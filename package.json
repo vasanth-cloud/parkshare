@@ -1,0 +1,14 @@
+{
+  "name": "parkshare-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev:customer": "npm --prefix customer-web run dev",
+    "dev:host": "npm --prefix host-web run dev",
+    "dev:admin": "npm --prefix admin-web run dev",
+    "build:customer": "npm --prefix customer-web run build",
+    "build:host": "npm --prefix host-web run build",
+    "build:admin": "npm --prefix admin-web run build",
+    "backend": "python -m uvicorn app.main:app --reload --port 8000"
+  }
+}
