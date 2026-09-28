@@ -37,7 +37,7 @@ app.include_router(admin.router, prefix=settings.API_V1_STR)
 app.include_router(disputes.router, prefix=settings.API_V1_STR)
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def root():
     return {
         "status": "online",
@@ -46,6 +46,6 @@ def root():
         "docs": "/docs"
     }
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "healthy"}

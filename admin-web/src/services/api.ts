@@ -1,7 +1,8 @@
 import { User, ParkingListing, AdminStats, Dispute } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL.replace(/\/+$/, '')}/api/v1` 
+const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
+const API_BASE = rawApiUrl 
+  ? `${rawApiUrl.replace(/\/+$/, '')}/api/v1` 
   : '/api/v1';
 
 function getHeaders(): HeadersInit {
