@@ -94,20 +94,18 @@ def run_migrations():
                 except Exception:
                     pass
 
-        # Ensure avasanth081@gmail.com has ADMIN role
-        try:
-            admin_user = conn.execute(text("SELECT id FROM users WHERE email = 'avasanth081@gmail.com'")).fetchone()
-            if admin_user:
-                admin_uid = admin_user[0]
-                has_admin = conn.execute(text(f"SELECT id FROM user_roles WHERE user_id = {admin_uid} AND role = 'ADMIN'")).fetchone()
+    # Ensure avasanth081@gmail.com has ADMIN role
+    try:
+        from app.models.user import User, UserRole, UserRoleEnum
+        with SessionLocal() as s:
+            admin_u = s.query(User).filter(User.email == "avasanth081@gmail.com").first()
+            if admin_u:
+                has_admin = any(r.role == UserRoleEnum.ADMIN for r in admin_u.roles)
                 if not has_admin:
-                    conn.execute(text(f"INSERT INTO user_roles (user_id, role) VALUES ({admin_uid}, 'ADMIN')"))
-                    conn.commit()
-        except Exception:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
+                    s.add(UserRole(user_id=admin_u.id, role=UserRoleEnum.ADMIN))
+                    s.commit()
+    except Exception:
+        pass
 
 def get_db():
     db = SessionLocal()

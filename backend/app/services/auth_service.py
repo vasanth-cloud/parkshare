@@ -72,7 +72,16 @@ class AuthService:
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account is suspended")
 
-        roles = [r.role.value for r in user.roles]
+        # Auto-grant superadmin role for platform administrator
+        if user.email.lower() in ["avasanth081@gmail.com", "admin@parkshare.com"]:
+            has_admin = any(r.role == UserRoleEnum.ADMIN for r in user.roles)
+            if not has_admin:
+                new_admin = UserRole(user_id=user.id, role=UserRoleEnum.ADMIN)
+                db.add(new_admin)
+                db.commit()
+                db.refresh(user)
+
+        roles = [r.role.value if hasattr(r.role, 'value') else str(r.role) for r in user.roles]
         access_token = create_access_token(subject=user.id, roles=roles)
         refresh_token = create_refresh_token(subject=user.id)
 
