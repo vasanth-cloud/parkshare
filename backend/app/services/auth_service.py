@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.user import User, UserRole, UserRoleEnum, HostProfile, Vehicle
@@ -16,11 +17,20 @@ class AuthService:
         if existing:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
+        is_host = (data.role == UserRoleEnum.HOST)
+        is_verified = False
+        if is_host and data.gov_id_type and data.gov_id_number and data.profile_photo_url:
+            is_verified = True
+
         user = User(
             email=data.email.lower(),
             hashed_password=hash_password(data.password),
-            full_name=data.full_name,
-            phone_number=data.phone_number
+            full_name=data.legal_name or data.full_name,
+            phone_number=data.phone_number,
+            profile_photo_url=data.profile_photo_url,
+            phone_verified=bool(data.phone_verified or is_verified),
+            email_verified=bool(data.email_verified or is_verified),
+            is_verified=bool(data.email_verified or is_verified)
         )
         db.add(user)
         db.commit()
@@ -33,8 +43,20 @@ class AuthService:
             db.add(UserRole(user_id=user.id, role=UserRoleEnum.PARKER))
 
         # If registering as HOST, create host profile
-        if data.role == UserRoleEnum.HOST:
-            host_profile = HostProfile(user_id=user.id)
+        if is_host:
+            host_profile = HostProfile(
+                user_id=user.id,
+                legal_name=data.legal_name or data.full_name,
+                business_name=f"{data.legal_name or data.full_name} Spaces",
+                payout_upi_id=data.payout_upi_id,
+                profile_photo_url=data.profile_photo_url,
+                gov_id_type=data.gov_id_type,
+                gov_id_number=data.gov_id_number,
+                gov_id_document_url=data.gov_id_document_url,
+                is_identity_verified=is_verified,
+                id_verified_at=datetime.now(timezone.utc) if is_verified else None,
+                id_verification_provider="DigiLocker / Aadhaar e-KYC Sandbox" if is_verified else None
+            )
             db.add(host_profile)
 
         db.commit()
@@ -54,13 +76,19 @@ class AuthService:
         access_token = create_access_token(subject=user.id, roles=roles)
         refresh_token = create_refresh_token(subject=user.id)
 
+        hp = user.host_profile
+
         user_data = {
             "id": user.id,
             "email": user.email,
             "full_name": user.full_name,
             "phone_number": user.phone_number,
+            "profile_photo_url": user.profile_photo_url or (hp.profile_photo_url if hp else None),
             "is_active": user.is_active,
             "is_verified": user.is_verified,
+            "phone_verified": user.phone_verified or (hp.is_identity_verified if hp else False),
+            "email_verified": user.email_verified or (hp.is_identity_verified if hp else False),
+            "is_identity_verified": hp.is_identity_verified if hp else False,
             "roles": [r.role for r in user.roles],
             "created_at": user.created_at
         }

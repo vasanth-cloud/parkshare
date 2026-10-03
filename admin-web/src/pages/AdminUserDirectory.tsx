@@ -95,12 +95,17 @@ export const AdminUserDirectory: React.FC = () => {
                     <div className="text-slate-400 text-[11px]">{u.email}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1 items-center">
                       {u.roles.map((r) => (
                         <span key={r} className="bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded text-[10px] font-semibold">
                           {r}
                         </span>
                       ))}
+                      {u.roles.includes('HOST') && (
+                        <span className="bg-blue-950 text-blue-300 border border-blue-800 px-2 py-0.5 rounded text-[10px] font-semibold">
+                          ✓ Identity Verified
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4">

@@ -148,26 +148,7 @@ export const WelcomeAuthPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Demo Quick Logins */}
-        <div className="bg-slate-800/50 p-3 rounded-2xl border border-slate-800 text-[11px]">
-          <p className="font-extrabold text-slate-300 mb-2 text-center">Instant Demo Accounts:</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleTestAccount('parker@parkshare.com', 'Parker@123', 'PARKER')}
-              className="py-1.5 px-2 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/80 rounded-xl font-bold text-[11px] flex items-center justify-center space-x-1"
-            >
-              <span>🚗 Demo Driver</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTestAccount('host@parkshare.com', 'Host@123', 'HOST')}
-              className="py-1.5 px-2 bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-800/80 rounded-xl font-bold text-[11px] flex items-center justify-center space-x-1"
-            >
-              <span>⚡ Demo Captain</span>
-            </button>
-          </div>
-        </div>
+
 
         {error && (
           <div className="bg-rose-950/80 text-rose-300 text-xs p-3 rounded-xl border border-rose-800 text-center font-semibold">

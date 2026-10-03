@@ -60,7 +60,7 @@ export const AdminAuthPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@parkshare.com"
+                placeholder="avasanth081@gmail.com"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm text-white"
               />
             </div>
@@ -90,12 +90,6 @@ export const AdminAuthPage: React.FC = () => {
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
-        <div className="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 border border-slate-800">
-          <p className="font-semibold text-slate-100 mb-1">Demo Admin Credentials:</p>
-          <p>Email: <code className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 text-emerald-300">admin@parkshare.com</code></p>
-          <p>Password: <code className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 text-emerald-300">Admin@123</code></p>
-        </div>
       </div>
     </div>
   );

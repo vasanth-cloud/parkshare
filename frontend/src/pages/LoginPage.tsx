@@ -55,33 +55,7 @@ export const LoginPage: React.FC = () => {
           </div>
         )}
 
-        {/* 1-Click Test Credentials Helper */}
-        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs">
-          <p className="font-semibold text-slate-700 mb-2">Instant Demo Accounts:</p>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleTestAccount('parker@parkshare.com', 'Parker@123')}
-              className="px-2 py-1.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 rounded-lg font-medium text-[11px]"
-            >
-              Parker
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTestAccount('host@parkshare.com', 'Host@123')}
-              className="px-2 py-1.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 rounded-lg font-medium text-[11px]"
-            >
-              Host
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTestAccount('admin@parkshare.com', 'Admin@123')}
-              className="px-2 py-1.5 bg-white hover:bg-purple-50 text-purple-800 border border-slate-200 rounded-lg font-medium text-[11px]"
-            >
-              Admin
-            </button>
-          </div>
-        </div>
+
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -150,10 +150,11 @@ export const api = {
     return res.json();
   },
 
-  endParking: async (booking_id: number): Promise<Booking> => {
+  endParking: async (booking_id: number, otp?: string): Promise<Booking> => {
     const res = await fetch(`${API_BASE}/bookings/${booking_id}/end-parking`, {
       method: 'POST',
       headers: getHeaders(),
+      body: JSON.stringify(otp ? { otp } : {}),
     });
     if (!res.ok) throw new Error((await res.json()).detail || 'Failed to end parking session');
     return res.json();
@@ -198,6 +199,112 @@ export const api = {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error((await res.json()).detail || 'Failed to submit review');
+    return res.json();
+  },
+
+  // Identity & OTP Verification
+  sendMobileOtp: async (phone_number: string) => {
+    const res = await fetch(`${API_BASE}/verification/send-mobile-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone_number }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to send Mobile OTP'));
+    return res.json();
+  },
+
+  verifyMobileOtp: async (phone_number: string, otp: string) => {
+    const res = await fetch(`${API_BASE}/verification/verify-mobile-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone_number, otp }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Invalid Mobile OTP'));
+    return res.json();
+  },
+
+  sendEmailOtp: async (email: string) => {
+    const res = await fetch(`${API_BASE}/verification/send-email-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to send Email OTP'));
+    return res.json();
+  },
+
+  verifyEmailOtp: async (email: string, otp: string) => {
+    const res = await fetch(`${API_BASE}/verification/verify-email-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Invalid Email OTP'));
+    return res.json();
+  },
+
+  // Vehicle Handover & Inspection
+  uploadFile: async (file: File | Blob, filename: string = 'upload.jpg'): Promise<{ success: boolean; filename: string; url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file, filename);
+    const token = localStorage.getItem('parkshare_customer_token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch(`${API_BASE}/verification/upload-file`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to upload photo'));
+    return res.json();
+  },
+
+  markDriverArrived: async (booking_id: number): Promise<Booking> => {
+    const res = await fetch(`${API_BASE}/bookings/${booking_id}/driver-arrived`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to record arrival'));
+    return res.json();
+  },
+
+  submitOdometer: async (
+    booking_id: number,
+    data: {
+      odometer_photo_url: string;
+      odometer_reading: number;
+      odometer_ocr_text?: string;
+      exterior_photos?: Record<string, string>;
+      damage_notes?: string;
+    }
+  ): Promise<Booking> => {
+    const res = await fetch(`${API_BASE}/bookings/${booking_id}/submit-odometer`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to submit odometer inspection'));
+    return res.json();
+  },
+
+  requestVehicleCollection: async (booking_id: number): Promise<Booking> => {
+    const res = await fetch(`${API_BASE}/bookings/${booking_id}/request-collection`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to request vehicle collection'));
+    return res.json();
+  },
+
+  verifyReleaseOtp: async (booking_id: number, otp: string): Promise<Booking> => {
+    const res = await fetch(`${API_BASE}/bookings/${booking_id}/verify-release-otp`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ otp }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Release OTP verification failed'));
     return res.json();
   },
 };

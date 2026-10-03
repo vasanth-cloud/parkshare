@@ -9,6 +9,7 @@ import { HostDashboard } from './pages/HostDashboard';
 import { CreateListingPage } from './pages/CreateListingPage';
 import { HostPinVerificationPage } from './pages/HostPinVerificationPage';
 import { HostEarningsPage } from './pages/HostEarningsPage';
+import { HostVerificationPage } from './pages/HostVerificationPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -30,6 +31,22 @@ export const AppContent: React.FC = () => {
             element={
               <ProtectedRoute>
                 <HostDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/verification"
+            element={
+              <ProtectedRoute>
+                <HostVerificationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kyc"
+            element={
+              <ProtectedRoute>
+                <HostVerificationPage />
               </ProtectedRoute>
             }
           />

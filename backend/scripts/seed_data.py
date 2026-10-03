@@ -20,12 +20,12 @@ def seed_db():
 
     try:
         # 1. Admin User
-        admin = db.query(User).filter(User.email == "admin@parkshare.com").first()
+        admin = db.query(User).filter(User.email == "avasanth081@gmail.com").first()
         if not admin:
-            print("Creating Admin account: admin@parkshare.com / Admin@123")
+            print("Creating Admin account: avasanth081@gmail.com / Vasanth@123")
             admin = User(
-                email="admin@parkshare.com",
-                hashed_password=hash_password("Admin@123"),
+                email="avasanth081@gmail.com",
+                hashed_password=hash_password("Vasanth@123"),
                 full_name="Platform Administrator",
                 phone_number="+91 9876543210",
                 is_active=True,
@@ -35,6 +35,8 @@ def seed_db():
             db.commit()
             db.refresh(admin)
             db.add(UserRole(user_id=admin.id, role=UserRoleEnum.ADMIN))
+            db.add(UserRole(user_id=admin.id, role=UserRoleEnum.HOST))
+            db.add(UserRole(user_id=admin.id, role=UserRoleEnum.PARKER))
             db.commit()
 
         # 2. Host User
@@ -283,7 +285,7 @@ def seed_db():
         print("\nSeed data generated successfully!")
         print("--------------------------------------------------")
         print("Credentials for local testing:")
-        print("   Admin Account : admin@parkshare.com / Admin@123")
+        print("   Admin Account : avasanth081@gmail.com / Vasanth@123")
         print("   Host Account  : host@parkshare.com  / Host@123")
         print("   Parker Account: parker@parkshare.com / Parker@123")
         print("--------------------------------------------------")

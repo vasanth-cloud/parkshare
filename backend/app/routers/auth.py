@@ -11,13 +11,17 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(data: UserRegister, db: Session = Depends(get_db)):
     user = AuthService.register_user(db, data)
+    hp = user.host_profile
     return UserOut(
         id=user.id,
         email=user.email,
         full_name=user.full_name,
         phone_number=user.phone_number,
+        profile_photo_url=user.profile_photo_url or (hp.profile_photo_url if hp else None),
         is_active=user.is_active,
         is_verified=user.is_verified,
+        phone_verified=user.phone_verified or (hp.is_identity_verified if hp else False),
+        email_verified=user.email_verified or (hp.is_identity_verified if hp else False),
         roles=[r.role for r in user.roles],
         created_at=user.created_at
     )
@@ -28,13 +32,17 @@ def login(data: UserLogin, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
+    hp = current_user.host_profile
     return UserOut(
         id=current_user.id,
         email=current_user.email,
         full_name=current_user.full_name,
         phone_number=current_user.phone_number,
+        profile_photo_url=current_user.profile_photo_url or (hp.profile_photo_url if hp else None),
         is_active=current_user.is_active,
         is_verified=current_user.is_verified,
+        phone_verified=current_user.phone_verified or (hp.is_identity_verified if hp else False),
+        email_verified=current_user.email_verified or (hp.is_identity_verified if hp else False),
         roles=[r.role for r in current_user.roles],
         created_at=current_user.created_at
     )

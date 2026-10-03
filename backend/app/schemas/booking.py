@@ -55,16 +55,47 @@ class BookingOut(BaseModel):
     refund_amount: float = 0.0
     cancelled_at: Optional[datetime] = None
 
+    # Vehicle Handover & Inspection
+    odometer_reading: Optional[float] = None
+    odometer_photo_url: Optional[str] = None
+    odometer_submitted_at: Optional[datetime] = None
+    odometer_ocr_text: Optional[str] = None
+    exterior_photos: Optional[str] = None
+    damage_notes: Optional[str] = None
+    driver_arrived_at: Optional[datetime] = None
+    key_received_at: Optional[datetime] = None
+    collection_requested_at: Optional[datetime] = None
+    vehicle_released_at: Optional[datetime] = None
+
     listing: Optional[ListingOut] = None
     vehicle: Optional[VehicleOut] = None
     review: Optional[ReviewOut] = None
     host_name: Optional[str] = "Ravi"
     host_phone: Optional[str] = "+91 98765 43210"
+    payment_expires_at: Optional[datetime] = None
     created_at: datetime
-
 
     class Config:
         from_attributes = True
+
+class OdometerSubmitRequest(BaseModel):
+    odometer_photo_url: str
+    odometer_reading: float
+    odometer_ocr_text: Optional[str] = None
+    exterior_photos: Optional[dict] = None
+    damage_notes: Optional[str] = None
+
+class VerifyReleaseOtpRequest(BaseModel):
+    otp: str
+
+class EndParkingRequest(BaseModel):
+    otp: Optional[str] = None
+
+class ReleaseOtpOut(BaseModel):
+    booking_id: int
+    release_otp: str
+    expires_at: datetime
+    message: str
 
 class CancellationPreviewOut(BaseModel):
     booking_id: int

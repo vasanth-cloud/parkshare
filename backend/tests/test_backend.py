@@ -151,8 +151,22 @@ def test_customer_active_parking_and_end_parking():
     assert act_data["id"] == booking_id
     assert act_data["status"] in ["CONFIRMED", "ACTIVE"]
 
-    # End parking
+    # End parking Step 1: Driver requests end parking -> transitions to VEHICLE_COLLECTION_REQUESTED
     end_res = client.post(f"/api/v1/bookings/{booking_id}/end-parking", headers=headers)
     assert end_res.status_code == 200
-    assert end_res.json()["status"] == "COMPLETED"
+    assert end_res.json()["status"] == "VEHICLE_COLLECTION_REQUESTED"
+
+    # End parking Step 2: Space Owner generates 6-digit release OTP
+    host_login = client.post("/api/v1/auth/login", json={"email": "host@parkshare.com", "password": "Host@123"})
+    host_headers = {"Authorization": f"Bearer {host_login.json()['access_token']}"}
+    otp_res = client.post(f"/api/v1/bookings/{booking_id}/generate-release-otp", headers=host_headers)
+    assert otp_res.status_code == 200
+    release_otp = otp_res.json()["release_otp"]
+    assert len(release_otp) == 6
+
+    # End parking Step 3: Driver enters owner's OTP -> Trip successfully ends with COMPLETED
+    end_otp_res = client.post(f"/api/v1/bookings/{booking_id}/end-parking", headers=headers, json={"otp": release_otp})
+    assert end_otp_res.status_code == 200
+    assert end_otp_res.json()["status"] == "COMPLETED"
+
 

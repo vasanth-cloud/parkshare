@@ -122,7 +122,5 @@ Once your backend is live, open the **Render Shell** tab on `parkshare-backend` 
 python scripts/reset_db.py
 ```
 
-This will initialize the schema and generate the default clean login accounts:
-- **Admin**: `admin@parkshare.com` / `Admin@123`
-- **Host**: `host@parkshare.com` / `Host@123`
-- **Parker**: `parker@parkshare.com` / `Parker@123`
+This will initialize the schema and generate the default clean admin account:
+- **Admin**: `avasanth081@gmail.com` / `Vasanth@123`

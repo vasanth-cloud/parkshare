@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.schemas.listing import ListingCreate, ListingOut
+from app.schemas.listing import ListingCreate, ListingUpdate, ListingOut
 from app.services.listing_service import ListingService
 from app.dependencies.auth import get_current_user, require_role
 from app.models.user import User, UserRoleEnum, HostProfile
@@ -76,3 +76,33 @@ def toggle_listing_status(
     db.commit()
     db.refresh(listing)
     return ListingService.get_listing_by_id(db, listing.id, current_user_id=current_user.id)
+
+@router.put("/{listing_id}", response_model=ListingOut)
+def update_listing(
+    listing_id: int,
+    data: ListingUpdate,
+    current_user: User = Depends(require_role(UserRoleEnum.HOST)),
+    db: Session = Depends(get_db)
+):
+    return ListingService.update_listing(db, listing_id, current_user.id, data)
+
+@router.post("/{listing_id}/resubmit", response_model=ListingOut)
+def resubmit_listing(
+    listing_id: int,
+    current_user: User = Depends(require_role(UserRoleEnum.HOST)),
+    db: Session = Depends(get_db)
+):
+    update_data = ListingUpdate(resubmit_for_approval=True)
+    return ListingService.update_listing(db, listing_id, current_user.id, update_data)
+
+@router.delete("/{listing_id}", status_code=status.HTTP_200_OK)
+def delete_listing(
+    listing_id: int,
+    current_user: User = Depends(require_role(UserRoleEnum.HOST)),
+    db: Session = Depends(get_db)
+):
+    user_roles = [r.role for r in current_user.roles]
+    is_admin = UserRoleEnum.ADMIN in user_roles
+    return ListingService.delete_listing(db, listing_id, current_user.id, is_admin=is_admin)
+
+

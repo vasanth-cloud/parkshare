@@ -25,8 +25,11 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
     phone_number = Column(String(50), nullable=True)
+    profile_photo_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    phone_verified = Column(Boolean, default=False)
+    email_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -52,11 +55,18 @@ class HostProfile(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    legal_name = Column(String(255), nullable=True)
     business_name = Column(String(255), nullable=True)
     bio = Column(Text, nullable=True)
     payout_bank_account = Column(String(255), nullable=True)
     payout_ifsc = Column(String(50), nullable=True)
     payout_upi_id = Column(String(100), nullable=True)
+    profile_photo_url = Column(String(500), nullable=True)
+    gov_id_type = Column(String(50), nullable=True)  # AADHAAR, DRIVING_LICENCE, PASSPORT
+    gov_id_number = Column(String(100), nullable=True)
+    gov_id_document_url = Column(String(500), nullable=True)
+    id_verification_provider = Column(String(100), default="DigiLocker Sandbox")
+    id_verified_at = Column(DateTime, nullable=True)
     is_identity_verified = Column(Boolean, default=False)
     total_earnings = Column(Float, default=0.0)
     cancellation_count = Column(Integer, default=0)
@@ -66,6 +76,18 @@ class HostProfile(Base):
 
     user = relationship("User", back_populates="host_profile")
     listings = relationship("ParkingListing", back_populates="host", cascade="all, delete-orphan")
+
+    @property
+    def full_name(self) -> str:
+        if self.legal_name:
+            return self.legal_name
+        if self.user and self.user.full_name:
+            return self.user.full_name
+        return "Host"
+
+    @property
+    def government_id_type(self):
+        return self.gov_id_type
 
 class Vehicle(Base):
     __tablename__ = "vehicles"

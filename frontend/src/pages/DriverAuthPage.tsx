@@ -90,17 +90,7 @@ export const DriverAuthPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Demo Driver Account Shortcut */}
-        <div className="bg-emerald-950/40 p-3 rounded-2xl border border-emerald-800/60 text-[11px] text-center">
-          <span className="font-bold text-emerald-300">Instant Demo Driver Login: </span>
-          <button
-            type="button"
-            onClick={() => { setEmail('parker@parkshare.com'); setPassword('Parker@123'); }}
-            className="underline font-bold text-white hover:text-emerald-300 ml-1"
-          >
-            parker@parkshare.com
-          </button>
-        </div>
+
 
         {error && (
           <div className="bg-rose-950/80 text-rose-300 text-xs p-3 rounded-xl border border-rose-800 text-center font-semibold">

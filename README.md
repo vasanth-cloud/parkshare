@@ -74,13 +74,11 @@ npm run dev
 
 ---
 
-## Demo Test Credentials
+## Admin Credentials
 
 | Role | Email | Password | Capabilities |
 | :--- | :--- | :--- | :--- |
-| **Parker (Driver)** | `parker@parkshare.com` | `Parker@123` | Search, Reserve space, View QR/PIN pass, Vehicle manager |
-| **Host** | `host@parkshare.com` | `Host@123` | Manage listings, PIN/QR Check-in scanner, Host earnings |
-| **Admin** | `admin@parkshare.com` | `Admin@123` | Listing approvals queue, System stats, Revenue analytics |
+| **Admin** | `avasanth081@gmail.com` | `Vasanth@123` | Listing approvals queue, System stats, Revenue analytics |
 
 ---
 

@@ -203,5 +203,78 @@ export const api = {
     });
     if (!res.ok) throw new Error('Moderation failed');
     return res.json();
+  },
+
+  // Verification & OTP
+  sendMobileOtp: async (phone_number: string) => {
+    const res = await fetch(`${API_BASE}/verification/send-mobile-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone_number }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to send Mobile OTP');
+    return res.json();
+  },
+
+  verifyMobileOtp: async (phone_number: string, otp: string) => {
+    const res = await fetch(`${API_BASE}/verification/verify-mobile-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone_number, otp }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to verify Mobile OTP');
+    return res.json();
+  },
+
+  sendEmailOtp: async (email: string) => {
+    const res = await fetch(`${API_BASE}/verification/send-email-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to send Email OTP');
+    return res.json();
+  },
+
+  verifyEmailOtp: async (email: string, otp: string) => {
+    const res = await fetch(`${API_BASE}/verification/verify-email-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to verify Email OTP');
+    return res.json();
+  },
+
+  getVerificationStatus: async () => {
+    const res = await fetch(`${API_BASE}/verification/status`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch verification status');
+    return res.json();
+  },
+
+  submitHostIdentity: async (data: any) => {
+    const res = await fetch(`${API_BASE}/verification/submit-identity`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Identity verification failed');
+    return res.json();
+  },
+
+  uploadFile: async (file: Blob | File, filename?: string) => {
+    const formData = new FormData();
+    formData.append('file', file, filename || (file instanceof File ? file.name : 'upload.jpg'));
+    const token = localStorage.getItem('parkshare_token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/verification/upload-file`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to upload verification file');
+    return res.json();
   }
 };

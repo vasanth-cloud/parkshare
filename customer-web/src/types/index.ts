@@ -37,10 +37,11 @@ export interface PricingRule {
 }
 
 export interface ListingImage {
-  id: number;
+  id?: number;
   image_url: string;
   caption?: string;
   is_cover: boolean;
+  display_order?: number;
 }
 
 export interface HostVerification {
@@ -87,6 +88,8 @@ export interface ParkingListing {
   parking_rules?: string;
   booking_mode: 'INSTANT' | 'MANUAL_APPROVAL';
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'ACTIVE' | 'PAUSED' | 'REJECTED' | 'SUSPENDED';
+  is_reserved?: boolean;
+  available_spaces?: number;
   average_rating: number;
   total_reviews: number;
   images: ListingImage[];
@@ -94,6 +97,27 @@ export interface ParkingListing {
   host_verification?: HostVerification;
   created_at: string;
 }
+
+export type BookingStatus = 
+  | 'PENDING_APPROVAL'
+  | 'PENDING_PAYMENT'
+  | 'BOOKING_CREATED'
+  | 'CONFIRMED'
+  | 'DRIVER_ARRIVED'
+  | 'ODOMETER_PHOTO_SUBMITTED'
+  | 'KEY_HANDOVER_PENDING'
+  | 'KEY_RECEIVED'
+  | 'PARKING_ACTIVE'
+  | 'ACTIVE'
+  | 'VEHICLE_COLLECTION_REQUESTED'
+  | 'RELEASE_OTP_VERIFIED'
+  | 'VEHICLE_RELEASED'
+  | 'COMPLETED'
+  | 'DISPUTE_OPENED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'REFUND_PENDING'
+  | 'REFUNDED';
 
 export interface Booking {
   id: number;
@@ -111,17 +135,28 @@ export interface Booking {
   platform_fee: number;
   tax: number;
   total_amount: number;
-  status: 'PENDING_APPROVAL' | 'PENDING_PAYMENT' | 'CONFIRMED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED' | 'REFUND_PENDING' | 'REFUNDED';
+  status: BookingStatus;
   cancellation_reason?: string;
   cancelled_by?: string;
   cancellation_tier?: 'FULL_REFUND' | 'PARTIAL_REFUND' | 'NO_REFUND';
   refund_amount?: number;
   cancelled_at?: string;
+  odometer_reading?: number;
+  odometer_photo_url?: string;
+  odometer_submitted_at?: string;
+  odometer_ocr_text?: string;
+  exterior_photos?: string;
+  damage_notes?: string;
+  driver_arrived_at?: string;
+  key_received_at?: string;
+  collection_requested_at?: string;
+  vehicle_released_at?: string;
   listing?: ParkingListing;
   vehicle?: Vehicle;
   review?: Review;
   host_name?: string;
   host_phone?: string;
+  payment_expires_at?: string;
   created_at: string;
 }
 

@@ -1,10 +1,25 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { MapPin, Plus, Navigation } from 'lucide-react';
+import { VerificationStatus } from '../types';
+import { HostIdentityVerificationModal } from '../components/HostIdentityVerificationModal';
+import { LiveSpaceCameraCapture, CapturedPhoto, PhotoAngleKey } from '../components/LiveSpaceCameraCapture';
+import { PhysicalLocationProofStep, LocationProof } from '../components/PhysicalLocationProofStep';
+import { MapPin, Plus, Navigation, ShieldCheck, ShieldAlert, CheckCircle2, Lock, Camera } from 'lucide-react';
 
 export const CreateListingPage: React.FC = () => {
   const navigate = useNavigate();
+
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const [checkingVerification, setCheckingVerification] = useState(true);
+
+  useEffect(() => {
+    api.getVerificationStatus()
+      .then(setVerificationStatus)
+      .catch(console.error)
+      .finally(() => setCheckingVerification(false));
+  }, []);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -33,7 +48,8 @@ export const CreateListingPage: React.FC = () => {
   const [isIndoor, setIsIndoor] = useState(false);
   const [hasCctv, setHasCctv] = useState(false);
   const [hasEv, setHasEv] = useState(false);
-  const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80');
+  const [photos, setPhotos] = useState<Partial<Record<PhotoAngleKey, CapturedPhoto>>>({});
+  const [locationProof, setLocationProof] = useState<LocationProof | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -99,9 +115,90 @@ export const CreateListingPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (verificationStatus && !verificationStatus.can_submit_space) {
+      setError('Host Identity Verification required before submitting a parking space. Please complete all 5 requirements.');
+      setIsVerificationModalOpen(true);
+      return;
+    }
+
     if (!title || !city || !area || !approxAddress || !exactAddress) {
       setError('Please fill in all mandatory fields.');
       return;
+    }
+
+    // 0. Physical Presence Proof (Prove You Are Physically There)
+    if (!locationProof || !locationProof.is_location_verified) {
+      setError("Physical presence proof required: Please complete the '📍 Verify Parking Location (Prove You Are Physically There)' step before submitting.");
+      return;
+    }
+
+    // 1. Mandatory Photo Angle Validations (Anti-Fraud Real Camera Policy)
+    if (!photos.ENTRANCE?.url) {
+      setError("Mandatory live photo missing: Please capture 'Entrance from road' using your live device camera.");
+      return;
+    }
+    if (!photos.PARKING_SLOT?.url) {
+      setError("Mandatory live photo missing: Please capture 'Actual parking slot' using your live device camera.");
+      return;
+    }
+    if (!photos.SURROUNDINGS?.url) {
+      setError("Mandatory live photo missing: Please capture 'Wider view showing surroundings/access' using your live device camera.");
+      return;
+    }
+
+    const isCoveredSpace = isCovered || isIndoor || parkingType === 'COVERED_PARKING' || parkingType === 'GARAGE';
+    if (isCoveredSpace && !photos.ROOF_CLEARANCE?.url) {
+      setError("For covered/indoor/garage parking, a live photo of the 'Roof / height-clearance' is mandatory.");
+      return;
+    }
+
+    if (hasGatedAccess && !photos.GATE_ENTRY?.url) {
+      setError("For gated access parking, a live photo of the 'Gate / entry area' is mandatory.");
+      return;
+    }
+
+    // Build verified images payload
+    const imagesPayload: { image_url: string; caption: string; is_cover: boolean; display_order: number }[] = [];
+    if (photos.PARKING_SLOT) {
+      imagesPayload.push({
+        image_url: photos.PARKING_SLOT.url,
+        caption: 'PARKING_SLOT',
+        is_cover: true,
+        display_order: 1,
+      });
+    }
+    if (photos.ENTRANCE) {
+      imagesPayload.push({
+        image_url: photos.ENTRANCE.url,
+        caption: 'ENTRANCE',
+        is_cover: false,
+        display_order: 2,
+      });
+    }
+    if (photos.SURROUNDINGS) {
+      imagesPayload.push({
+        image_url: photos.SURROUNDINGS.url,
+        caption: 'SURROUNDINGS',
+        is_cover: false,
+        display_order: 3,
+      });
+    }
+    if (photos.ROOF_CLEARANCE) {
+      imagesPayload.push({
+        image_url: photos.ROOF_CLEARANCE.url,
+        caption: 'ROOF_CLEARANCE',
+        is_cover: false,
+        display_order: 4,
+      });
+    }
+    if (photos.GATE_ENTRY) {
+      imagesPayload.push({
+        image_url: photos.GATE_ENTRY.url,
+        caption: 'GATE_ENTRY',
+        is_cover: false,
+        display_order: 5,
+      });
     }
 
     setLoading(true);
@@ -147,7 +244,8 @@ export const CreateListingPage: React.FC = () => {
           maximum_duration_hours: 720,
           security_deposit: 0,
         },
-        images: [{ image_url: imageUrl, caption: 'Cover view', is_cover: true }],
+        images: imagesPayload,
+        location_verification: locationProof,
       });
 
       navigate('/dashboard');
@@ -171,6 +269,71 @@ export const CreateListingPage: React.FC = () => {
       {error && (
         <div className="bg-red-50 text-red-700 p-4 rounded-2xl text-sm font-semibold border border-red-200">
           {error}
+        </div>
+      )}
+
+      {/* Host Identity Verification Status Banner */}
+      {checkingVerification ? (
+        <div className="bg-white p-4 rounded-2xl border border-gray-200 text-xs text-gray-500 animate-pulse">
+          Checking host compliance & verification status...
+        </div>
+      ) : verificationStatus && !verificationStatus.can_submit_space ? (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center flex-shrink-0 text-amber-700">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-amber-950">Host Identity Verification Required</h2>
+                <p className="text-xs text-amber-800 mt-0.5">
+                  Before allowing a host to submit a space, safety regulations require full verification of legal name, mobile OTP, email OTP, profile photo, and Government ID (Aadhaar / Driving Licence / Passport).
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/verification"
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow flex-shrink-0 self-start sm:self-auto"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Verify Identity Now</span>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 pt-2 text-xs">
+            <div className={`p-2.5 rounded-xl border flex items-center space-x-2 font-medium ${verificationStatus.has_legal_name ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-white border-amber-200 text-gray-600'}`}>
+              <span className={verificationStatus.has_legal_name ? 'text-emerald-600 font-bold' : 'text-gray-400'}>{verificationStatus.has_legal_name ? '✓' : '○'}</span>
+              <span>Legal Name</span>
+            </div>
+            <div className={`p-2.5 rounded-xl border flex items-center space-x-2 font-medium ${verificationStatus.phone_verified ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-white border-amber-200 text-gray-600'}`}>
+              <span className={verificationStatus.phone_verified ? 'text-emerald-600 font-bold' : 'text-gray-400'}>{verificationStatus.phone_verified ? '✓' : '○'}</span>
+              <span>Mobile OTP</span>
+            </div>
+            <div className={`p-2.5 rounded-xl border flex items-center space-x-2 font-medium ${verificationStatus.email_verified ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-white border-amber-200 text-gray-600'}`}>
+              <span className={verificationStatus.email_verified ? 'text-emerald-600 font-bold' : 'text-gray-400'}>{verificationStatus.email_verified ? '✓' : '○'}</span>
+              <span>Email Verified</span>
+            </div>
+            <div className={`p-2.5 rounded-xl border flex items-center space-x-2 font-medium ${verificationStatus.has_profile_photo ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-white border-amber-200 text-gray-600'}`}>
+              <span className={verificationStatus.has_profile_photo ? 'text-emerald-600 font-bold' : 'text-gray-400'}>{verificationStatus.has_profile_photo ? '✓' : '○'}</span>
+              <span>Profile Photo</span>
+            </div>
+            <div className={`p-2.5 rounded-xl border flex items-center space-x-2 font-medium ${verificationStatus.has_gov_id ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-white border-amber-200 text-gray-600'}`}>
+              <span className={verificationStatus.has_gov_id ? 'text-emerald-600 font-bold' : 'text-gray-400'}>{verificationStatus.has_gov_id ? '✓' : '○'}</span>
+              <span>Gov ID (Aadhaar/DL)</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between text-xs text-emerald-950">
+          <div className="flex items-center space-x-2 font-semibold">
+            <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <span>
+              Verified Space Host: <strong>{verificationStatus?.legal_name || 'Verified'}</strong> • Government ID Verified ({verificationStatus?.gov_id_type || 'Aadhaar e-KYC'})
+            </span>
+          </div>
+          <span className="bg-emerald-100 text-emerald-800 font-extrabold px-3 py-1 rounded-full text-[11px] border border-emerald-300">
+            Space Submission Unlocked
+          </span>
         </div>
       )}
 
@@ -482,6 +645,31 @@ export const CreateListingPage: React.FC = () => {
             />
           </div>
 
+          {/* Section: Physical Location Proof (Prove You Are Physically There) */}
+          <div className="pt-6 border-t border-gray-200">
+            <PhysicalLocationProofStep
+              declaredLat={lat}
+              declaredLng={lng}
+              declaredAddress={exactAddress || approxAddress}
+              verificationData={locationProof}
+              onVerificationChange={setLocationProof}
+            />
+          </div>
+
+          {/* Section: Live Camera Photos of Parking Space (Mandatory Anti-Fraud Policy) */}
+          <div className="pt-6 border-t border-gray-200">
+            <LiveSpaceCameraCapture
+              photos={photos}
+              onPhotosChange={setPhotos}
+              isCovered={isCovered}
+              isIndoor={isIndoor}
+              parkingType={parkingType}
+              hasGatedAccess={hasGatedAccess}
+              currentLat={lat}
+              currentLng={lng}
+            />
+          </div>
+
           <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-1">
             <div className="font-bold flex items-center space-x-1.5">
               <span>🔒 Admin Review & Approval Required</span>
@@ -493,14 +681,33 @@ export const CreateListingPage: React.FC = () => {
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition text-sm disabled:opacity-50 flex items-center justify-center space-x-2"
-        >
-          <span>{loading ? 'Submitting Space for Review...' : 'Submit Space for Admin Review'}</span>
-        </button>
+        {verificationStatus && !verificationStatus.can_submit_space ? (
+          <Link
+            to="/verification"
+            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition text-sm flex items-center justify-center space-x-2"
+          >
+            <Lock className="w-4 h-4" />
+            <span>Complete Identity Verification to Submit Space</span>
+          </Link>
+        ) : (
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition text-sm disabled:opacity-50 flex items-center justify-center space-x-2"
+          >
+            <span>{loading ? 'Submitting Space for Review...' : 'Submit Space for Admin Review'}</span>
+          </button>
+        )}
       </form>
+
+      <HostIdentityVerificationModal
+        isOpen={isVerificationModalOpen}
+        onClose={() => setIsVerificationModalOpen(false)}
+        onSuccess={(status) => {
+          setVerificationStatus(status);
+          setError('');
+        }}
+      />
     </div>
   );
 };

@@ -1,8 +1,9 @@
 import math
 import random
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_
 from fastapi import HTTPException, status
 from app.models.listing import ParkingListing, PricingRule, ListingStatusEnum
 from app.models.booking import Booking, BookingStatusEnum
@@ -18,27 +19,102 @@ def generate_verification_code() -> str:
 VALID_TRANSITIONS = {
     BookingStatusEnum.PENDING_APPROVAL: {
         BookingStatusEnum.PENDING_PAYMENT,
+        BookingStatusEnum.BOOKING_CREATED,
         BookingStatusEnum.CANCELLED
     },
     BookingStatusEnum.PENDING_PAYMENT: {
+        BookingStatusEnum.BOOKING_CREATED,
         BookingStatusEnum.CONFIRMED,
         BookingStatusEnum.EXPIRED,
         BookingStatusEnum.CANCELLED
     },
+    BookingStatusEnum.BOOKING_CREATED: {
+        BookingStatusEnum.CONFIRMED,
+        BookingStatusEnum.DRIVER_ARRIVED,
+        BookingStatusEnum.CANCELLED,
+        BookingStatusEnum.EXPIRED,
+        BookingStatusEnum.DISPUTE_OPENED
+    },
     BookingStatusEnum.CONFIRMED: {
+        BookingStatusEnum.DRIVER_ARRIVED,
+        BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED,
+        BookingStatusEnum.KEY_HANDOVER_PENDING,
+        BookingStatusEnum.KEY_RECEIVED,
+        BookingStatusEnum.PARKING_ACTIVE,
+        BookingStatusEnum.ACTIVE,
+        BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED,
+        BookingStatusEnum.COMPLETED,
+        BookingStatusEnum.CANCELLED,
+        BookingStatusEnum.REFUND_PENDING,
+        BookingStatusEnum.DISPUTE_OPENED
+    },
+    BookingStatusEnum.DRIVER_ARRIVED: {
+        BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED,
+        BookingStatusEnum.KEY_HANDOVER_PENDING,
+        BookingStatusEnum.CANCELLED,
+        BookingStatusEnum.DISPUTE_OPENED
+    },
+    BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED: {
+        BookingStatusEnum.KEY_HANDOVER_PENDING,
+        BookingStatusEnum.KEY_RECEIVED,
+        BookingStatusEnum.PARKING_ACTIVE,
+        BookingStatusEnum.ACTIVE,
+        BookingStatusEnum.CANCELLED,
+        BookingStatusEnum.DISPUTE_OPENED
+    },
+    BookingStatusEnum.KEY_HANDOVER_PENDING: {
+        BookingStatusEnum.KEY_RECEIVED,
+        BookingStatusEnum.PARKING_ACTIVE,
+        BookingStatusEnum.ACTIVE,
+        BookingStatusEnum.CANCELLED,
+        BookingStatusEnum.DISPUTE_OPENED
+    },
+    BookingStatusEnum.KEY_RECEIVED: {
+        BookingStatusEnum.PARKING_ACTIVE,
+        BookingStatusEnum.ACTIVE,
+        BookingStatusEnum.CANCELLED,
+        BookingStatusEnum.DISPUTE_OPENED
+    },
+    BookingStatusEnum.PARKING_ACTIVE: {
+        BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED,
         BookingStatusEnum.ACTIVE,
         BookingStatusEnum.COMPLETED,
         BookingStatusEnum.CANCELLED,
-        BookingStatusEnum.REFUND_PENDING
+        BookingStatusEnum.REFUND_PENDING,
+        BookingStatusEnum.DISPUTE_OPENED
     },
-
     BookingStatusEnum.ACTIVE: {
+        BookingStatusEnum.PARKING_ACTIVE,
+        BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED,
         BookingStatusEnum.COMPLETED,
         BookingStatusEnum.CANCELLED,
-        BookingStatusEnum.REFUND_PENDING
+        BookingStatusEnum.REFUND_PENDING,
+        BookingStatusEnum.DISPUTE_OPENED
+    },
+    BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED: {
+        BookingStatusEnum.RELEASE_OTP_VERIFIED,
+        BookingStatusEnum.VEHICLE_RELEASED,
+        BookingStatusEnum.COMPLETED,
+        BookingStatusEnum.DISPUTE_OPENED
+    },
+    BookingStatusEnum.RELEASE_OTP_VERIFIED: {
+        BookingStatusEnum.VEHICLE_RELEASED,
+        BookingStatusEnum.COMPLETED,
+        BookingStatusEnum.DISPUTE_OPENED
+    },
+    BookingStatusEnum.VEHICLE_RELEASED: {
+        BookingStatusEnum.COMPLETED,
+        BookingStatusEnum.DISPUTE_OPENED
+    },
+    BookingStatusEnum.DISPUTE_OPENED: {
+        BookingStatusEnum.COMPLETED,
+        BookingStatusEnum.CANCELLED,
+        BookingStatusEnum.REFUND_PENDING,
+        BookingStatusEnum.REFUNDED
     },
     BookingStatusEnum.CANCELLED: {
-        BookingStatusEnum.REFUND_PENDING
+        BookingStatusEnum.REFUND_PENDING,
+        BookingStatusEnum.REFUNDED
     },
     BookingStatusEnum.REFUND_PENDING: {
         BookingStatusEnum.REFUNDED
@@ -146,7 +222,27 @@ class BookingService:
         )
 
     @staticmethod
+    def expire_stale_pending_bookings(db: Session):
+        """
+        Automatically expires any unpaid checkout holds older than 1 minute (60 seconds).
+        Releases the held parking slot so other drivers can reserve it.
+        """
+        now = datetime.now(timezone.utc)
+        db.query(Booking).filter(
+            Booking.status == BookingStatusEnum.PENDING_PAYMENT,
+            Booking.payment_expires_at.isnot(None),
+            Booking.payment_expires_at < now
+        ).update(
+            {"status": BookingStatusEnum.EXPIRED, "cancellation_reason": "Payment session timed out (1-minute limit reached)"},
+            synchronize_session=False
+        )
+        db.commit()
+
+    @staticmethod
     def create_booking(db: Session, user_id: int, data: BookingCreate) -> Booking:
+        # 0. Expire any stale 1-minute checkout sessions
+        BookingService.expire_stale_pending_bookings(db)
+
         # -------------------------------------------------------------------
         # STRICT CONCURRENCY LOCK & DOUBLE-BOOKING PROTECTION
         # -------------------------------------------------------------------
@@ -159,29 +255,97 @@ class BookingService:
         if not listing or listing.status != ListingStatusEnum.ACTIVE:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Listing is not available for booking")
 
-        # 2. Count existing active/confirmed overlapping bookings within the requested time window
+        now = datetime.now(timezone.utc)
+
+        # Check if the same user already has an active, unexpired 1-minute checkout session for this listing
+        existing_user_pending = (
+            db.query(Booking)
+            .filter(
+                Booking.listing_id == data.listing_id,
+                Booking.user_id == user_id,
+                Booking.status == BookingStatusEnum.PENDING_PAYMENT,
+                Booking.payment_expires_at.isnot(None),
+                Booking.payment_expires_at > now
+            )
+            .first()
+        )
+        if existing_user_pending:
+            # Refresh price breakdown and vehicle if changed, and return existing session
+            p_type = getattr(data, 'booking_product_type', None) or BookingProductTypeEnum.HOURLY
+            price_info = BookingService.calculate_price(db, data.listing_id, data.start_time, data.end_time, product_type=p_type)
+            existing_user_pending.vehicle_id = data.vehicle_id
+            existing_user_pending.start_time = data.start_time
+            existing_user_pending.end_time = data.end_time
+            existing_user_pending.booking_product_type = p_type
+            existing_user_pending.parking_fee = price_info.parking_fee
+            existing_user_pending.platform_fee = price_info.platform_fee
+            existing_user_pending.tax = price_info.tax
+            existing_user_pending.total_amount = price_info.total_amount
+            db.commit()
+            db.refresh(existing_user_pending)
+            return existing_user_pending
+
+        # 2. Count existing confirmed/active bookings AND active 1-min checkout holds from OTHER users
+        CONFIRMED_RESERVATION_STATUSES = [
+            BookingStatusEnum.CONFIRMED,
+            BookingStatusEnum.DRIVER_ARRIVED,
+            BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED,
+            BookingStatusEnum.KEY_HANDOVER_PENDING,
+            BookingStatusEnum.KEY_RECEIVED,
+            BookingStatusEnum.PARKING_ACTIVE,
+            BookingStatusEnum.ACTIVE,
+            BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED,
+            BookingStatusEnum.RELEASE_OTP_VERIFIED,
+            BookingStatusEnum.DISPUTE_OPENED,
+        ]
+
         overlapping_count = (
             db.query(Booking)
             .filter(
                 Booking.listing_id == data.listing_id,
-                Booking.status.in_([
-                    BookingStatusEnum.CONFIRMED,
-                    BookingStatusEnum.ACTIVE,
-                    BookingStatusEnum.PENDING_PAYMENT,
-                    BookingStatusEnum.PENDING_APPROVAL
-                ]),
-                Booking.start_time < data.end_time,
-                Booking.end_time > data.start_time
+                Booking.user_id != user_id,
+                or_(
+                    Booking.status.in_(CONFIRMED_RESERVATION_STATUSES),
+                    and_(
+                        Booking.status == BookingStatusEnum.PENDING_PAYMENT,
+                        Booking.payment_expires_at.isnot(None),
+                        Booking.payment_expires_at > now
+                    )
+                ),
+                or_(
+                    and_(Booking.start_time < data.end_time, Booking.end_time > data.start_time),
+                    Booking.status.in_([
+                        BookingStatusEnum.DRIVER_ARRIVED,
+                        BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED,
+                        BookingStatusEnum.KEY_HANDOVER_PENDING,
+                        BookingStatusEnum.KEY_RECEIVED,
+                        BookingStatusEnum.PARKING_ACTIVE,
+                        BookingStatusEnum.ACTIVE,
+                        BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED,
+                        BookingStatusEnum.RELEASE_OTP_VERIFIED,
+                        BookingStatusEnum.DISPUTE_OPENED,
+                    ])
+                )
             )
             .count()
         )
 
-        # 3. Reject if active overlap count meets or exceeds space capacity
+        # 3. Reject if active overlap / active hold count meets or exceeds space capacity
         if overlapping_count >= listing.capacity:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"This parking space is fully reserved for the selected time window."
+                detail="This parking space is currently held in a 1-minute checkout session by another driver. If payment is not completed, it will be released shortly."
             )
+
+        # Cancel any previous stale/expired pending payment attempts by this user for this listing
+        db.query(Booking).filter(
+            Booking.listing_id == data.listing_id,
+            Booking.user_id == user_id,
+            Booking.status == BookingStatusEnum.PENDING_PAYMENT
+        ).update(
+            {"status": BookingStatusEnum.CANCELLED, "cancellation_reason": "Superceded by new reservation attempt"},
+            synchronize_session=False
+        )
 
         p_type = getattr(data, 'booking_product_type', None) or BookingProductTypeEnum.HOURLY
         # Calculate Price Breakdown
@@ -199,6 +363,9 @@ class BookingService:
             else BookingStatusEnum.PENDING_PAYMENT
         )
 
+        # 1-minute session timeout (60 seconds)
+        session_timeout = datetime.now(timezone.utc) + timedelta(minutes=1)
+
         booking = Booking(
             booking_reference=reference,
             user_id=user_id,
@@ -214,7 +381,8 @@ class BookingService:
             platform_fee=price_info.platform_fee,
             tax=price_info.tax,
             total_amount=price_info.total_amount,
-            status=initial_status
+            status=initial_status,
+            payment_expires_at=session_timeout
         )
 
         db.add(booking)

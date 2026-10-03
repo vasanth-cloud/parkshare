@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Booking, CancellationPreview } from '../types';
 import { QRCodeSVG } from 'qrcode.react';
-import { Calendar, MapPin, Clock, Lock, CheckCircle, Car, Shield, AlertCircle, XCircle, Star } from 'lucide-react';
+import { Calendar, MapPin, Clock, Lock, CheckCircle, Car, Shield, AlertCircle, XCircle, Star, CreditCard } from 'lucide-react';
 
 import { ActiveParkingCard } from '../components/ActiveParkingCard';
 
 export const CustomerBookingsPage: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [nowTime, setNowTime] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTime(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   
   // Cancellation Modal State
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -82,6 +89,8 @@ export const CustomerBookingsPage: React.FC = () => {
   };
 
 
+  const [payingBookingId, setPayingBookingId] = useState<number | null>(null);
+
   const fetchBookings = () => {
     setLoading(true);
     api.getMyBookings()
@@ -90,12 +99,82 @@ export const CustomerBookingsPage: React.FC = () => {
       .finally(() => setLoading(false));
   };
 
+  const handlePayPendingBooking = async (b: Booking) => {
+    try {
+      setPayingBookingId(b.id);
+      const orderData = await api.createPaymentOrder(b.id);
+
+      const Razorpay = (window as any).Razorpay;
+      if (!Razorpay) {
+        alert('Razorpay Checkout SDK not loaded. Please refresh the page and try again.');
+        setPayingBookingId(null);
+        return;
+      }
+
+      const options = {
+        key: orderData.key_id || 'rzp_test_TjLLsOAid1sNkb',
+        amount: orderData.amount_in_paise || Math.round((orderData.amount || b.total_amount) * 100),
+        currency: orderData.currency || 'INR',
+        name: 'ParkShare Parking',
+        description: `Booking #${b.booking_reference} - ${b.listing?.title || 'Parking Space'}`,
+        order_id: orderData.order_id,
+        theme: {
+          color: '#059669',
+        },
+        modal: {
+          ondismiss: () => {
+            setPayingBookingId(null);
+          },
+        },
+        handler: async (response: any) => {
+          try {
+            await api.verifyPayment({
+              booking_id: b.id,
+              order_id: response.razorpay_order_id || orderData.order_id,
+              payment_id: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+            });
+            fetchBookings();
+          } catch (err: any) {
+            alert(err.message || 'Payment verification failed');
+          } finally {
+            setPayingBookingId(null);
+          }
+        },
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.on('payment.failed', (failRes: any) => {
+        setPayingBookingId(null);
+        alert(`Payment failed: ${failRes?.error?.description || 'Transaction declined'}`);
+      });
+      rzp.open();
+    } catch (err: any) {
+      alert(err.message || 'Failed to start payment');
+      setPayingBookingId(null);
+    }
+  };
+
   useEffect(() => {
     fetchBookings();
+    const interval = setInterval(() => {
+      api.getMyBookings().then(setBookings).catch(() => {});
+    }, 4000);
+    return () => clearInterval(interval);
   }, []);
 
-  const activeBooking = bookings.find((b) => b.status === 'ACTIVE' || b.status === 'CONFIRMED');
-
+  const activeBooking =
+    bookings.find((b) =>
+      [
+        'VEHICLE_COLLECTION_REQUESTED',
+        'PARKING_ACTIVE',
+        'ACTIVE',
+        'KEY_RECEIVED',
+        'KEY_HANDOVER_PENDING',
+        'ODOMETER_PHOTO_SUBMITTED',
+        'DRIVER_ARRIVED',
+      ].includes(b.status)
+    ) || bookings.find((b) => ['CONFIRMED', 'BOOKING_CREATED'].includes(b.status));
 
   const handleOpenCancelModal = (b: Booking) => {
     setSelectedBooking(b);
@@ -120,6 +199,48 @@ export const CustomerBookingsPage: React.FC = () => {
       alert(err.message || 'Failed to cancel booking');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const renderStatusBadge = (b: Booking) => {
+    switch (b.status) {
+      case 'DRIVER_ARRIVED':
+        return <span className="bg-amber-500 text-slate-950 font-black px-3 py-1 rounded-full text-xs animate-pulse">Driver Arrived</span>;
+      case 'ODOMETER_PHOTO_SUBMITTED':
+      case 'KEY_HANDOVER_PENDING':
+        return <span className="bg-purple-600 text-white font-bold px-3 py-1 rounded-full text-xs animate-pulse">Key Handover Pending</span>;
+      case 'KEY_RECEIVED':
+      case 'PARKING_ACTIVE':
+      case 'ACTIVE':
+        return <span className="bg-emerald-600 text-white font-bold px-3 py-1 rounded-full text-xs">Parking Active</span>;
+      case 'VEHICLE_COLLECTION_REQUESTED':
+        return <span className="bg-amber-600 text-white font-black px-3 py-1 rounded-full text-xs animate-pulse">Collection Requested</span>;
+      case 'RELEASE_OTP_VERIFIED':
+      case 'VEHICLE_RELEASED':
+      case 'COMPLETED':
+        return <span className="bg-blue-600 text-white font-bold px-3 py-1 rounded-full text-xs">Completed</span>;
+      case 'CONFIRMED':
+        return <span className="bg-emerald-600 text-white font-bold px-3 py-1 rounded-full text-xs">Confirmed</span>;
+      case 'PENDING_PAYMENT': {
+        const exp = b.payment_expires_at ? new Date(b.payment_expires_at).getTime() : 0;
+        const sec = Math.max(0, Math.floor((exp - nowTime) / 1000));
+        if (exp > 0 && sec <= 0) {
+          return <span className="bg-gray-100 text-gray-500 border border-gray-300 font-bold px-3 py-1 rounded-full text-xs">Session Timed Out</span>;
+        }
+        return (
+          <span className="bg-amber-100 text-amber-900 border border-amber-300 font-bold px-3 py-1 rounded-full text-xs animate-pulse flex items-center space-x-1">
+            <span>⏱️ 1-Min Hold ({sec > 0 ? `00:${('0' + sec).slice(-2)}` : 'Active'})</span>
+          </span>
+        );
+      }
+      case 'EXPIRED':
+        return <span className="bg-gray-100 text-gray-500 border border-gray-300 font-bold px-3 py-1 rounded-full text-xs">Session Timed Out</span>;
+      case 'CANCELLED':
+        return <span className="bg-rose-100 text-rose-700 font-bold px-3 py-1 rounded-full text-xs">Cancelled</span>;
+      case 'DISPUTE_OPENED':
+        return <span className="bg-amber-100 text-amber-900 border border-amber-300 font-bold px-3 py-1 rounded-full text-xs">Dispute Opened</span>;
+      default:
+        return <span className="bg-gray-200 text-gray-700 font-bold px-3 py-1 rounded-full text-xs">{b.status}</span>;
     }
   };
 
@@ -157,19 +278,7 @@ export const CustomerBookingsPage: React.FC = () => {
                   <span className="text-xs font-mono font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
                     Ref: #{b.booking_reference}
                   </span>
-                  <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full ${
-                      b.status === 'CONFIRMED' || b.status === 'ACTIVE'
-                        ? 'bg-emerald-600 text-white'
-                        : b.status === 'COMPLETED'
-                        ? 'bg-blue-600 text-white'
-                        : b.status === 'CANCELLED'
-                        ? 'bg-rose-100 text-rose-700'
-                        : 'bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    {b.status}
-                  </span>
+                  {renderStatusBadge(b)}
 
                   {b.cancellation_tier && (
                     <span className="text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded-full">
@@ -244,6 +353,31 @@ export const CustomerBookingsPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center space-x-2">
+                    {b.status === 'PENDING_PAYMENT' && (() => {
+                      const exp = b.payment_expires_at ? new Date(b.payment_expires_at).getTime() : 0;
+                      const sec = Math.max(0, Math.floor((exp - nowTime) / 1000));
+                      if (exp > 0 && sec <= 0) {
+                        return (
+                          <Link
+                            to={`/listing/${b.listing_id}`}
+                            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline px-2 py-1 flex items-center space-x-1"
+                          >
+                            <span>Hold Expired - Re-book Space →</span>
+                          </Link>
+                        );
+                      }
+                      return (
+                        <button
+                          onClick={() => handlePayPendingBooking(b)}
+                          disabled={payingBookingId === b.id}
+                          className="text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>{payingBookingId === b.id ? 'Opening Razorpay...' : `Pay Now (₹${b.total_amount}${sec > 0 ? ` - 00:${('0' + sec).slice(-2)}` : ''})`}</span>
+                        </button>
+                      );
+                    })()}
+
                     {['CONFIRMED', 'PENDING_PAYMENT', 'PENDING_APPROVAL'].includes(b.status) && (
                       <button
                         onClick={() => handleOpenCancelModal(b)}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PlusCircle, LayoutDashboard, KeyRound, DollarSign, LogOut } from 'lucide-react';
+import { PlusCircle, LayoutDashboard, KeyRound, DollarSign, LogOut, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Navbar: React.FC = () => {
@@ -37,6 +37,11 @@ export const Navbar: React.FC = () => {
                 <Link to="/pin-verify" className="flex items-center space-x-1 hover:text-emerald-300 transition text-sm font-medium">
                   <KeyRound className="w-4 h-4" />
                   <span>Check-in PIN</span>
+                </Link>
+
+                <Link to="/verification" className="flex items-center space-x-1 hover:text-emerald-300 transition text-sm font-medium">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>KYC Verification</span>
                 </Link>
 
                 <Link to="/earnings" className="flex items-center space-x-1 hover:text-emerald-300 transition text-sm font-medium">

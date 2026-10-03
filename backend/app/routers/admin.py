@@ -72,6 +72,8 @@ def approve_or_reject_listing(
     listing.status = action.status
     if action.rejection_reason:
         listing.rejection_reason = action.rejection_reason
+    elif action.status == ListingStatusEnum.ACTIVE:
+        listing.rejection_reason = None
 
     db.commit()
     db.refresh(listing)

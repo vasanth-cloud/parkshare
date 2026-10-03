@@ -9,9 +9,19 @@ from app.models.listing import BookingProductTypeEnum
 class BookingStatusEnum(str, enum.Enum):
     PENDING_APPROVAL = "PENDING_APPROVAL"
     PENDING_PAYMENT = "PENDING_PAYMENT"
+    BOOKING_CREATED = "BOOKING_CREATED"
     CONFIRMED = "CONFIRMED"
+    DRIVER_ARRIVED = "DRIVER_ARRIVED"
+    ODOMETER_PHOTO_SUBMITTED = "ODOMETER_PHOTO_SUBMITTED"
+    KEY_HANDOVER_PENDING = "KEY_HANDOVER_PENDING"
+    KEY_RECEIVED = "KEY_RECEIVED"
+    PARKING_ACTIVE = "PARKING_ACTIVE"
     ACTIVE = "ACTIVE"
+    VEHICLE_COLLECTION_REQUESTED = "VEHICLE_COLLECTION_REQUESTED"
+    RELEASE_OTP_VERIFIED = "RELEASE_OTP_VERIFIED"
+    VEHICLE_RELEASED = "VEHICLE_RELEASED"
     COMPLETED = "COMPLETED"
+    DISPUTE_OPENED = "DISPUTE_OPENED"
     CANCELLED = "CANCELLED"
     EXPIRED = "EXPIRED"
     REFUND_PENDING = "REFUND_PENDING"
@@ -58,6 +68,26 @@ class Booking(Base):
     cancellation_tier = Column(Enum(CancellationTierEnum), nullable=True)
     refund_amount = Column(Float, default=0.0)
     cancelled_at = Column(DateTime, nullable=True)
+
+    # Vehicle Handover & Inspection
+    odometer_reading = Column(Float, nullable=True)
+    odometer_photo_url = Column(String(500), nullable=True)
+    odometer_submitted_at = Column(DateTime, nullable=True)
+    odometer_ocr_text = Column(String(100), nullable=True)
+    exterior_photos = Column(Text, nullable=True)  # JSON serialized dict of exterior photo URLs
+    damage_notes = Column(Text, nullable=True)
+    driver_arrived_at = Column(DateTime, nullable=True)
+    key_received_at = Column(DateTime, nullable=True)
+    collection_requested_at = Column(DateTime, nullable=True)
+
+    # One-Time Release OTP (Hashed for security)
+    release_otp_hash = Column(String(255), nullable=True)
+    release_otp_expires_at = Column(DateTime, nullable=True)
+    release_otp_attempts = Column(Integer, default=0)
+    vehicle_released_at = Column(DateTime, nullable=True)
+
+    # Payment Session Timeout (1-minute hold)
+    payment_expires_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

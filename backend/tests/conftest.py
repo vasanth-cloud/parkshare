@@ -5,8 +5,6 @@ from scripts.seed_data import seed_db
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database():
     """
-    Session-wide fixture that ensures test database schema and base test fixtures
-    (test listing & vehicle) are present when running pytest.
+    Session-wide fixture for testing.
     """
-    seed_db()
     yield

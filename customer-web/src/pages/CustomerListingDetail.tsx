@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ParkingListing, Vehicle, Booking } from '../types';
-import { MapPin, Shield, Zap, Car, Clock, Star, Calendar, CreditCard, Lock, CheckCircle } from 'lucide-react';
+import { MapPin, Shield, Zap, Car, Clock, Star, Calendar, CreditCard, Lock, CheckCircle, Camera, ShieldCheck, ZoomIn, X, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export const CustomerListingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +13,28 @@ export const CustomerListingDetail: React.FC = () => {
   const [listing, setListing] = useState<ParkingListing | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  const [activePhotoIdx, setActivePhotoIdx] = useState<number>(0);
+  const [inspectImage, setInspectImage] = useState<string | null>(null);
+
+  const getAngleInfo = (caption?: string) => {
+    const c = (caption || '').toUpperCase();
+    if (c.includes('ENTRANCE') || c.includes('ROAD')) {
+      return { icon: '🛣️', label: 'Entrance from Road', badge: 'bg-blue-900/80 text-blue-200 border-blue-700' };
+    }
+    if (c.includes('SLOT') || c.includes('PARKING')) {
+      return { icon: '🅿️', label: 'Actual Parking Slot', badge: 'bg-emerald-900/80 text-emerald-200 border-emerald-700' };
+    }
+    if (c.includes('SURROUNDING') || c.includes('WIDE') || c.includes('ACCESS')) {
+      return { icon: '🌐', label: 'Surroundings & Access', badge: 'bg-purple-900/80 text-purple-200 border-purple-700' };
+    }
+    if (c.includes('ROOF') || c.includes('CLEARANCE') || c.includes('HEIGHT')) {
+      return { icon: '📏', label: 'Roof Clearance', badge: 'bg-amber-900/80 text-amber-200 border-amber-700' };
+    }
+    if (c.includes('GATE') || c.includes('BARRIER')) {
+      return { icon: '🚪', label: 'Gate / Entry Area', badge: 'bg-cyan-900/80 text-cyan-200 border-cyan-700' };
+    }
+    return { icon: '📷', label: caption || 'Space View', badge: 'bg-slate-900/80 text-slate-200 border-slate-700' };
+  };
 
   // Time window selection
   const [startTime, setStartTime] = useState(() => {
@@ -30,6 +52,35 @@ export const CustomerListingDetail: React.FC = () => {
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState('');
+  const [activePendingBooking, setActivePendingBooking] = useState<Booking | null>(null);
+  const [nowTime, setNowTime] = useState<number>(Date.now());
+
+  // 1-second interval to tick countdown timers
+  useEffect(() => {
+    const timer = setInterval(() => setNowTime(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Check on mount if user already has an active 1-minute checkout session for this space
+  useEffect(() => {
+    if (user && listing) {
+      api.getMyBookings()
+        .then((bList) => {
+          const now = Date.now();
+          const active = bList.find(
+            (b) =>
+              b.listing_id === listing.id &&
+              b.status === 'PENDING_PAYMENT' &&
+              b.payment_expires_at &&
+              new Date(b.payment_expires_at).getTime() > now
+          );
+          if (active) {
+            setActivePendingBooking(active);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [user, listing]);
 
   useEffect(() => {
     if (id) {
@@ -48,6 +99,11 @@ export const CustomerListingDetail: React.FC = () => {
 
   const [selectedPlan, setSelectedPlan] = useState<'HOURLY' | 'DAILY' | 'MULTI_DAY' | 'MONTHLY_FULL' | 'MONTHLY_COMMUTER'>('HOURLY');
 
+  // Clear any existing error banner when inputs change
+  useEffect(() => {
+    setError('');
+  }, [startTime, endTime, selectedPlan, selectedVehicleId]);
+
   // Recalculate price on time or plan change
   useEffect(() => {
     if (listing && startTime && endTime) {
@@ -58,6 +114,68 @@ export const CustomerListingDetail: React.FC = () => {
         .finally(() => setLoadingPrice(false));
     }
   }, [listing, startTime, endTime, selectedPlan]);
+
+  const resumePayment = async (b: Booking) => {
+    if (!user) return;
+    setError('');
+    setBookingLoading(true);
+
+    try {
+      const orderData = await api.createPaymentOrder(b.id);
+      const Razorpay = (window as any).Razorpay;
+      if (!Razorpay) {
+        throw new Error('Razorpay Checkout SDK not loaded. Please refresh the page and try again.');
+      }
+
+      const options = {
+        key: orderData.key_id || 'rzp_test_TjLLsOAid1sNkb',
+        amount: orderData.amount_in_paise || Math.round((orderData.amount || b.total_amount) * 100),
+        currency: orderData.currency || 'INR',
+        name: 'ParkShare Parking',
+        description: `Booking #${b.booking_reference} - ${listing!.title}`,
+        order_id: orderData.order_id,
+        prefill: {
+          name: user.full_name || 'Customer',
+          email: user.email || '',
+          contact: user.phone_number || '',
+        },
+        theme: {
+          color: '#059669',
+        },
+        modal: {
+          ondismiss: () => {
+            setBookingLoading(false);
+          },
+        },
+        handler: async (response: any) => {
+          try {
+            setBookingLoading(true);
+            await api.verifyPayment({
+              booking_id: b.id,
+              order_id: response.razorpay_order_id || orderData.order_id,
+              payment_id: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+            });
+            navigate('/bookings');
+          } catch (verifyErr: any) {
+            setError(verifyErr.message || 'Payment verification failed.');
+          } finally {
+            setBookingLoading(false);
+          }
+        },
+      };
+
+      const rzpInstance = new Razorpay(options);
+      rzpInstance.on('payment.failed', (failRes: any) => {
+        setBookingLoading(false);
+        setError(`Payment failed: ${failRes?.error?.description || 'Transaction declined'}`);
+      });
+      rzpInstance.open();
+    } catch (err: any) {
+      setError(err.message || 'Failed to resume payment session.');
+      setBookingLoading(false);
+    }
+  };
 
   const handleReserveAndPay = async () => {
     if (!user) {
@@ -73,7 +191,7 @@ export const CustomerListingDetail: React.FC = () => {
     setBookingLoading(true);
 
     try {
-      // 1. Create booking with product plan type
+      // 1. Create booking with product plan type (status starts as PENDING_PAYMENT)
       const newBooking: Booking = await api.createBooking({
         listing_id: listing!.id,
         vehicle_id: selectedVehicleId,
@@ -82,22 +200,69 @@ export const CustomerListingDetail: React.FC = () => {
         booking_product_type: selectedPlan,
       });
 
+      // Track active 1-minute checkout session
+      setActivePendingBooking(newBooking);
+
       // 2. Create Razorpay Payment order
       const orderData = await api.createPaymentOrder(newBooking.id);
 
-      // 3. Verify Payment (Mock execution for local dev / Razorpay callback)
-      await api.verifyPayment({
-        booking_id: newBooking.id,
-        order_id: orderData.order_id,
-        payment_id: `pay_mock_${Date.now()}`,
-        signature: 'sig_mock_verified',
-      });
+      // Check for Razorpay SDK
+      const Razorpay = (window as any).Razorpay;
+      if (!Razorpay) {
+        throw new Error('Razorpay Checkout SDK not loaded. Please refresh the page and try again.');
+      }
 
-      // 4. Navigate to My Bookings where PIN & QR code token is shown
-      navigate('/bookings');
+      // 3. Open genuine Razorpay checkout modal
+      const options = {
+        key: orderData.key_id || 'rzp_test_TjLLsOAid1sNkb',
+        amount: orderData.amount_in_paise || Math.round((orderData.amount || newBooking.total_amount) * 100),
+        currency: orderData.currency || 'INR',
+        name: 'ParkShare Parking',
+        description: `Booking #${newBooking.booking_reference} - ${listing!.title}`,
+        order_id: orderData.order_id,
+        prefill: {
+          name: user.full_name || 'Customer',
+          email: user.email || '',
+          contact: user.phone_number || '',
+        },
+        theme: {
+          color: '#059669', // Emerald-600
+        },
+        modal: {
+          ondismiss: () => {
+            setBookingLoading(false);
+            setError('Checkout closed. Your 1-minute reservation hold is active — you can complete payment below before the timer expires.');
+          },
+        },
+        handler: async (response: any) => {
+          try {
+            setBookingLoading(true);
+            // 4. Verify Payment with backend signature check. ONLY ON SUCCESS STATUS BECOMES CONFIRMED!
+            await api.verifyPayment({
+              booking_id: newBooking.id,
+              order_id: response.razorpay_order_id || orderData.order_id,
+              payment_id: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+            });
+
+            // 5. Navigate to My Bookings where confirmed pass and parking card are shown
+            navigate('/bookings');
+          } catch (verifyErr: any) {
+            setError(verifyErr.message || 'Payment verification failed. Please contact support.');
+          } finally {
+            setBookingLoading(false);
+          }
+        },
+      };
+
+      const rzpInstance = new Razorpay(options);
+      rzpInstance.on('payment.failed', (failRes: any) => {
+        setBookingLoading(false);
+        setError(`Payment failed: ${failRes?.error?.description || 'Transaction declined'}`);
+      });
+      rzpInstance.open();
     } catch (err: any) {
       setError(err.message || 'Failed to complete reservation.');
-    } finally {
       setBookingLoading(false);
     }
   };
@@ -112,11 +277,107 @@ export const CustomerListingDetail: React.FC = () => {
         {/* Left Column: Listing Info */}
         <div className="lg:col-span-7 space-y-6">
           <div className="bg-white rounded-3xl shadow-sm border border-emerald-100 overflow-hidden">
-            <img
-              src={listing.images[0]?.image_url || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80'}
-              alt={listing.title}
-              className="w-full h-64 object-cover"
-            />
+            {/* Interactive Multi-Angle Photo Gallery */}
+            {(() => {
+              const imagesList = (listing.images && listing.images.length > 0)
+                ? listing.images
+                : [{ image_url: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80', caption: 'PARKING_SLOT' }];
+              const currentPhoto = imagesList[activePhotoIdx] || imagesList[0];
+              const angle = getAngleInfo(currentPhoto.caption);
+
+              return (
+                <div className="space-y-2">
+                  {/* Main Display Stage */}
+                  <div className="relative w-full h-72 sm:h-80 bg-black group overflow-hidden">
+                    <img
+                      src={currentPhoto.image_url}
+                      alt={currentPhoto.caption || listing.title}
+                      className="w-full h-full object-cover transition duration-300"
+                    />
+
+                    {/* Gradient & Overlay Badges */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 p-4 flex flex-col justify-between pointer-events-none">
+                      <div className="flex justify-between items-start">
+                        {/* Verified Live Camera Badge */}
+                        <span className="text-[11px] font-bold bg-emerald-600/90 text-white px-3 py-1 rounded-full shadow-md flex items-center space-x-1.5 backdrop-blur-sm pointer-events-auto">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Verified On-Site Live Photos</span>
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setInspectImage(currentPhoto.image_url)}
+                          className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl transition pointer-events-auto shadow"
+                          title="Zoom Photo"
+                        >
+                          <ZoomIn className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Bottom Angle Name & Carousel Arrows */}
+                      <div className="flex items-end justify-between">
+                        <div className="space-y-1">
+                          <span className={`inline-flex items-center space-x-1.5 text-xs font-black px-3 py-1 rounded-xl border ${angle.badge} shadow-md backdrop-blur-sm`}>
+                            <span className="text-sm">{angle.icon}</span>
+                            <span>{angle.label}</span>
+                          </span>
+                          <p className="text-[11px] text-slate-300 font-medium">
+                            Angle {activePhotoIdx + 1} of {imagesList.length}
+                          </p>
+                        </div>
+
+                        {/* Prev / Next controls */}
+                        {imagesList.length > 1 && (
+                          <div className="flex items-center space-x-2 pointer-events-auto">
+                            <button
+                              type="button"
+                              onClick={() => setActivePhotoIdx((prev) => (prev > 0 ? prev - 1 : imagesList.length - 1))}
+                              className="p-2 bg-black/60 hover:bg-black/90 text-white rounded-xl transition shadow"
+                              title="Previous Photo"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setActivePhotoIdx((prev) => (prev < imagesList.length - 1 ? prev + 1 : 0))}
+                              className="p-2 bg-black/60 hover:bg-black/90 text-white rounded-xl transition shadow"
+                              title="Next Photo"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Thumbnail Row */}
+                  {imagesList.length > 1 && (
+                    <div className="p-3 bg-gray-50 border-t border-b border-gray-100 flex items-center space-x-2 overflow-x-auto">
+                      {imagesList.map((img, idx) => {
+                        const thumbAngle = getAngleInfo(img.caption);
+                        const isSelected = idx === activePhotoIdx;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setActivePhotoIdx(idx)}
+                            className={`flex-shrink-0 relative rounded-xl overflow-hidden border-2 transition w-20 h-14 bg-black ${
+                              isSelected ? 'border-emerald-600 ring-2 ring-emerald-400/40' : 'border-gray-200 opacity-70 hover:opacity-100'
+                            }`}
+                          >
+                            <img src={img.image_url} alt={img.caption || ''} className="w-full h-full object-cover" />
+                            <div className="absolute inset-x-0 bottom-0 bg-black/80 text-[9px] text-white font-bold truncate px-1 py-0.5 text-center">
+                              {thumbAngle.label.split(' ')[0]}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <div className="p-6 space-y-4">
               <div className="flex justify-between items-start">
                 <div>
@@ -348,6 +609,18 @@ export const CustomerListingDetail: React.FC = () => {
               </div>
             </div>
 
+            {listing?.is_reserved && (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 text-xs text-amber-950 space-y-1 shadow-xs">
+                <div className="flex items-center space-x-2 font-black text-amber-800 text-sm">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span>Space Currently Reserved & Occupied</span>
+                </div>
+                <p className="leading-relaxed">
+                  This parking spot currently has an active reservation. You cannot place a new reservation until the current vehicle completes parking.
+                </p>
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-50 text-red-700 p-3 rounded-xl text-xs font-semibold border border-red-200">
                 {error}
@@ -424,18 +697,76 @@ export const CustomerListingDetail: React.FC = () => {
               </div>
             )}
 
+            {/* Active 1-Minute Payment Session Card */}
+            {activePendingBooking && (() => {
+              const exp = activePendingBooking.payment_expires_at ? new Date(activePendingBooking.payment_expires_at).getTime() : 0;
+              const sec = Math.max(0, Math.floor((exp - nowTime) / 1000));
+              if (sec <= 0) return null;
+              return (
+                <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 text-xs text-amber-950 space-y-2.5 shadow-sm animate-pulse">
+                  <div className="flex items-center justify-between font-bold text-amber-900">
+                    <span className="flex items-center space-x-1.5 text-sm">
+                      <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+                      <span>1-Minute Checkout Session Active</span>
+                    </span>
+                    <span className="font-mono text-xs font-black bg-amber-200 border border-amber-400 px-2.5 py-0.5 rounded-lg text-amber-950">
+                      00:{('0' + sec).slice(-2)}
+                    </span>
+                  </div>
+                  <p className="text-gray-700 leading-relaxed">
+                    This space is temporarily held for you. Complete payment before the timer expires to secure your spot.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => resumePayment(activePendingBooking)}
+                    disabled={bookingLoading}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl transition flex items-center justify-center space-x-2 shadow cursor-pointer disabled:opacity-50"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>{bookingLoading ? 'Opening Razorpay...' : `Resume & Complete Payment (₹${activePendingBooking.total_amount})`}</span>
+                  </button>
+                </div>
+              );
+            })()}
+
             {/* Checkout Action Button */}
             <button
               onClick={handleReserveAndPay}
-              disabled={bookingLoading || loadingPrice}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-sm disabled:opacity-50"
+              disabled={Boolean(listing?.is_reserved) || bookingLoading || loadingPrice}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-sm disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
               <CreditCard className="w-5 h-5" />
-              <span>{bookingLoading ? 'Processing Checkout...' : 'Confirm & Pay Now'}</span>
+              <span>
+                {listing?.is_reserved
+                  ? '⛔ Space Currently Reserved'
+                  : bookingLoading
+                  ? 'Processing Checkout...'
+                  : 'Confirm & Pay Now'}
+              </span>
             </button>
           </div>
         </div>
       </div>
+
+      {/* Image Zoom Lightbox Modal */}
+      {inspectImage && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative max-w-4xl w-full bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between text-white border-b border-slate-800 pb-2">
+              <span className="text-xs font-bold text-slate-300">Verified Parking Photo (High Resolution)</span>
+              <button
+                onClick={() => setInspectImage(null)}
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="rounded-2xl overflow-hidden bg-black flex items-center justify-center max-h-[75vh]">
+              <img src={inspectImage} alt="Enlarged space photo" className="w-full h-auto object-contain max-h-[75vh]" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

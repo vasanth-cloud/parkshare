@@ -84,6 +84,14 @@ class ParkingListing(Base):
     status = Column(Enum(ListingStatusEnum), default=ListingStatusEnum.PENDING_APPROVAL, index=True)
     rejection_reason = Column(Text, nullable=True)
 
+    # Physical Presence On-Site Verification Proof (Anti-Fraud Location Lock)
+    is_location_verified = Column(Boolean, default=False)
+    verified_latitude = Column(Float, nullable=True)
+    verified_longitude = Column(Float, nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    verification_photo_url = Column(String(500), nullable=True)
+    location_verification_metadata = Column(JSON, nullable=True)
+
     # Performance
     average_rating = Column(Float, default=0.0)
     total_reviews = Column(Integer, default=0)
@@ -100,8 +108,8 @@ class ParkingListing(Base):
     images = relationship("ParkingListingImage", back_populates="listing", cascade="all, delete-orphan")
     availabilities = relationship("ParkingAvailability", back_populates="listing", cascade="all, delete-orphan")
     pricing_rule = relationship("PricingRule", back_populates="listing", uselist=False, cascade="all, delete-orphan")
-    bookings = relationship("Booking", back_populates="listing")
-    reviews = relationship("Review", back_populates="listing")
+    bookings = relationship("Booking", back_populates="listing", cascade="all, delete-orphan", passive_deletes=True)
+    reviews = relationship("Review", back_populates="listing", cascade="all, delete-orphan", passive_deletes=True)
     favorites = relationship("Favorite", back_populates="listing", cascade="all, delete-orphan")
 
 class ParkingListingImage(Base):
