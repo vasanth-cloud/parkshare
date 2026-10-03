@@ -94,6 +94,21 @@ def run_migrations():
                 except Exception:
                     pass
 
+        # Ensure avasanth081@gmail.com has ADMIN role
+        try:
+            admin_user = conn.execute(text("SELECT id FROM users WHERE email = 'avasanth081@gmail.com'")).fetchone()
+            if admin_user:
+                admin_uid = admin_user[0]
+                has_admin = conn.execute(text(f"SELECT id FROM user_roles WHERE user_id = {admin_uid} AND role = 'ADMIN'")).fetchone()
+                if not has_admin:
+                    conn.execute(text(f"INSERT INTO user_roles (user_id, role) VALUES ({admin_uid}, 'ADMIN')"))
+                    conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
 def get_db():
     db = SessionLocal()
     try:
