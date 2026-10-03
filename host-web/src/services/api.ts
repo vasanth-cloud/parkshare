@@ -4,7 +4,7 @@ import { User, ParkingListing, Booking, HostSummary, VerificationStatus } from '
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
 const API_BASE = rawApiUrl 
   ? `${rawApiUrl.replace(/\/+$/, '')}/api/v1` 
-  : '/api/v1';
+  : 'https://parkshare-backend-9anh.onrender.com/api/v1';
 
 function getHeaders(): HeadersInit {
   const token = localStorage.getItem('parkshare_host_token');
