@@ -74,13 +74,6 @@ npm run dev
 
 ---
 
-## Admin Credentials
-
-| Role | Email | Password | Capabilities |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `avasanth081@gmail.com` | `Vasanth@123` | Listing approvals queue, System stats, Revenue analytics |
-
----
 
 ## Run Unit & Integration Tests
 ```bash
