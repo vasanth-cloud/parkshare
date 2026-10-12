@@ -363,8 +363,8 @@ class BookingService:
             else BookingStatusEnum.PENDING_PAYMENT
         )
 
-        # 1-minute session timeout (60 seconds)
-        session_timeout = datetime.now(timezone.utc) + timedelta(minutes=1)
+        # 15-minute standard session timeout for checkout completion
+        session_timeout = datetime.now(timezone.utc) + timedelta(minutes=15)
 
         booking = Booking(
             booking_reference=reference,

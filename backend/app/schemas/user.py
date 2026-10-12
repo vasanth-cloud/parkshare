@@ -23,6 +23,10 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class ProfilePhotoUpdate(BaseModel):
+    profile_photo_url: str
+
+
 class UserOut(BaseModel):
     id: int
     email: EmailStr

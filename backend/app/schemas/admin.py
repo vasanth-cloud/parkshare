@@ -16,6 +16,8 @@ class AdminStatsOut(BaseModel):
     total_revenue: float
     platform_commission_earned: float
     total_payouts: float
+    total_drivers: int = 0
+    total_car_spas: int = 0
 
 class AuditLogOut(BaseModel):
     id: int

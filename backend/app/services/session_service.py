@@ -41,8 +41,37 @@ class SessionService:
         if not host_profile or host_profile.id != booking.listing.host_profile_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to check in parkers for this space")
 
-        if booking.status != BookingStatusEnum.CONFIRMED:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot check in. Booking status is {booking.status}")
+        # If already checked in and active, return the existing session gracefully
+        if booking.status in [BookingStatusEnum.ACTIVE, BookingStatusEnum.PARKING_ACTIVE]:
+            session = db.query(ParkingSession).filter(ParkingSession.booking_id == booking.id).first()
+            if not session:
+                now = datetime.now(timezone.utc)
+                session = ParkingSession(
+                    booking_id=booking.id,
+                    check_in_time=now,
+                    verification_method=method,
+                    verified_by_user_id=host_user_id
+                )
+                db.add(session)
+                db.commit()
+                db.refresh(session)
+            session.is_already_active = True
+            session.message = "Booking is already checked in and actively parked."
+            return session
+
+        allowed_pre_checkin = [
+            BookingStatusEnum.CONFIRMED,
+            BookingStatusEnum.DRIVER_ARRIVED,
+            BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED,
+            BookingStatusEnum.KEY_HANDOVER_PENDING,
+        ]
+
+        if booking.status not in allowed_pre_checkin:
+            status_text = booking.status.value if hasattr(booking.status, 'value') else str(booking.status)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot check in. Booking is already {status_text.replace('_', ' ').lower()}."
+            )
 
         now = datetime.now(timezone.utc)
 
@@ -61,7 +90,7 @@ class SessionService:
             session.verified_by_user_id = host_user_id
 
         from app.services.booking_service import BookingService
-        BookingService.update_booking_status(db, booking, BookingStatusEnum.ACTIVE)
+        BookingService.update_booking_status(db, booking, BookingStatusEnum.PARKING_ACTIVE)
         db.refresh(session)
         return session
 
@@ -75,8 +104,18 @@ class SessionService:
         if not host_profile or host_profile.id != booking.listing.host_profile_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to check out parkers for this space")
 
-        if booking.status != BookingStatusEnum.ACTIVE:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot check out. Booking status is {booking.status}")
+        allowed_checkout_statuses = [
+            BookingStatusEnum.ACTIVE,
+            BookingStatusEnum.PARKING_ACTIVE,
+            BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED,
+        ]
+
+        if booking.status not in allowed_checkout_statuses:
+            status_text = booking.status.value if hasattr(booking.status, 'value') else str(booking.status)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot check out. Booking is {status_text.replace('_', ' ').lower()}."
+            )
 
         session = db.query(ParkingSession).filter(ParkingSession.booking_id == booking.id).first()
         if not session:

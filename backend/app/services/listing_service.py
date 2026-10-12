@@ -21,10 +21,11 @@ class ListingService:
     def get_active_occupancy_count(db: Session, listing_id: int) -> int:
         from datetime import datetime, timezone
         from app.models.booking import Booking, BookingStatusEnum
-        now = datetime.now(timezone.utc)
+        now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
         return db.query(Booking).filter(
             Booking.listing_id == listing_id,
             Booking.status.in_([
+                BookingStatusEnum.BOOKING_CREATED,
                 BookingStatusEnum.CONFIRMED,
                 BookingStatusEnum.DRIVER_ARRIVED,
                 BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED,
@@ -37,7 +38,7 @@ class ListingService:
                 BookingStatusEnum.DISPUTE_OPENED,
             ]),
             or_(
-                Booking.end_time > now,
+                Booking.end_time >= now_naive,
                 Booking.status.in_([
                     BookingStatusEnum.DRIVER_ARRIVED,
                     BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED,
@@ -234,7 +235,17 @@ class ListingService:
         if city:
             query = query.filter(ParkingListing.city.ilike(f"%{city}%"))
         if area:
-            query = query.filter(ParkingListing.area.ilike(f"%{area}%"))
+            clean_area = area.replace(" ", "").replace("-", "")
+            query = query.filter(
+                or_(
+                    ParkingListing.area.ilike(f"%{area}%"),
+                    ParkingListing.area.ilike(f"%{clean_area}%"),
+                    ParkingListing.title.ilike(f"%{area}%"),
+                    ParkingListing.title.ilike(f"%{clean_area}%"),
+                    ParkingListing.exact_address.ilike(f"%{area}%"),
+                    ParkingListing.exact_address.ilike(f"%{clean_area}%")
+                )
+            )
         if is_covered is not None:
             query = query.filter(ParkingListing.is_covered == is_covered)
         if has_ev_charging is not None:
@@ -341,10 +352,36 @@ class ListingService:
 
             if not is_confirmed_parker and not is_host:
                 from app.models.booking import Booking, BookingStatusEnum
+                from datetime import datetime, timezone
+                now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
                 confirmed_booking = db.query(Booking).filter(
                     Booking.user_id == current_user_id,
                     Booking.listing_id == listing_id,
-                    Booking.status.in_([BookingStatusEnum.CONFIRMED, BookingStatusEnum.ACTIVE, BookingStatusEnum.COMPLETED])
+                    Booking.status.in_([
+                        BookingStatusEnum.CONFIRMED,
+                        BookingStatusEnum.BOOKING_CREATED,
+                        BookingStatusEnum.DRIVER_ARRIVED,
+                        BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED,
+                        BookingStatusEnum.KEY_HANDOVER_PENDING,
+                        BookingStatusEnum.KEY_RECEIVED,
+                        BookingStatusEnum.PARKING_ACTIVE,
+                        BookingStatusEnum.ACTIVE,
+                        BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED,
+                        BookingStatusEnum.RELEASE_OTP_VERIFIED,
+                    ]),
+                    or_(
+                        Booking.end_time >= now_naive,
+                        Booking.status.in_([
+                            BookingStatusEnum.DRIVER_ARRIVED,
+                            BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED,
+                            BookingStatusEnum.KEY_HANDOVER_PENDING,
+                            BookingStatusEnum.KEY_RECEIVED,
+                            BookingStatusEnum.PARKING_ACTIVE,
+                            BookingStatusEnum.ACTIVE,
+                            BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED,
+                            BookingStatusEnum.RELEASE_OTP_VERIFIED,
+                        ])
+                    )
                 ).first()
                 if confirmed_booking:
                     is_confirmed_parker = True
@@ -361,6 +398,15 @@ class ListingService:
             access_notes = None
 
         active_occupancy = ListingService.get_active_occupancy_count(db, listing.id)
+
+        # Privacy enforcement:
+        # Full exact location, access instructions, and host contact numbers (phone & email)
+        # are only revealed after booking is confirmed or to the host themselves.
+        host_raw_name = (
+            listing.host.user.full_name if (listing.host and listing.host.user and listing.host.user.full_name)
+            else (listing.host.legal_name if (listing.host and listing.host.legal_name) else "Host")
+        )
+        host_public_name = host_raw_name.split()[0] if host_raw_name else "Verified Host"
 
         return {
             "id": listing.id,
@@ -417,10 +463,10 @@ class ListingService:
             },
             "host": {
                 "id": listing.host.id,
-                "full_name": listing.host.user.full_name if (listing.host and listing.host.user) else (listing.host.legal_name if listing.host else "Host"),
-                "legal_name": (listing.host.legal_name or (listing.host.user.full_name if listing.host.user else "Host")) if listing.host else "Host",
-                "email": listing.host.user.email if (listing.host and listing.host.user) else None,
-                "phone_number": listing.host.user.phone_number if (listing.host and listing.host.user) else None,
+                "full_name": host_raw_name if show_exact else f"{host_public_name} (Host)",
+                "legal_name": (listing.host.legal_name or host_raw_name) if (listing.host and show_exact) else None,
+                "email": listing.host.user.email if (listing.host and listing.host.user and show_exact) else None,
+                "phone_number": listing.host.user.phone_number if (listing.host and listing.host.user and show_exact) else None,
                 "host_type": listing.host_type.value if hasattr(listing, "host_type") and listing.host_type else "INDIVIDUAL",
                 "email_verified": bool(listing.host.user.email_verified) if (listing.host and listing.host.user) else False,
                 "phone_verified": bool(listing.host.user.phone_verified) if (listing.host and listing.host.user) else False,

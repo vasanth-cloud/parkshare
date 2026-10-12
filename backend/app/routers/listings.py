@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.listing import ListingCreate, ListingUpdate, ListingOut
 from app.services.listing_service import ListingService
-from app.dependencies.auth import get_current_user, require_role
+from app.dependencies.auth import get_current_user, require_role, get_optional_current_user
 from app.models.user import User, UserRoleEnum, HostProfile
 from app.models.listing import ParkingListing, ListingStatusEnum
 
@@ -54,9 +54,11 @@ def get_my_listings(
 @router.get("/{listing_id}", response_model=ListingOut)
 def get_listing_detail(
     listing_id: int,
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
-    return ListingService.get_listing_by_id(db, listing_id)
+    user_id = current_user.id if current_user else None
+    return ListingService.get_listing_by_id(db, listing_id, current_user_id=user_id)
 
 @router.post("/{listing_id}/toggle-status", response_model=ListingOut)
 def toggle_listing_status(

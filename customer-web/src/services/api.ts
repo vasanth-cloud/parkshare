@@ -1,9 +1,28 @@
 import { User, Vehicle, ParkingListing, Booking } from '../types';
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
-const API_BASE = rawApiUrl 
-  ? `${rawApiUrl.replace(/\/+$/, '')}/api/v1` 
-  : '/api/v1';
+
+function resolveBackendBase(): string {
+  if (rawApiUrl) {
+    return rawApiUrl.replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:8000';
+    }
+    if (host === '10.0.2.2') {
+      return 'http://10.0.2.2:8000';
+    }
+    if (/^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(host)) {
+      return `http://${host}:8000`;
+    }
+  }
+  return 'http://192.168.1.17:8000';
+}
+
+export const BACKEND_BASE = resolveBackendBase();
+const API_BASE = `${BACKEND_BASE}/api/v1`;
 
 function getHeaders(): HeadersInit {
   const token = localStorage.getItem('parkshare_customer_token');
@@ -58,6 +77,16 @@ export const api = {
     return res.json();
   },
 
+  updateProfilePhoto: async (profile_photo_url: string): Promise<User> => {
+    const res = await fetch(`${API_BASE}/auth/profile-photo`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ profile_photo_url }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to update profile photo'));
+    return res.json();
+  },
+
   // Vehicles
   getVehicles: async (): Promise<Vehicle[]> => {
     const res = await fetch(`${API_BASE}/vehicles`, { headers: getHeaders() });
@@ -73,6 +102,14 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to add vehicle');
     return res.json();
+  },
+
+  deleteVehicle: async (id: number): Promise<void> => {
+    const res = await fetch(`${API_BASE}/vehicles/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to remove vehicle');
   },
 
   // Listings
@@ -140,7 +177,10 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('Payment verification failed');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Payment verification failed');
+    }
     return res.json();
   },
 
@@ -306,6 +346,39 @@ export const api = {
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Release OTP verification failed'));
     return res.json();
+  },
+
+  // AI Chatbot Assistant
+  sendChatMessage: async (message: string, history: { role: string; content: string }[] = []): Promise<{
+    reply: string;
+    recommended_listings: ParkingListing[];
+    suggestions: string[];
+  }> => {
+    const res = await fetch(`${API_BASE}/chatbot/message`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ message, history }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'AI assistant unavailable right now'));
+    return res.json();
+  },
+
+  getChatSuggestions: async (): Promise<string[]> => {
+    try {
+      const res = await fetch(`${API_BASE}/chatbot/suggestions`, {
+        headers: getHeaders(),
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.suggestions || [];
+    } catch {
+      return [
+        "I am going to Whitefield and need parking space",
+        "Show spots with EV charging",
+        "Find parking near BTM Layout",
+        "How does key handover work?"
+      ];
+    }
   },
 };
 

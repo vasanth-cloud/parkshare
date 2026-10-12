@@ -30,6 +30,12 @@ def get_admin_stats(
     platform_commission = db.query(func.sum(Payment.platform_commission)).filter(Payment.status == PaymentStatusEnum.PAID).scalar() or 0.0
     total_payouts = db.query(func.sum(Payment.host_gross_earning)).filter(Payment.status == PaymentStatusEnum.PAID).scalar() or 0.0
 
+    from app.services.driver_service import DriverService
+    from app.services.car_spa_service import CarSpaService
+
+    total_drivers = len(DriverService.get_all_drivers())
+    total_car_spas = len(CarSpaService.get_all_spas())
+
     return AdminStatsOut(
         total_users=total_users,
         total_hosts=total_hosts,
@@ -39,7 +45,9 @@ def get_admin_stats(
         active_bookings=active_bookings,
         total_revenue=total_revenue,
         platform_commission_earned=platform_commission,
-        total_payouts=total_payouts
+        total_payouts=total_payouts,
+        total_drivers=total_drivers,
+        total_car_spas=total_car_spas
     )
 
 @router.get("/listings/pending", response_model=List[ListingOut])

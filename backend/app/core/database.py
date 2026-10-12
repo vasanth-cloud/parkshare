@@ -73,14 +73,17 @@ def run_migrations():
             "ALTER TABLE bookings ADD COLUMN payment_expires_at TIMESTAMP WITH TIME ZONE",
             # users verification
             "ALTER TABLE users ADD COLUMN profile_photo_url VARCHAR(500)",
+            "ALTER TABLE users ALTER COLUMN profile_photo_url TYPE TEXT",
             "ALTER TABLE users ADD COLUMN phone_verified BOOLEAN DEFAULT FALSE",
             "ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE",
             # host_profiles identity verification
             "ALTER TABLE host_profiles ADD COLUMN legal_name VARCHAR(255)",
             "ALTER TABLE host_profiles ADD COLUMN profile_photo_url VARCHAR(500)",
+            "ALTER TABLE host_profiles ALTER COLUMN profile_photo_url TYPE TEXT",
             "ALTER TABLE host_profiles ADD COLUMN gov_id_type VARCHAR(50)",
             "ALTER TABLE host_profiles ADD COLUMN gov_id_number VARCHAR(100)",
             "ALTER TABLE host_profiles ADD COLUMN gov_id_document_url VARCHAR(500)",
+            "ALTER TABLE host_profiles ALTER COLUMN gov_id_document_url TYPE TEXT",
             "ALTER TABLE host_profiles ADD COLUMN id_verification_provider VARCHAR(100) DEFAULT 'DigiLocker Sandbox'",
             "ALTER TABLE host_profiles ADD COLUMN id_verified_at TIMESTAMP WITH TIME ZONE"
         ]

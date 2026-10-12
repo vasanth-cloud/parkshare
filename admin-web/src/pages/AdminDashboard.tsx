@@ -27,21 +27,35 @@ export const AdminDashboard: React.FC = () => {
           <p className="text-xs text-slate-400 mt-1">Real-time marketplace system statistics & financial performance</p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             to="/approvals"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center space-x-1.5 shadow-sm"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center space-x-1.5 shadow-sm"
           >
-            <CheckSquare className="w-4 h-4" />
-            <span>Moderate Spaces ({stats?.pending_listings || 0})</span>
+            <CheckSquare className="w-3.5 h-3.5" />
+            <span>Spaces ({stats?.pending_listings || 0})</span>
+          </Link>
+
+          <Link
+            to="/drivers"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center space-x-1.5 shadow-sm"
+          >
+            <span>🧑‍✈️ Drivers ({stats?.total_drivers || 0})</span>
+          </Link>
+
+          <Link
+            to="/car-spas"
+            className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center space-x-1.5 shadow-sm"
+          >
+            <span>✨ Car Spas ({stats?.total_car_spas || 0})</span>
           </Link>
 
           <Link
             to="/users"
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center space-x-1.5 border border-slate-700"
+            className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center space-x-1.5 border border-slate-700"
           >
-            <Users className="w-4 h-4 text-emerald-400" />
-            <span>Manage Users</span>
+            <Users className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Users</span>
           </Link>
         </div>
       </div>
@@ -115,6 +129,94 @@ export const AdminDashboard: React.FC = () => {
               <p className="text-xs text-slate-400 leading-relaxed">
                 Net earnings remitted directly to registered space hosts via automated UPI bank transfers.
               </p>
+            </div>
+          </div>
+          {/* Multi-Service Operations Ecosystem Hub */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center space-x-2">
+                  <span>ParkShare Multi-Service Operations</span>
+                </h2>
+                <p className="text-xs text-slate-400">Direct operational management across parking, chauffeurs, and car wash</p>
+              </div>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                3 Platforms Live
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* Service 1: Parking Radar */}
+              <div className="bg-slate-900/90 rounded-3xl p-5 border border-emerald-900/50 space-y-4 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="w-10 h-10 rounded-2xl bg-emerald-950 flex items-center justify-center text-xl border border-emerald-800">
+                      🅿️
+                    </span>
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800">
+                      {stats.total_listings} Spaces
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-white">Parking Radar</h3>
+                  <p className="text-xs text-slate-400">
+                    Host driveway & garage listings, physical GPS spot verification, PIN check-in custody.
+                  </p>
+                </div>
+                <Link
+                  to="/approvals"
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 rounded-xl transition text-center block shadow-sm"
+                >
+                  Moderate Parking Spaces →
+                </Link>
+              </div>
+
+              {/* Service 2: Acting Drivers */}
+              <div className="bg-slate-900/90 rounded-3xl p-5 border border-indigo-900/50 space-y-4 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="w-10 h-10 rounded-2xl bg-indigo-950 flex items-center justify-center text-xl border border-indigo-800">
+                      🧑‍✈️
+                    </span>
+                    <span className="text-xs font-bold text-indigo-400 bg-indigo-950/80 px-2 py-0.5 rounded-full border border-indigo-800">
+                      {stats.total_drivers || 3} Registered
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-white">Acting Drivers Fleet</h3>
+                  <p className="text-xs text-slate-400">
+                    Certified chauffeur applications, driver verification, transmission credentials, and trip status.
+                  </p>
+                </div>
+                <Link
+                  to="/drivers"
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2.5 rounded-xl transition text-center block shadow-sm"
+                >
+                  Manage Acting Drivers →
+                </Link>
+              </div>
+
+              {/* Service 3: Car Spa Detailing */}
+              <div className="bg-slate-900/90 rounded-3xl p-5 border border-cyan-900/50 space-y-4 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="w-10 h-10 rounded-2xl bg-cyan-950 flex items-center justify-center text-xl border border-cyan-800">
+                      ✨
+                    </span>
+                    <span className="text-xs font-bold text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-800">
+                      {stats.total_car_spas || 3} Centers
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-white">Car Spa & Detailing Hubs</h3>
+                  <p className="text-xs text-slate-400">
+                    Doorstep mobile detailing vans & in-bay workshops, packages, slot capacity, and service approvals.
+                  </p>
+                </div>
+                <Link
+                  to="/car-spas"
+                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs py-2.5 rounded-xl transition text-center block shadow-sm"
+                >
+                  Manage Car Spas →
+                </Link>
+              </div>
             </div>
           </div>
         </>

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.schemas.user import UserRegister, UserLogin, Token, UserOut, HostProfileCreate, HostProfileOut, HostSummaryOut
+from app.schemas.user import UserRegister, UserLogin, Token, UserOut, HostProfileCreate, HostProfileOut, HostSummaryOut, ProfilePhotoUpdate
 from app.services.auth_service import AuthService
 from app.dependencies.auth import get_current_user
-from app.models.user import User
+from app.models.user import User, HostProfile
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -33,6 +33,35 @@ def login(data: UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
     hp = current_user.host_profile
+    return UserOut(
+        id=current_user.id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        phone_number=current_user.phone_number,
+        profile_photo_url=current_user.profile_photo_url or (hp.profile_photo_url if hp else None),
+        is_active=current_user.is_active,
+        is_verified=current_user.is_verified,
+        phone_verified=current_user.phone_verified or (hp.is_identity_verified if hp else False),
+        email_verified=current_user.email_verified or (hp.is_identity_verified if hp else False),
+        roles=[r.role for r in current_user.roles],
+        created_at=current_user.created_at
+    )
+
+@router.put("/profile-photo", response_model=UserOut)
+@router.post("/profile-photo", response_model=UserOut)
+def update_profile_photo(
+    data: ProfilePhotoUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    current_user.profile_photo_url = data.profile_photo_url
+    hp = current_user.host_profile
+    if not hp:
+        hp = db.query(HostProfile).filter(HostProfile.user_id == current_user.id).first()
+    if hp:
+        hp.profile_photo_url = data.profile_photo_url
+    db.commit()
+    db.refresh(current_user)
     return UserOut(
         id=current_user.id,
         email=current_user.email,
@@ -91,13 +120,20 @@ def get_host_summary(
 
     upcoming_count = db.query(Booking).filter(
         Booking.listing_id.in_(listing_ids),
-        Booking.status.in_([BookingStatusEnum.CONFIRMED, BookingStatusEnum.PENDING_PAYMENT, BookingStatusEnum.PENDING_APPROVAL]),
-        Booking.start_time > now
+        Booking.status.in_([
+            BookingStatusEnum.CONFIRMED,
+            BookingStatusEnum.DRIVER_ARRIVED,
+            BookingStatusEnum.KEY_HANDOVER_PENDING,
+            BookingStatusEnum.PARKING_ACTIVE,
+            BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED,
+            BookingStatusEnum.PENDING_APPROVAL,
+            BookingStatusEnum.PENDING_PAYMENT,
+        ])
     ).count()
 
     active_count = db.query(Booking).filter(
         Booking.listing_id.in_(listing_ids),
-        Booking.status == BookingStatusEnum.ACTIVE
+        Booking.status.in_([BookingStatusEnum.ACTIVE, BookingStatusEnum.PARKING_ACTIVE])
     ).count()
 
     # Calculate aggregate host rating across listings

@@ -13,6 +13,10 @@ export interface User {
   phone_verified?: boolean;
   email_verified?: boolean;
   is_identity_verified?: boolean;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   roles: UserRole[];
   created_at: string;
 }
@@ -161,6 +165,14 @@ export interface Booking {
     model?: string;
     color?: string;
   };
+  vehicle_license_plate?: string;
+  initial_odometer_photo_url?: string;
+  user?: {
+    id?: number;
+    full_name?: string;
+    phone_number?: string;
+    email?: string;
+  };
   listing?: ParkingListing;
   payment_expires_at?: string;
   created_at: string;
@@ -172,5 +184,46 @@ export interface HostSummary {
   upcoming_bookings: number;
   active_parking: number;
   rating: number;
+}
+
+export interface DriverProfile {
+  id: string;
+  name: string;
+  photo: string;
+  rating: number;
+  trips: number;
+  experienceYears: number;
+  transmission: string[];
+  languages: string[];
+  badge: string;
+  eta: string;
+  hourlyRate: number;
+  isAvailable: boolean;
+  phone?: string;
+  city?: string;
+  dlNumber?: string;
+  status: 'ACTIVE' | 'PENDING_APPROVAL' | 'REJECTED' | 'SUSPENDED';
+  rejectionReason?: string;
+  createdAt?: string;
+}
+
+export interface CarSpaCenter {
+  id: string;
+  centerName: string;
+  ownerName: string;
+  phone: string;
+  city: string;
+  address: string;
+  serviceType: 'DOORSTEP_MOBILE' | 'WORKSHOP_BAY' | 'BOTH';
+  bayCapacity: number;
+  operatingHours: string;
+  servicesOffered: string[];
+  rating: number;
+  totalOrders: number;
+  isVerified: boolean;
+  status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'REJECTED';
+  photo?: string;
+  rejectionReason?: string;
+  createdAt?: string;
 }
 

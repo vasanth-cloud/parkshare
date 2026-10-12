@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine, run_migrations
-from app.routers import auth, vehicles, listings, bookings, sessions, payments, reviews, admin, disputes, verification
+from app.routers import auth, vehicles, listings, bookings, sessions, payments, reviews, admin, disputes, verification, chatbot, drivers, car_spa
 
 # Create Database tables & run column migrations on startup
 Base.metadata.create_all(bind=engine)
@@ -41,6 +41,9 @@ app.include_router(reviews.router, prefix=settings.API_V1_STR)
 app.include_router(admin.router, prefix=settings.API_V1_STR)
 app.include_router(disputes.router, prefix=settings.API_V1_STR)
 app.include_router(verification.router, prefix=settings.API_V1_STR)
+app.include_router(chatbot.router, prefix=settings.API_V1_STR)
+app.include_router(drivers.router, prefix=settings.API_V1_STR)
+app.include_router(car_spa.router, prefix=settings.API_V1_STR)
 
 
 @app.api_route("/", methods=["GET", "HEAD"])

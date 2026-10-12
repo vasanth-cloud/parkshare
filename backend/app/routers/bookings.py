@@ -41,6 +41,12 @@ ACTIVE_BOOKING_STATUSES = [
     BookingStatusEnum.VEHICLE_RELEASED,
 ]
 
+def format_status(status_val) -> str:
+    val = status_val.value if hasattr(status_val, 'value') else str(status_val)
+    if "." in val:
+        val = val.split(".")[-1]
+    return val.replace("_", " ").lower()
+
 def serialize_booking(b: Booking, current_user: User, db: Session) -> dict:
     is_active_or_done = (b.status in ACTIVE_BOOKING_STATUSES) or (b.status == BookingStatusEnum.COMPLETED)
     listing_detail = ListingService.get_listing_by_id(
@@ -183,7 +189,7 @@ def mark_driver_arrived(
     if booking.status not in [BookingStatusEnum.CONFIRMED, BookingStatusEnum.BOOKING_CREATED]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot mark arrival for booking in status {booking.status}"
+            detail=f"Cannot mark arrival for booking in status {format_status(booking.status)}"
         )
 
     now = datetime.now(timezone.utc)
@@ -225,7 +231,7 @@ def submit_odometer_inspection(
     if booking.status not in [BookingStatusEnum.DRIVER_ARRIVED, BookingStatusEnum.CONFIRMED]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot submit odometer for booking in status {booking.status}"
+            detail=f"Cannot submit odometer for booking in status {format_status(booking.status)}"
         )
 
     if not data.odometer_photo_url:
@@ -288,7 +294,7 @@ def confirm_key_received(
     if booking.status not in allowed_prior_statuses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot confirm key handover for booking in status {booking.status}"
+            detail=f"Cannot confirm key handover for booking in status {format_status(booking.status)}"
         )
 
     now = datetime.now(timezone.utc)
@@ -342,7 +348,7 @@ def request_vehicle_collection(
     if booking.status not in [BookingStatusEnum.PARKING_ACTIVE, BookingStatusEnum.ACTIVE]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot request vehicle collection. Current status is {booking.status}"
+            detail=f"Cannot request vehicle collection. Current status is {format_status(booking.status)}"
         )
 
     now = datetime.now(timezone.utc)
@@ -430,7 +436,7 @@ def verify_release_otp(
     if booking.status != BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot verify release OTP. Booking status is {booking.status}"
+            detail=f"Cannot verify release OTP. Booking status is {format_status(booking.status)}"
         )
 
     if not booking.release_otp_hash:
@@ -669,7 +675,7 @@ def end_parking(
     if booking.status not in allowed_statuses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot end parking for booking in {booking.status} status"
+            detail=f"Cannot end parking for booking in {format_status(booking.status)} status"
         )
 
     # Transition to VEHICLE_COLLECTION_REQUESTED

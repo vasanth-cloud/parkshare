@@ -7,6 +7,7 @@ export interface User {
   email: string;
   full_name: string;
   phone_number?: string;
+  profile_photo_url?: string;
   is_active: boolean;
   is_verified: boolean;
   roles: UserRole[];
@@ -53,6 +54,21 @@ export interface HostVerification {
   is_fully_verified: boolean;
 }
 
+export interface HostSummary {
+  id: number;
+  full_name?: string;
+  legal_name?: string;
+  email?: string;
+  phone_number?: string;
+  host_type?: string;
+  email_verified?: boolean;
+  phone_verified?: boolean;
+  is_identity_verified?: boolean;
+  government_id_type?: string;
+  property_proof_verified?: boolean;
+  authorization_status?: string;
+}
+
 export interface ParkingListing {
   id: number;
   host_profile_id: number;
@@ -95,6 +111,7 @@ export interface ParkingListing {
   images: ListingImage[];
   pricing_rule?: PricingRule;
   host_verification?: HostVerification;
+  host?: HostSummary;
   created_at: string;
 }
 

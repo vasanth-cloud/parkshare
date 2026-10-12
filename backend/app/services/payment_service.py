@@ -19,18 +19,14 @@ class PaymentService:
         if booking.status not in [BookingStatusEnum.PENDING_PAYMENT, BookingStatusEnum.BOOKING_CREATED]:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Booking is in {booking.status} status")
 
-        # Check 1-minute session timeout
+        # Check session timeout - refresh if user is actively initiating checkout
         now = datetime.now(timezone.utc)
         if booking.payment_expires_at:
             exp = booking.payment_expires_at if booking.payment_expires_at.tzinfo else booking.payment_expires_at.replace(tzinfo=timezone.utc)
             if exp < now:
-                booking.status = BookingStatusEnum.EXPIRED
-                booking.cancellation_reason = "Payment session timed out (1-minute limit reached)"
+                booking.payment_expires_at = now + timedelta(minutes=15)
+                booking.status = BookingStatusEnum.PENDING_PAYMENT
                 db.commit()
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Payment session has expired (1-minute limit reached). Please place a new reservation."
-                )
 
         amount_in_paise = max(100, int(round(booking.total_amount * 100)))  # Minimum 100 paise (Rs 1)
         order_id = f"order_ps_{random.randint(1000000, 9999999)}"
@@ -110,8 +106,11 @@ class PaymentService:
             if not payment:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment order record not found")
 
-        # Verify Razorpay signature
-        if not settings.RAZORPAY_MOCK_MODE:
+        # Verify Razorpay signature or verify against Razorpay API
+        payment_verified = False
+        if settings.RAZORPAY_MOCK_MODE:
+            payment_verified = True
+        else:
             msg = f"{order_id}|{payment_id}".encode("utf-8")
             generated_signature = hmac.new(
                 settings.RAZORPAY_KEY_SECRET.encode("utf-8"),
@@ -119,27 +118,31 @@ class PaymentService:
                 hashlib.sha256
             ).hexdigest()
 
-            if generated_signature != signature:
-                payment.status = PaymentStatusEnum.FAILED
-                db.commit()
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Payment verification failed: Invalid Razorpay signature"
-                )
+            if generated_signature == signature:
+                payment_verified = True
+            else:
+                # Direct API verification with Razorpay
+                try:
+                    import httpx
+                    rzp_res = httpx.get(
+                        f"https://api.razorpay.com/v1/payments/{payment_id}",
+                        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET),
+                        timeout=5.0
+                    )
+                    if rzp_res.status_code == 200:
+                        rzp_data = rzp_res.json()
+                        if rzp_data.get("status") in ["captured", "authorized"] and rzp_data.get("order_id") == order_id:
+                            payment_verified = True
+                except Exception:
+                    pass
 
-        # Check 1-minute session timeout (with 15s grace for network latency)
-        now = datetime.now(timezone.utc)
-        if booking.payment_expires_at:
-            from datetime import timedelta
-            exp = booking.payment_expires_at if booking.payment_expires_at.tzinfo else booking.payment_expires_at.replace(tzinfo=timezone.utc)
-            if (exp + timedelta(seconds=15)) < now and booking.status != BookingStatusEnum.CONFIRMED:
-                booking.status = BookingStatusEnum.EXPIRED
-                booking.cancellation_reason = "Payment session timed out (1-minute limit reached)"
-                db.commit()
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Payment session timed out (1-minute limit reached). Payment could not be confirmed."
-                )
+        if not payment_verified:
+            payment.status = PaymentStatusEnum.FAILED
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Payment verification failed: Invalid Razorpay signature"
+            )
 
         # Check that space has capacity before confirming
         from app.models.listing import ParkingListing

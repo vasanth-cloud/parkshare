@@ -57,3 +57,16 @@ htmlcov/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Android binaries & Keystores (Security & Size)
+*.apk
+*.aab
+*.jks
+*.keystore
+*.flat
+local.properties
+.gradle/
+**/android/.gradle/
+**/android/build/
+**/android/app/build/
+**/android/local.properties

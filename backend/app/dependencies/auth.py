@@ -38,3 +38,19 @@ def require_role(required_role: UserRoleEnum):
             )
         return current_user
     return role_checker
+
+oauth2_optional_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+
+def get_optional_current_user(token: str = Depends(oauth2_optional_scheme), db: Session = Depends(get_db)) -> User | None:
+    if not token:
+        return None
+    try:
+        payload = decode_token(token)
+        if payload is None:
+            return None
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        return db.query(User).filter(User.id == int(user_id)).first()
+    except Exception:
+        return None

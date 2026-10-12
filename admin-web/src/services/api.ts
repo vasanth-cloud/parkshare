@@ -1,4 +1,4 @@
-import { User, ParkingListing, AdminStats, Dispute } from '../types';
+import { User, ParkingListing, AdminStats, Dispute, DriverProfile, CarSpaCenter } from '../types';
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
 const API_BASE = rawApiUrl 
@@ -97,6 +97,70 @@ export const api = {
       body: JSON.stringify({ status, resolution_notes }),
     });
     if (!res.ok) throw new Error((await res.json()).detail || 'Failed to update dispute');
+    return res.json();
+  },
+
+  // Acting Drivers Administration
+  getDrivers: async (status?: string, city?: string): Promise<DriverProfile[]> => {
+    const params = new URLSearchParams();
+    if (status && status !== 'ALL') params.append('status', status);
+    if (city) params.append('city', city);
+    const query = params.toString() ? `?${params.toString()}` : '';
+
+    const res = await fetch(`${API_BASE}/drivers/all${query}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load drivers directory');
+    return res.json();
+  },
+
+  registerDriver: async (data: any): Promise<DriverProfile> => {
+    const res = await fetch(`${API_BASE}/drivers/register`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to register driver');
+    return res.json();
+  },
+
+  updateDriverStatus: async (driverId: string, status: string, reason?: string): Promise<DriverProfile> => {
+    const res = await fetch(`${API_BASE}/drivers/${driverId}/status`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ status, reason }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to update driver status');
+    return res.json();
+  },
+
+  // Car Spa & Detailing Administration
+  getCarSpas: async (status?: string, city?: string): Promise<CarSpaCenter[]> => {
+    const params = new URLSearchParams();
+    if (status && status !== 'ALL') params.append('status', status);
+    if (city) params.append('city', city);
+    const query = params.toString() ? `?${params.toString()}` : '';
+
+    const res = await fetch(`${API_BASE}/car-spa/all${query}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load car spas directory');
+    return res.json();
+  },
+
+  registerCarSpa: async (data: any): Promise<CarSpaCenter> => {
+    const res = await fetch(`${API_BASE}/car-spa/register`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to register car spa');
+    return res.json();
+  },
+
+  updateCarSpaStatus: async (spaId: string, status: string, reason?: string): Promise<CarSpaCenter> => {
+    const res = await fetch(`${API_BASE}/car-spa/${spaId}/status`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ status, reason }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to update car spa status');
     return res.json();
   },
 };

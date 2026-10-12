@@ -34,6 +34,16 @@ export const Navbar: React.FC = () => {
                   <span>Space Approvals</span>
                 </Link>
 
+                <Link to="/drivers" className="flex items-center space-x-1 hover:text-indigo-400 transition text-sm font-medium">
+                  <span className="text-base leading-none">🧑‍✈️</span>
+                  <span>Acting Drivers</span>
+                </Link>
+
+                <Link to="/car-spas" className="flex items-center space-x-1 hover:text-cyan-400 transition text-sm font-medium">
+                  <span className="text-base leading-none">✨</span>
+                  <span>Car Spas</span>
+                </Link>
+
                 <Link to="/disputes" className="flex items-center space-x-1 hover:text-emerald-400 transition text-sm font-medium">
                   <ShieldAlert className="w-4 h-4" />
                   <span>Disputes & Reports</span>

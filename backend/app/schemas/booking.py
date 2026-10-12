@@ -120,6 +120,8 @@ class SessionOut(BaseModel):
     verification_method: Optional[VerificationMethodEnum] = None
     overtime_hours: float = 0.0
     overtime_fee: float = 0.0
+    is_already_active: Optional[bool] = False
+    message: Optional[str] = None
 
     class Config:
         from_attributes = True

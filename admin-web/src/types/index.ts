@@ -97,6 +97,8 @@ export interface AdminStats {
   total_revenue: number;
   platform_commission_earned: number;
   total_payouts: number;
+  total_drivers?: number;
+  total_car_spas?: number;
 }
 
 export interface Dispute {
@@ -117,5 +119,46 @@ export interface Dispute {
   reported_user_name?: string;
   booking_reference?: string;
   listing_title?: string;
+}
+
+export interface DriverProfile {
+  id: string;
+  name: string;
+  photo: string;
+  rating: number;
+  trips: number;
+  experienceYears: number;
+  transmission: string[];
+  languages: string[];
+  badge: string;
+  eta: string;
+  hourlyRate: number;
+  isAvailable: boolean;
+  phone?: string;
+  city?: string;
+  dlNumber?: string;
+  status: 'ACTIVE' | 'PENDING_APPROVAL' | 'REJECTED' | 'SUSPENDED';
+  rejectionReason?: string;
+  createdAt?: string;
+}
+
+export interface CarSpaCenter {
+  id: string;
+  centerName: string;
+  ownerName: string;
+  phone: string;
+  city: string;
+  address: string;
+  serviceType: 'DOORSTEP_MOBILE' | 'WORKSHOP_BAY' | 'BOTH';
+  bayCapacity: number;
+  operatingHours: string;
+  servicesOffered: string[];
+  rating: number;
+  totalOrders: number;
+  isVerified: boolean;
+  status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'REJECTED';
+  photo?: string;
+  rejectionReason?: string;
+  createdAt?: string;
 }
 

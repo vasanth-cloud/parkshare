@@ -8,16 +8,21 @@ import {
   Phone, 
   Mail, 
   User as UserIcon, 
-  FileText, 
   Camera, 
   Upload, 
-  RefreshCw, 
-  X, 
   ArrowRight, 
-  Sparkles,
-  Check,
-  CreditCard
+  ArrowLeft,
+  Sparkles, 
+  Check, 
+  CreditCard, 
+  RefreshCw, 
+  X,
+  Lock,
+  FileText
 } from 'lucide-react';
+
+import { useAuth } from '../context/AuthContext';
+import { compressImageToDataUrl } from '../utils/imageCompressor';
 
 interface Props {
   isOpen: boolean;
@@ -36,6 +41,12 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
   initialEmail = '',
   initialName = '',
 }) => {
+  const { updateUser } = useAuth();
+  
+  // Stepper state: 1 = Basic Info, 2 = Photo ID, 3 = Government ID
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+
+  // Form states
   const [legalName, setLegalName] = useState(initialName);
   
   // Mobile Verification State
@@ -45,6 +56,7 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [sendingPhoneOtp, setSendingPhoneOtp] = useState(false);
   const [verifyingPhoneOtp, setVerifyingPhoneOtp] = useState(false);
+  const [phoneDevOtp, setPhoneDevOtp] = useState<string | null>(null);
 
   // Email Verification State
   const [email, setEmail] = useState(initialEmail);
@@ -53,8 +65,9 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
   const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
+  const [emailDevOtp, setEmailDevOtp] = useState<string | null>(null);
 
-  // Profile Photo State (Live Camera + Device Upload)
+  // Profile Photo State
   const [photoMode, setPhotoMode] = useState<'upload' | 'camera'>('upload');
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -63,7 +76,7 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Government ID State (Aadhaar / PAN / DL / Passport)
+  // Government ID State
   const [govIdType, setGovIdType] = useState<'AADHAAR' | 'PAN' | 'DRIVING_LICENCE' | 'PASSPORT'>('AADHAAR');
   const [govIdNumber, setGovIdNumber] = useState('');
   const [govIdDocUrl, setGovIdDocUrl] = useState('');
@@ -74,7 +87,25 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Stop camera when closing or unmounting
+  // Format ID numbers
+  const formatGovIdInput = (value: string, type: 'AADHAAR' | 'PAN' | 'DRIVING_LICENCE' | 'PASSPORT'): string => {
+    if (type === 'AADHAAR') {
+      const digits = value.replace(/\D/g, '').slice(0, 12);
+      const groups = digits.match(/.{1,4}/g);
+      return groups ? groups.join(' ') : '';
+    }
+    if (type === 'PAN') {
+      return value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase();
+    }
+    if (type === 'DRIVING_LICENCE') {
+      return value.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 16).toUpperCase();
+    }
+    if (type === 'PASSPORT') {
+      return value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 9).toUpperCase();
+    }
+    return value.toUpperCase();
+  };
+
   const stopCamera = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
@@ -107,12 +138,10 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
-  // 1. Mobile OTP Handlers
+  // Mobile OTP Handlers
   const handleSendPhoneOtp = async () => {
     if (!phone || phone.trim().length < 10) {
-      setError('Please enter a valid 10-digit mobile number with country code (e.g. +91 9876543210)');
+      setError('Please enter a valid 10-digit mobile number');
       return;
     }
     setError('');
@@ -120,18 +149,18 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
     try {
       const res = await api.sendMobileOtp(phone.trim());
       setIsPhoneOtpSent(true);
-      if (res.sms_delivered) {
-        setSuccessMsg(`✓ 6-digit verification code has been dispatched via real SMS to ${phone}. Please check your phone SMS.`);
-        setPhoneOtp('');
-      } else if (res.dev_otp) {
+      if (res.dev_otp) {
+        setPhoneDevOtp(res.dev_otp);
         setPhoneOtp(res.dev_otp);
-        setSuccessMsg(`✓ Verification code: ${res.dev_otp} (Auto-filled)`);
+        setSuccessMsg(`✓ Verification code ready! Auto-filled: ${res.dev_otp}`);
+      } else if (res.sms_delivered) {
+        setSuccessMsg(`✓ Verification code dispatched via SMS to ${phone}`);
+        setPhoneOtp('');
       } else {
         setSuccessMsg(res.message);
-        setPhoneOtp('');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to send Mobile OTP. Please check the mobile number.');
+      setError(err.message || 'Failed to send Mobile OTP');
     } finally {
       setSendingPhoneOtp(false);
     }
@@ -147,15 +176,15 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
     try {
       await api.verifyMobileOtp(phone.trim(), phoneOtp.trim());
       setIsPhoneVerified(true);
-      setSuccessMsg('✓ Mobile number successfully verified via SMS OTP!');
+      setSuccessMsg('✓ Mobile number verified successfully!');
     } catch (err: any) {
-      setError(err.message || 'Invalid Mobile OTP. Please check the code received on your phone.');
+      setError(err.message || 'Invalid Mobile OTP');
     } finally {
       setVerifyingPhoneOtp(false);
     }
   };
 
-  // 2. Email OTP Handlers
+  // Email OTP Handlers
   const handleSendEmailOtp = async () => {
     if (!email || !email.includes('@')) {
       setError('Please enter a valid email address');
@@ -166,14 +195,18 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
     try {
       const res = await api.sendEmailOtp(email.trim().toLowerCase());
       setIsEmailOtpSent(true);
-      if (res.email_delivered) {
-        setSuccessMsg(`✓ 6-digit verification code has been dispatched via email to ${email}. Please check your inbox or spam.`);
+      if (res.dev_otp) {
+        setEmailDevOtp(res.dev_otp);
+        setEmailOtp(res.dev_otp);
+        setSuccessMsg(`✓ Verification code ready! Auto-filled: ${res.dev_otp}`);
+      } else if (res.email_delivered) {
+        setSuccessMsg(`✓ Verification code dispatched to ${email}`);
+        setEmailOtp('');
       } else {
         setSuccessMsg(res.message);
       }
-      setEmailOtp('');
     } catch (err: any) {
-      setError(err.message || 'Failed to send Email OTP. Please check the email address.');
+      setError(err.message || 'Failed to send Email verification code');
     } finally {
       setSendingEmailOtp(false);
     }
@@ -181,7 +214,7 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
 
   const handleVerifyEmailOtp = async () => {
     if (!emailOtp || emailOtp.trim().length !== 6) {
-      setError('Please enter the 6-digit OTP received in your email');
+      setError('Please enter the 6-digit OTP sent to your email');
       return;
     }
     setError('');
@@ -189,25 +222,21 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
     try {
       await api.verifyEmailOtp(email.trim().toLowerCase(), emailOtp.trim());
       setIsEmailVerified(true);
-      setSuccessMsg('✓ Email address successfully verified via Email OTP!');
+      setSuccessMsg('✓ Email address verified successfully!');
     } catch (err: any) {
-      setError(err.message || 'Invalid Email OTP. Please check the code sent to your email.');
+      setError(err.message || 'Invalid Email OTP');
     } finally {
       setVerifyingEmailOtp(false);
     }
   };
 
-  // 3. Camera Live Photo Handlers
+  // Camera Handlers
   const startCamera = async () => {
     setError('');
     try {
       stopCamera();
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'user',
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-        },
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
       });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -215,8 +244,8 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
         videoRef.current.play();
       }
       setIsCameraActive(true);
-    } catch (err: any) {
-      setError('Camera access denied or unavailable. Please upload a photo from your device instead.');
+    } catch (err) {
+      setError('Camera access unavailable. You can upload a photo from your device instead.');
     }
   };
 
@@ -229,26 +258,41 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
       const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Failed to create photo canvas');
+      if (!ctx) throw new Error('Failed to capture frame');
 
-      // Mirror live camera capture
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       canvas.toBlob(async (blob) => {
         if (!blob) {
-          setError('Failed to capture photo frame');
+          setError('Failed to capture frame');
           setIsUploadingPhoto(false);
           return;
         }
+
+        const compressedDataUrl = await compressImageToDataUrl(blob, 240, 0.85);
+        if (compressedDataUrl) {
+          try {
+            localStorage.setItem('parkshare_host_avatar', compressedDataUrl);
+          } catch {}
+          setProfilePhotoUrl(compressedDataUrl);
+          updateUser({ profile_photo_url: compressedDataUrl });
+        }
+
+        stopCamera();
+        setSuccessMsg('✓ Selfie photo captured successfully!');
+
         try {
-          const uploadRes = await api.uploadFile(blob, 'live_host_photo.jpg');
-          setProfilePhotoUrl(uploadRes.url);
-          stopCamera();
-          setSuccessMsg('✓ Live face photo captured and verified successfully!');
-        } catch (err: any) {
-          setError(err.message || 'Failed to upload captured photo');
+          const res = await api.uploadFile(blob, 'host_live_photo.jpg');
+          if (res?.url) {
+            setProfilePhotoUrl(res.url);
+            api.updateProfilePhoto(res.url).catch(() => {});
+          }
+        } catch {
+          if (compressedDataUrl) {
+            api.updateProfilePhoto(compressedDataUrl).catch(() => {});
+          }
         } finally {
           setIsUploadingPhoto(false);
         }
@@ -259,7 +303,6 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
     }
   };
 
-  // 4. Device Upload Handler for Profile Photo
   const handleDevicePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -271,18 +314,33 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
 
     setError('');
     setIsUploadingPhoto(true);
+
+    const compressedDataUrl = await compressImageToDataUrl(file, 240, 0.85);
+    if (compressedDataUrl) {
+      try {
+        localStorage.setItem('parkshare_host_avatar', compressedDataUrl);
+      } catch {}
+      setProfilePhotoUrl(compressedDataUrl);
+      updateUser({ profile_photo_url: compressedDataUrl });
+    }
+
+    setSuccessMsg('✓ Profile photo uploaded successfully!');
+
     try {
       const res = await api.uploadFile(file, file.name);
-      setProfilePhotoUrl(res.url);
-      setSuccessMsg('✓ Profile photo uploaded from device successfully!');
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload photo from device');
+      if (res?.url) {
+        setProfilePhotoUrl(res.url);
+        api.updateProfilePhoto(res.url).catch(() => {});
+      }
+    } catch {
+      if (compressedDataUrl) {
+        api.updateProfilePhoto(compressedDataUrl).catch(() => {});
+      }
     } finally {
       setIsUploadingPhoto(false);
     }
   };
 
-  // 5. Device Upload Handler for Government ID Document
   const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -292,34 +350,40 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
     try {
       const res = await api.uploadFile(file, file.name);
       setGovIdDocUrl(res.url);
-      setSuccessMsg(`✓ ${govIdType} document uploaded for automated KYC verification!`);
+      setSuccessMsg(`✓ ${govIdType} document uploaded for automated verification!`);
     } catch (err: any) {
-      setError(err.message || 'Failed to upload ID document');
+      setError(err.message || 'Failed to upload document');
     } finally {
       setIsUploadingDoc(false);
     }
   };
 
-  // 6. Submit Host Identity
+  const canProceedStep1 = legalName.trim().length >= 2 && isPhoneVerified && isEmailVerified;
+  const canProceedStep2 = Boolean(profilePhotoUrl);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
 
     if (!legalName || legalName.trim().length < 2) {
-      setError('Full legal name is mandatory and must match your Government ID.');
+      setError('Full legal name is mandatory and must match your ID.');
+      setCurrentStep(1);
       return;
     }
     if (!isPhoneVerified) {
-      setError('Please verify your mobile number with OTP before submitting.');
+      setError('Please verify your mobile number with OTP.');
+      setCurrentStep(1);
       return;
     }
     if (!isEmailVerified) {
-      setError('Please verify your email address with OTP before submitting.');
+      setError('Please verify your email address with OTP.');
+      setCurrentStep(1);
       return;
     }
     if (!profilePhotoUrl) {
-      setError('A profile photo (live camera capture or uploaded from device) is mandatory.');
+      setError('A profile photo or live selfie is mandatory.');
+      setCurrentStep(2);
       return;
     }
     if (!govIdNumber || govIdNumber.trim().length < 4) {
@@ -327,7 +391,6 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
       return;
     }
 
-    // Client-side quick format check
     const cleanId = govIdNumber.trim().replace(/\s+/g, '').toUpperCase();
     if (govIdType === 'AADHAAR' && cleanId.length !== 12) {
       setError('Aadhaar number must contain exactly 12 numeric digits.');
@@ -348,7 +411,16 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
         gov_id_document_url: govIdDocUrl || profilePhotoUrl,
       });
 
-      setSuccessMsg('✓ Host Identity Automatically Verified via DigiLocker / NSDL e-KYC Engine! You can now list parking spaces.');
+      setSuccessMsg('✓ Host Identity Automatically Verified via DigiLocker / NSDL Engine!');
+      if (status.profile_photo_url) {
+        try {
+          localStorage.setItem('parkshare_host_avatar', status.profile_photo_url);
+        } catch {}
+      }
+      updateUser({
+        profile_photo_url: status.profile_photo_url || profilePhotoUrl,
+        full_name: status.legal_name || legalName.trim(),
+      });
       setTimeout(() => {
         onSuccess(status);
         onClose();
@@ -360,468 +432,477 @@ export const HostIdentityVerificationModal: React.FC<Props> = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-emerald-100 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-emerald-100 overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 text-white p-6 relative">
+        {/* Modal Header */}
+        <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-950 text-white p-6 relative">
           <button
             onClick={() => {
               stopCamera();
               onClose();
             }}
-            className="absolute top-5 right-5 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition"
+            className="absolute top-5 right-5 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition"
           >
             <X className="w-5 h-5" />
           </button>
+
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center border border-white/20 shadow-inner">
-              <ShieldCheck className="w-7 h-7 text-emerald-300" />
+            <div className="w-10 h-10 bg-emerald-500/20 border border-emerald-400/30 rounded-2xl flex items-center justify-center">
+              <ShieldCheck className="w-6 h-6 text-emerald-300" />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold tracking-tight">Host Identity Verification</h2>
-              <p className="text-xs text-emerald-100 mt-0.5">
-                Automated e-KYC Verification required before listing private parking spaces
-              </p>
+              <div className="flex items-center space-x-2">
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">e-KYC Verification</span>
+                <span className="text-[10px] bg-white/10 text-emerald-200 px-2 py-0.5 rounded-full">Step {currentStep} of 3</span>
+              </div>
+              <h2 className="text-lg font-black tracking-tight text-white">Host Identity Verification</h2>
             </div>
+          </div>
+
+          {/* Stepper Bar in Modal */}
+          <div className="mt-4 pt-4 border-t border-emerald-800/60 grid grid-cols-3 gap-2">
+            {[
+              { step: 1, title: 'Basic Info', done: canProceedStep1 },
+              { step: 2, title: 'Photo ID', done: canProceedStep2 },
+              { step: 3, title: 'Govt ID', done: false },
+            ].map((s) => (
+              <div
+                key={s.step}
+                className={`flex items-center space-x-2 p-1.5 rounded-xl text-left ${
+                  currentStep === s.step
+                    ? 'bg-emerald-500/20 border border-emerald-400/40 text-white'
+                    : s.done
+                    ? 'text-emerald-300'
+                    : 'opacity-40 text-gray-300'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] flex-shrink-0 ${
+                  s.done ? 'bg-emerald-500 text-slate-950' : currentStep === s.step ? 'bg-white text-emerald-950' : 'bg-emerald-900 text-white'
+                }`}>
+                  {s.done ? <Check className="w-3 h-3 stroke-[3]" /> : s.step}
+                </div>
+                <span className="text-[11px] font-bold truncate">{s.title}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 sm:p-8 space-y-6 max-h-[78vh] overflow-y-auto">
+        {/* Modal Body */}
+        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
           {error && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs p-3.5 rounded-2xl flex items-center space-x-2.5 font-medium shadow-sm">
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs p-3.5 rounded-2xl flex items-center space-x-2.5 font-medium animate-in fade-in">
               <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
               <span>{error}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs p-3.5 rounded-2xl flex items-center space-x-2.5 font-medium shadow-sm">
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs p-3.5 rounded-2xl flex items-center space-x-2.5 font-medium animate-in fade-in">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600" />
               <span>{successMsg}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             
-            {/* 1. Full Legal Name */}
-            <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-200/80 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center space-x-1.5">
-                  <UserIcon className="w-4 h-4 text-emerald-600" />
-                  <span>1. Full Legal Name (As on Government ID) *</span>
-                </label>
-                {legalName.length > 2 && (
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center space-x-1">
-                    <Check className="w-3 h-3" />
-                    <span>Entered</span>
-                  </span>
-                )}
-              </div>
-              <input
-                type="text"
-                required
-                value={legalName}
-                onChange={(e) => setLegalName(e.target.value)}
-                placeholder="e.g. Rajesh Kumar Sharma"
-                className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
-              <p className="text-[11px] text-gray-500">Must exactly match the name on your Aadhaar, PAN, Passport, or Driving Licence.</p>
-            </div>
-
-            {/* 2. Mobile Number + Real OTP Verification */}
-            <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-200/80 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center space-x-1.5">
-                  <Phone className="w-4 h-4 text-emerald-600" />
-                  <span>2. Mobile Number + SMS OTP Verification *</span>
-                </label>
-                {isPhoneVerified ? (
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full flex items-center space-x-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>✓ OTP Verified</span>
-                  </span>
-                ) : (
-                  <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
-                    Verification Required
-                  </span>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="tel"
-                  disabled={isPhoneVerified}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 9876543210"
-                  className="flex-1 px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-600"
-                />
-                {!isPhoneVerified && (
-                  <button
-                    type="button"
-                    disabled={sendingPhoneOtp}
-                    onClick={handleSendPhoneOtp}
-                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex-shrink-0 disabled:opacity-50"
-                  >
-                    {sendingPhoneOtp ? 'Sending...' : isPhoneOtpSent ? 'Resend OTP' : 'Send OTP'}
-                  </button>
-                )}
-              </div>
-
-              {isPhoneOtpSent && !isPhoneVerified && (
-                <div className="flex items-center gap-2 pt-1 animate-in fade-in">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={phoneOtp}
-                    onChange={(e) => setPhoneOtp(e.target.value)}
-                    placeholder="Enter 6-digit OTP"
-                    className="w-44 px-3.5 py-2 bg-white border border-emerald-300 rounded-xl text-sm font-mono tracking-widest text-center focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm"
-                  />
-                  <button
-                    type="button"
-                    disabled={verifyingPhoneOtp || phoneOtp.length !== 6}
-                    onClick={handleVerifyPhoneOtp}
-                    className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
-                  >
-                    {verifyingPhoneOtp ? 'Verifying...' : 'Verify OTP'}
-                  </button>
-                  <span className="text-[11px] text-gray-500">Check phone SMS</span>
-                </div>
-              )}
-            </div>
-
-            {/* 3. Email Address + Real OTP Verification */}
-            <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-200/80 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center space-x-1.5">
-                  <Mail className="w-4 h-4 text-emerald-600" />
-                  <span>3. Email Address + Email OTP Verification *</span>
-                </label>
-                {isEmailVerified ? (
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full flex items-center space-x-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>✓ Email Verified</span>
-                  </span>
-                ) : (
-                  <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
-                    Verification Required
-                  </span>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  disabled={isEmailVerified}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="host@example.com"
-                  className="flex-1 px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-600"
-                />
-                {!isEmailVerified && (
-                  <button
-                    type="button"
-                    disabled={sendingEmailOtp}
-                    onClick={handleSendEmailOtp}
-                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex-shrink-0 disabled:opacity-50"
-                  >
-                    {sendingEmailOtp ? 'Sending...' : isEmailOtpSent ? 'Resend OTP' : 'Send OTP'}
-                  </button>
-                )}
-              </div>
-
-              {isEmailOtpSent && !isEmailVerified && (
-                <div className="flex items-center gap-2 pt-1 animate-in fade-in">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={emailOtp}
-                    onChange={(e) => setEmailOtp(e.target.value)}
-                    placeholder="Enter 6-digit OTP"
-                    className="w-44 px-3.5 py-2 bg-white border border-emerald-300 rounded-xl text-sm font-mono tracking-widest text-center focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm"
-                  />
-                  <button
-                    type="button"
-                    disabled={verifyingEmailOtp || emailOtp.length !== 6}
-                    onClick={handleVerifyEmailOtp}
-                    className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
-                  >
-                    {verifyingEmailOtp ? 'Verifying...' : 'Verify Email'}
-                  </button>
-                  <span className="text-[11px] text-gray-500">Check inbox / spam</span>
-                </div>
-              )}
-            </div>
-
-            {/* 4. Host Profile Photo: Live Camera OR Upload from Device */}
-            <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-200/80 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center space-x-1.5">
-                  <Camera className="w-4 h-4 text-emerald-600" />
-                  <span>4. Host Profile Photo (Live Camera or Upload) *</span>
-                </label>
-                {profilePhotoUrl ? (
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>Photo Ready</span>
-                  </span>
-                ) : (
-                  <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                    Required
-                  </span>
-                )}
-              </div>
-
-              {/* Mode Selector Tabs */}
-              <div className="flex rounded-xl bg-gray-200/80 p-1 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => {
-                    stopCamera();
-                    setPhotoMode('upload');
-                  }}
-                  className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1.5 transition ${
-                    photoMode === 'upload' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Upload from Device</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPhotoMode('camera');
-                    startCamera();
-                  }}
-                  className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1.5 transition ${
-                    photoMode === 'camera' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Take Live Photo (Webcam)</span>
-                </button>
-              </div>
-
-              {/* Upload from Device View */}
-              {photoMode === 'upload' && (
-                <div className="space-y-3">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    onChange={handleDevicePhotoUpload}
-                    className="hidden"
-                  />
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50/70 rounded-2xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-2"
-                  >
-                    <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center">
-                      <Upload className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-emerald-900">Click to browse and upload photo from device</p>
-                      <p className="text-[11px] text-gray-500">Supports JPG, PNG, or WebP (max 10MB)</p>
-                    </div>
+            {/* STEP 1: Personal & Contact */}
+            {currentStep === 1 && (
+              <div className="space-y-4 animate-in fade-in">
+                {/* Legal Name */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-gray-700 uppercase">
+                    Full Legal Name (as on ID) *
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" />
+                    <input
+                      type="text"
+                      required
+                      value={legalName}
+                      onChange={(e) => setLegalName(e.target.value)}
+                      placeholder="Rajesh Kumar"
+                      className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white text-sm"
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Live Camera View */}
-              {photoMode === 'camera' && (
-                <div className="space-y-3">
-                  <div className="relative rounded-2xl overflow-hidden bg-black aspect-video flex items-center justify-center border-2 border-emerald-500/50 shadow-inner">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover transform -scale-x-100"
-                    />
-                    {!isCameraActive && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/90 text-white p-4 space-y-2">
-                        <Camera className="w-8 h-8 text-emerald-400" />
-                        <p className="text-xs font-medium">Camera is inactive</p>
-                        <button
-                          type="button"
-                          onClick={startCamera}
-                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          <span>Start Webcam</span>
-                        </button>
-                      </div>
+                {/* Mobile Phone Verification */}
+                <div className="p-3.5 bg-gray-50/80 rounded-2xl border border-gray-200 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-gray-700 uppercase flex items-center space-x-1.5">
+                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Mobile Number Verification *</span>
+                    </label>
+                    {isPhoneVerified && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                        ✓ Verified
+                      </span>
                     )}
                   </div>
-
-                  {isCameraActive && (
-                    <div className="flex gap-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      required
+                      disabled={isPhoneVerified}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+91 9876543210"
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs disabled:bg-gray-100"
+                    />
+                    {!isPhoneVerified && (
                       <button
                         type="button"
-                        disabled={isUploadingPhoto}
-                        onClick={captureLivePhoto}
-                        className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow"
+                        disabled={sendingPhoneOtp}
+                        onClick={handleSendPhoneOtp}
+                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex-shrink-0 disabled:opacity-50"
                       >
-                        <Camera className="w-4 h-4" />
-                        <span>{isUploadingPhoto ? 'Uploading Frame...' : 'Snap & Save Live Photo'}</span>
+                        {sendingPhoneOtp ? '...' : isPhoneOtpSent ? 'Resend' : 'Send OTP'}
                       </button>
+                    )}
+                  </div>
+                  {isPhoneOtpSent && !isPhoneVerified && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={phoneOtp}
+                        onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
+                        placeholder="6-digit OTP"
+                        className="w-28 px-2 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-mono tracking-widest text-center"
+                      />
                       <button
                         type="button"
-                        onClick={stopCamera}
-                        className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition"
+                        disabled={verifyingPhoneOtp || phoneOtp.length !== 6}
+                        onClick={handleVerifyPhoneOtp}
+                        className="px-3 py-1.5 bg-emerald-700 text-white rounded-lg text-xs font-bold disabled:opacity-50"
                       >
-                        Cancel
+                        {verifyingPhoneOtp ? '...' : 'Verify'}
                       </button>
+                      {phoneDevOtp && (
+                        <button
+                          type="button"
+                          onClick={() => setPhoneOtp(phoneDevOtp)}
+                          className="text-[10px] text-emerald-700 underline font-bold"
+                        >
+                          Auto-fill
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
 
-              {/* Photo Preview */}
-              {profilePhotoUrl && (
-                <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-gray-200">
-                  <img
-                    src={profilePhotoUrl}
-                    alt="Active Profile"
-                    className="w-14 h-14 rounded-xl object-cover border-2 border-emerald-500 shadow-sm"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-gray-800 truncate">Host Profile Photo Attached</p>
-                    <p className="text-[11px] text-emerald-600 font-medium">Verified for identity match</p>
+                {/* Email Verification */}
+                <div className="p-3.5 bg-gray-50/80 rounded-2xl border border-gray-200 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-gray-700 uppercase flex items-center space-x-1.5">
+                      <Mail className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Email Verification *</span>
+                    </label>
+                    {isEmailVerified && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                        ✓ Verified
+                      </span>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setProfilePhotoUrl('')}
-                    className="p-1.5 text-gray-400 hover:text-rose-600 transition"
-                    title="Remove photo"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 5. Government ID Verification & Automated KYC Provider */}
-            <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-200/80 space-y-3.5">
-              <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center space-x-1.5">
-                <FileText className="w-4 h-4 text-emerald-600" />
-                <span>5. Government ID Verification (Automated e-KYC) *</span>
-              </label>
-
-              {/* ID Type Options: Aadhaar, PAN, DL, Passport */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: 'AADHAAR', label: 'Aadhaar Card', icon: '🪪' },
-                  { id: 'PAN', label: 'PAN Card', icon: '💳' },
-                  { id: 'DRIVING_LICENCE', label: 'Driving Licence', icon: '🚗' },
-                  { id: 'PASSPORT', label: 'Passport', icon: '🛂' },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setGovIdType(item.id as any);
-                      setError('');
-                    }}
-                    className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center space-y-1 transition ${
-                      govIdType === item.id
-                        ? 'bg-emerald-100 border-emerald-600 text-emerald-950 shadow-sm ring-1 ring-emerald-500'
-                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="text-base">{item.icon}</span>
-                    <span className="text-center">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
-                  {govIdType === 'AADHAAR' 
-                    ? '12-Digit Aadhaar Number (UIDAI Checksum Validated)' 
-                    : govIdType === 'PAN'
-                    ? '10-Character PAN Card Number (e.g. ABCDE1234F)'
-                    : govIdType === 'DRIVING_LICENCE' 
-                    ? 'Driving Licence Number' 
-                    : 'Passport Number'}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={govIdNumber}
-                  onChange={(e) => setGovIdNumber(e.target.value.toUpperCase())}
-                  placeholder={
-                    govIdType === 'AADHAAR'
-                      ? '5482 1928 3041'
-                      : govIdType === 'PAN'
-                      ? 'ABCDE1234F'
-                      : govIdType === 'DRIVING_LICENCE'
-                      ? 'KA01 20210012345'
-                      : 'Z1234567'
-                  }
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-mono tracking-wider focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Upload Document Scan/Photo from Device */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-gray-700">Upload {govIdType} Document Scan (Optional / Supporting):</span>
-                  {govIdDocUrl && (
-                    <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
-                      ✓ Document Attached
-                    </span>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      required
+                      disabled={isEmailVerified}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="host@example.com"
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs disabled:bg-gray-100"
+                    />
+                    {!isEmailVerified && (
+                      <button
+                        type="button"
+                        disabled={sendingEmailOtp}
+                        onClick={handleSendEmailOtp}
+                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex-shrink-0 disabled:opacity-50"
+                      >
+                        {sendingEmailOtp ? '...' : isEmailOtpSent ? 'Resend' : 'Send Code'}
+                      </button>
+                    )}
+                  </div>
+                  {isEmailOtpSent && !isEmailVerified && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={emailOtp}
+                        onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
+                        placeholder="6-digit code"
+                        className="w-28 px-2 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-mono tracking-widest text-center"
+                      />
+                      <button
+                        type="button"
+                        disabled={verifyingEmailOtp || emailOtp.length !== 6}
+                        onClick={handleVerifyEmailOtp}
+                        className="px-3 py-1.5 bg-emerald-700 text-white rounded-lg text-xs font-bold disabled:opacity-50"
+                      >
+                        {verifyingEmailOtp ? '...' : 'Verify'}
+                      </button>
+                      {emailDevOtp && (
+                        <button
+                          type="button"
+                          onClick={() => setEmailOtp(emailDevOtp)}
+                          className="text-[10px] text-emerald-700 underline font-bold"
+                        >
+                          Auto-fill
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
-                <input
-                  type="file"
-                  ref={docFileInputRef}
-                  accept="image/*,application/pdf"
-                  onChange={handleDocUpload}
-                  className="hidden"
-                />
+
+                {/* Step 1 Next */}
                 <button
                   type="button"
-                  onClick={() => docFileInputRef.current?.click()}
-                  disabled={isUploadingDoc}
-                  className="w-full py-2 px-3 border border-gray-300 bg-white hover:bg-gray-50 rounded-xl text-xs font-semibold text-gray-700 transition flex items-center justify-center space-x-2"
+                  disabled={!canProceedStep1}
+                  onClick={() => setCurrentStep(2)}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center space-x-2 disabled:opacity-40"
                 >
-                  <Upload className="w-3.5 h-3.5 text-gray-500" />
-                  <span>{isUploadingDoc ? 'Uploading...' : govIdDocUrl ? 'Replace Uploaded Document' : `Upload ${govIdType} Document Scan`}</span>
+                  <span>Continue to Photo Verification</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
+            )}
 
-              {/* Automated KYC Provider Guarantee Banner */}
-              <div className="bg-emerald-50/80 p-3 rounded-xl border border-emerald-200 text-[11px] text-emerald-950 flex items-start space-x-2">
-                <Sparkles className="w-4 h-4 text-emerald-700 flex-shrink-0 mt-0.5" />
-                <div className="space-y-0.5">
-                  <p className="font-bold text-emerald-900">Automated e-KYC Verification Provider Integration</p>
-                  <p className="text-gray-600 leading-relaxed">
-                    Documents are verified automatically in real-time via DigiLocker, UIDAI & NSDL APIs. 
-                    Platform admins do not manually inspect your ID; verification and instant space approval occur automatically.
-                  </p>
+            {/* STEP 2: Photo Verification */}
+            {currentStep === 2 && (
+              <div className="space-y-4 animate-in fade-in">
+                <div className="flex p-1 bg-gray-100 rounded-xl w-fit mx-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopCamera();
+                      setPhotoMode('upload');
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                      photoMode === 'upload' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+                    }`}
+                  >
+                    Upload Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhotoMode('camera');
+                      startCamera();
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                      photoMode === 'camera' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+                    }`}
+                  >
+                    Take Live Selfie
+                  </button>
+                </div>
+
+                {photoMode === 'upload' ? (
+                  <div className="space-y-3">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleDevicePhotoUpload}
+                      className="hidden"
+                    />
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-gray-200 hover:border-emerald-500 rounded-2xl p-6 text-center cursor-pointer transition hover:bg-emerald-50/20 flex flex-col items-center justify-center space-y-2"
+                    >
+                      {profilePhotoUrl ? (
+                        <div className="relative">
+                          <img 
+                            src={profilePhotoUrl} 
+                            alt="Host Preview" 
+                            className="w-20 h-20 rounded-xl object-cover border-2 border-emerald-500 shadow"
+                          />
+                          <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-0.5 rounded-full">
+                            <Check className="w-3 h-3" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                          <Upload className="w-6 h-6" />
+                        </div>
+                      )}
+                      <p className="text-xs font-bold text-gray-800">
+                        {profilePhotoUrl ? 'Change Profile Photo' : 'Click to Upload Profile Photo'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 text-center">
+                    <div className="relative w-56 h-48 bg-slate-900 rounded-2xl overflow-hidden border-2 border-emerald-400 mx-auto shadow">
+                      <video 
+                        ref={videoRef} 
+                        autoPlay 
+                        playsInline 
+                        muted 
+                        className="w-full h-full object-cover scale-x-[-1]" 
+                      />
+                      {!isCameraActive && (
+                        <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-300">
+                          Camera loading...
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isUploadingPhoto || !isCameraActive}
+                      onClick={captureLivePhoto}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 mx-auto disabled:opacity-50"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>{isUploadingPhoto ? 'Saving...' : 'Capture Snapshot'}</span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopCamera();
+                      setCurrentStep(1);
+                    }}
+                    className="px-4 py-2.5 border border-gray-200 text-gray-700 font-bold rounded-xl text-xs flex items-center space-x-1"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canProceedStep2}
+                    onClick={() => {
+                      stopCamera();
+                      setCurrentStep(3);
+                    }}
+                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1 disabled:opacity-40"
+                  >
+                    <span>Continue to Govt ID</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Submit Action */}
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg transition text-sm flex items-center justify-center space-x-2 disabled:opacity-50"
-              >
-                <span>{loading ? 'Processing Automated e-KYC Verification...' : 'Complete Automated e-KYC & Unlock Listing'}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
+            {/* STEP 3: Government ID Verification */}
+            {currentStep === 3 && (
+              <div className="space-y-4 animate-in fade-in">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700 uppercase">
+                    Select Document Type *
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { type: 'AADHAAR', label: 'Aadhaar' },
+                      { type: 'PAN', label: 'PAN Card' },
+                      { type: 'DRIVING_LICENCE', label: 'Driving Lic.' },
+                      { type: 'PASSPORT', label: 'Passport' },
+                    ].map((item) => (
+                      <button
+                        key={item.type}
+                        type="button"
+                        onClick={() => setGovIdType(item.type as any)}
+                        className={`py-2 px-2.5 rounded-xl border text-xs font-bold transition text-center ${
+                          govIdType === item.type
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                            : 'bg-white border-gray-200 text-gray-700 hover:border-emerald-300'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-gray-700 uppercase">
+                    {govIdType} Document Number *
+                  </label>
+                  <input
+                    type={govIdType === 'AADHAAR' ? 'tel' : 'text'}
+                    inputMode={govIdType === 'AADHAAR' ? 'numeric' : 'text'}
+                    required
+                    value={govIdNumber}
+                    onChange={(e) => setGovIdNumber(formatGovIdInput(e.target.value, govIdType))}
+                    placeholder={
+                      govIdType === 'AADHAAR' ? '2345 6789 0123' :
+                      govIdType === 'PAN' ? 'ABCDE1234F' : 'Document Number'
+                    }
+                    maxLength={govIdType === 'AADHAAR' ? 14 : govIdType === 'PAN' ? 10 : 16}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white text-sm font-mono tracking-wider uppercase text-gray-900"
+                  />
+                </div>
+
+                {/* Optional doc proof */}
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      ref={docFileInputRef}
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleDocUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      disabled={isUploadingDoc}
+                      onClick={() => docFileInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 flex items-center space-x-1"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{isUploadingDoc ? 'Uploading...' : govIdDocUrl ? 'Replace Proof' : 'Upload Proof (Optional)'}</span>
+                    </button>
+                    {govIdDocUrl && (
+                      <span className="text-xs text-emerald-700 font-bold">✓ Attached</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="px-4 py-2.5 border border-gray-200 text-gray-700 font-bold rounded-xl text-xs flex items-center space-x-1"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={loading || !govIdNumber}
+                    className="flex-1 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white font-black rounded-xl shadow-lg transition text-xs flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Verifying with DigiLocker...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Verify & Complete e-KYC</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
           </form>
         </div>
+
       </div>
     </div>
   );
 };
+export default HostIdentityVerificationModal;

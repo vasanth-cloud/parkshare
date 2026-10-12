@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     KYC_MOCK_SANDBOX: bool = True
     KYC_API_KEY: Optional[str] = None
 
+    # Google Gemini AI Assistant
+    GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", "")
+
     class Config:
         case_sensitive = True
         env_file = (ENV_FILE_PATH, ".env")

@@ -1,10 +1,37 @@
-import { User, ParkingListing, Booking, HostSummary, VerificationStatus } from '../types';
+import { User, ParkingListing, Booking, HostSummary, VerificationStatus, DriverProfile, CarSpaCenter } from '../types';
 
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
-const API_BASE = rawApiUrl 
-  ? `${rawApiUrl.replace(/\/+$/, '')}/api/v1` 
-  : 'https://parkshare-backend-9anh.onrender.com/api/v1';
+
+function resolveBackendBase(): string {
+  if (rawApiUrl) {
+    return rawApiUrl.replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:8000';
+    }
+    if (host === '10.0.2.2') {
+      return 'http://10.0.2.2:8000';
+    }
+    if (/^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(host)) {
+      return `http://${host}:8000`;
+    }
+  }
+  return 'http://192.168.1.17:8000';
+}
+
+export const BACKEND_BASE = resolveBackendBase();
+const API_BASE = `${BACKEND_BASE}/api/v1`;
+
+export function getFullImageUrl(url?: string): string {
+  if (!url) return '';
+  if (url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `${BACKEND_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+}
 
 function getHeaders(): HeadersInit {
   const token = localStorage.getItem('parkshare_host_token');
@@ -55,7 +82,11 @@ export const api = {
 
   getMe: async (): Promise<User> => {
     const res = await fetch(`${API_BASE}/auth/me`, { headers: getHeaders() });
-    if (!res.ok) throw new Error('Unauthorized');
+    if (!res.ok) {
+      const err = new Error(await extractErrorMessage(res, 'Unauthorized'));
+      (err as any).status = res.status;
+      throw err;
+    }
     return res.json();
   },
 
@@ -74,6 +105,23 @@ export const api = {
     if (!res.ok) throw new Error('Failed to fetch host summary');
     return res.json();
   },
+
+  updateProfilePhoto: async (profile_photo_url: string): Promise<User> => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/profile-photo`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ profile_photo_url }),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.warn('Backend update profile photo:', err);
+    }
+    return {} as any;
+  },
+
 
 
   // Listings
@@ -261,13 +309,51 @@ export const api = {
       body: formData,
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to upload verification file'));
-    return res.json();
+    const data = await res.json();
+    if (data.url) {
+      data.url = getFullImageUrl(data.url);
+    }
+    return data;
   },
 
   getVerificationStatus: async (): Promise<VerificationStatus> => {
     const res = await fetch(`${API_BASE}/verification/status`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch verification status');
     return res.json();
-  }
+  },
+
+  // Acting Drivers Partner APIs
+  registerDriver: async (data: any): Promise<DriverProfile> => {
+    const res = await fetch(`${API_BASE}/drivers/register`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to submit driver registration'));
+    return res.json();
+  },
+
+  getDrivers: async (): Promise<DriverProfile[]> => {
+    const res = await fetch(`${API_BASE}/drivers/all`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load drivers directory');
+    return res.json();
+  },
+
+  // Car Spa & Detailing Partner APIs
+  registerCarSpa: async (data: any): Promise<CarSpaCenter> => {
+    const res = await fetch(`${API_BASE}/car-spa/register`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to submit car spa registration'));
+    return res.json();
+  },
+
+  getCarSpas: async (): Promise<CarSpaCenter[]> => {
+    const res = await fetch(`${API_BASE}/car-spa/all`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load car spas directory');
+    return res.json();
+  },
 };
 
