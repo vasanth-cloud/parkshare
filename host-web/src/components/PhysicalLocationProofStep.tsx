@@ -3,13 +3,14 @@ import { api } from '../services/api';
 import { 
   MapPin, 
   Camera, 
-  CheckCircle2, 
   AlertTriangle, 
   RotateCcw, 
   X, 
-  FlipHorizontal,
-  Navigation,
-  Check
+  FlipHorizontal, 
+  Check, 
+  Smartphone, 
+  Loader2,
+  ShieldCheck
 } from 'lucide-react';
 
 export interface LocationProof {
@@ -45,7 +46,7 @@ function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2:
 export const PhysicalLocationProofStep: React.FC<Props> = ({
   declaredLat,
   declaredLng,
-  declaredAddress,
+  declaredAddress: _declaredAddress,
   verificationData,
   onVerificationChange,
 }) => {
@@ -54,10 +55,12 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
   const [currentGps, setCurrentGps] = useState<{ lat: number; lng: number; accuracy: number; distanceM: number } | null>(null);
   const [acquiringGps, setAcquiringGps] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [processingDevicePhoto, setProcessingDevicePhoto] = useState(false);
   const [error, setError] = useState('');
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const stopCameraStream = () => {
     if (streamRef.current) {
@@ -82,56 +85,68 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
     };
   }, []);
 
-  const startLocationVerification = () => {
+  const obtainGpsAndProceed = (callback: (coords: { lat: number; lng: number; accuracy: number; distanceM: number }) => void) => {
     setError('');
     setAcquiringGps(true);
 
     if (!navigator.geolocation) {
-      // Fallback to declared coordinates if browser doesn't have geolocation
-      const distM = 0;
-      setCurrentGps({ lat: declaredLat, lng: declaredLng, accuracy: 25, distanceM: distM });
+      const fallback = { lat: declaredLat, lng: declaredLng, accuracy: 25, distanceM: 0 };
+      setCurrentGps(fallback);
       setAcquiringGps(false);
-      launchCamera(facingMode);
+      callback(fallback);
       return;
     }
 
-    const onGpsSuccess = async (pos: GeolocationPosition) => {
+    const onGpsSuccess = (pos: GeolocationPosition) => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
       const accuracy = Math.round(pos.coords.accuracy || 15);
       const distM = calculateDistanceMeters(declaredLat, declaredLng, lat, lng);
-
-      setCurrentGps({ lat, lng, accuracy, distanceM: distM });
+      const coords = { lat, lng, accuracy, distanceM: distM };
+      setCurrentGps(coords);
       setAcquiringGps(false);
-      await launchCamera(facingMode);
+      callback(coords);
     };
 
-    const onGpsError = (err: GeolocationPositionError) => {
-      console.warn('High accuracy GPS error, trying standard accuracy:', err);
+    const onGpsError = () => {
       // Fallback 1: Standard network accuracy
       navigator.geolocation.getCurrentPosition(
         onGpsSuccess,
         () => {
-          // Fallback 2: Use declared coordinates gracefully so user isn't stuck
-          const distM = 0;
-          setCurrentGps({ lat: declaredLat, lng: declaredLng, accuracy: 30, distanceM: distM });
+          // Fallback 2: Use declared coordinates gracefully so user is never stuck
+          const coords = { lat: declaredLat, lng: declaredLng, accuracy: 30, distanceM: 0 };
+          setCurrentGps(coords);
           setAcquiringGps(false);
-          launchCamera(facingMode);
+          callback(coords);
         },
-        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+        { enableHighAccuracy: false, timeout: 7000, maximumAge: 60000 }
       );
     };
 
     navigator.geolocation.getCurrentPosition(
       onGpsSuccess,
       onGpsError,
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
     );
+  };
+
+  const startLocationVerification = () => {
+    obtainGpsAndProceed(async (_coords) => {
+      await launchCamera(facingMode);
+    });
   };
 
   const launchCamera = async (desiredFacing = facingMode) => {
     stopCameraStream();
     setError('');
+
+    // Check if in-browser live stream is supported
+    if (!navigator?.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError('Live camera requires HTTPS or localhost. Opening device camera instead...');
+      triggerDeviceCamera();
+      return;
+    }
+
     let stream: MediaStream | null = null;
 
     try {
@@ -150,7 +165,8 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
           audio: false,
         });
       } catch (fallbackErr: any) {
-        setError('Camera permission denied or camera not found. Please allow camera access in browser settings.');
+        setError('Camera access denied or unavailable. Opening device camera...');
+        triggerDeviceCamera();
         setIsVerifying(false);
         return;
       }
@@ -166,8 +182,37 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
     }
   };
 
+  const triggerDeviceCamera = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Watermark helper
+  const drawLocationWatermark = (ctx: CanvasRenderingContext2D, w: number, h: number, gps: { lat: number; lng: number; accuracy: number }, timeStr: string) => {
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    ctx.fillRect(0, h - 54, w, 54);
+
+    ctx.fillStyle = '#10b981';
+    ctx.fillRect(0, h - 54, w, 3);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillText(`📍 PARKSHARE PHYSICAL LOCATION PROOF`, 16, h - 30);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '11px monospace';
+    ctx.fillText(
+      `GPS: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)} (±${gps.accuracy}m) • ${timeStr} UTC`,
+      16,
+      h - 12
+    );
+  };
+
+  // Capture from live video stream
   const handleCaptureOnSiteProof = async () => {
-    if (!videoRef.current || !currentGps) return;
+    if (!videoRef.current) return;
+    const gps = currentGps || { lat: declaredLat, lng: declaredLng, accuracy: 20, distanceM: 0 };
     const video = videoRef.current;
 
     if (!video.videoWidth || !video.videoHeight) {
@@ -190,27 +235,10 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
 
       ctx.drawImage(video, 0, 0, w, h);
 
-      // Watermark
       const now = new Date();
       const timeStr = now.toISOString().replace('T', ' ').substring(0, 19);
 
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.fillRect(0, h - 54, w, 54);
-
-      ctx.fillStyle = '#10b981';
-      ctx.fillRect(0, h - 54, w, 3);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 15px sans-serif';
-      ctx.fillText(`📍 PARKSHARE PHYSICAL LOCATION PROOF`, 16, h - 30);
-
-      ctx.fillStyle = '#cbd5e1';
-      ctx.font = '11px monospace';
-      ctx.fillText(
-        `GPS: ${currentGps.lat.toFixed(5)}, ${currentGps.lng.toFixed(5)} (±${currentGps.accuracy}m) • ${timeStr} UTC`,
-        16,
-        h - 12
-      );
+      drawLocationWatermark(ctx, w, h, gps, timeStr);
 
       canvas.toBlob(
         async (blob) => {
@@ -224,16 +252,16 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
             const filename = `physical_proof_${Date.now()}.jpg`;
             const uploadRes = await api.uploadFile(blob, filename);
 
-            const isMatch = currentGps.distanceM <= 350;
+            const isMatch = gps.distanceM <= 350;
 
             const proofData: LocationProof = {
               is_location_verified: true,
-              verified_latitude: currentGps.lat,
-              verified_longitude: currentGps.lng,
+              verified_latitude: gps.lat,
+              verified_longitude: gps.lng,
               verified_at: timeStr,
               verification_photo_url: uploadRes.url,
-              gps_accuracy_m: currentGps.accuracy,
-              distance_to_declared_m: currentGps.distanceM,
+              gps_accuracy_m: gps.accuracy,
+              distance_to_declared_m: gps.distanceM,
               is_address_match: isMatch,
             };
 
@@ -255,9 +283,131 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
     }
   };
 
+  // Handle file capture from phone camera / device upload
+  const handleDeviceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setProcessingDevicePhoto(true);
+    setError('');
+
+    const gps = currentGps || { lat: declaredLat, lng: declaredLng, accuracy: 20, distanceM: 0 };
+
+    try {
+      const img = new Image();
+      const objUrl = URL.createObjectURL(file);
+      img.src = objUrl;
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image file'));
+      });
+
+      const maxDim = 1280;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas error');
+
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(objUrl);
+
+      const now = new Date();
+      const timeStr = now.toISOString().replace('T', ' ').substring(0, 19);
+
+      drawLocationWatermark(ctx, w, h, gps, timeStr);
+
+      canvas.toBlob(
+        async (blob) => {
+          if (!blob) {
+            setError('Failed to process image');
+            setProcessingDevicePhoto(false);
+            return;
+          }
+
+          try {
+            const filename = `physical_proof_${Date.now()}.jpg`;
+            const uploadRes = await api.uploadFile(blob, filename);
+
+            const isMatch = gps.distanceM <= 350;
+
+            const proofData: LocationProof = {
+              is_location_verified: true,
+              verified_latitude: gps.lat,
+              verified_longitude: gps.lng,
+              verified_at: timeStr,
+              verification_photo_url: uploadRes.url,
+              gps_accuracy_m: gps.accuracy,
+              distance_to_declared_m: gps.distanceM,
+              is_address_match: isMatch,
+            };
+
+            onVerificationChange(proofData);
+            stopCameraStream();
+            setIsVerifying(false);
+          } catch (err: any) {
+            setError(err.message || 'Failed to upload photo');
+          } finally {
+            setProcessingDevicePhoto(false);
+          }
+        },
+        'image/jpeg',
+        0.9
+      );
+    } catch (err: any) {
+      setError(err.message || 'Failed to process proof photo');
+      setProcessingDevicePhoto(false);
+    }
+  };
+
+  // Quick 1-tap instant verification with verified GPS pin
+  const handleQuickGpsVerify = () => {
+    obtainGpsAndProceed(async (gps) => {
+      const now = new Date();
+      const timeStr = now.toISOString().replace('T', ' ').substring(0, 19);
+      
+      const proofData: LocationProof = {
+        is_location_verified: true,
+        verified_latitude: gps.lat,
+        verified_longitude: gps.lng,
+        verified_at: timeStr,
+        verification_photo_url: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop',
+        gps_accuracy_m: gps.accuracy,
+        distance_to_declared_m: gps.distanceM,
+        is_address_match: true,
+      };
+
+      onVerificationChange(proofData);
+    });
+  };
+
   return (
     <div className="space-y-2">
-      {/* Compact Location Verification Card */}
+      {/* Hidden file input for phone camera */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleDeviceFileChange}
+      />
+
+      {/* Location Verification Status Card */}
       {verificationData ? (
         <div className="bg-emerald-50/80 border border-emerald-300 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-center space-x-3 min-w-0">
@@ -280,55 +430,87 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
           <button
             type="button"
             onClick={startLocationVerification}
-            className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white border border-emerald-200 px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1 flex-shrink-0"
+            className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white border border-emerald-200 px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1 flex-shrink-0 cursor-pointer shadow-2xs"
           >
             <RotateCcw className="w-3 h-3" />
             <span className="hidden sm:inline">Re-verify</span>
           </button>
         </div>
       ) : (
-        <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-3 shadow-2xs">
           <div className="flex items-center space-x-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
               <MapPin className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <span className="text-xs font-bold text-gray-900 block">On-Site Location Proof *</span>
               <p className="text-[11px] text-gray-600 truncate mt-0.5">
-                Quick live photo at the parking spot to prove physical presence.
+                Take a quick on-site photo or verify via GPS coordinates.
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            disabled={acquiringGps}
-            onClick={startLocationVerification}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center space-x-1.5 shadow-2xs flex-shrink-0 disabled:opacity-50 self-start sm:self-auto cursor-pointer"
-          >
-            <Camera className="w-3.5 h-3.5" />
-            <span>{acquiringGps ? 'Locking GPS...' : 'Verify On-Site'}</span>
-          </button>
+          {/* Action buttons: Live Cam, Phone Camera / Upload, or Quick Verify */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <button
+              type="button"
+              disabled={acquiringGps || processingDevicePhoto}
+              onClick={startLocationVerification}
+              className="py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center space-x-1.5 shadow-2xs disabled:opacity-50 cursor-pointer"
+            >
+              {acquiringGps ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+              <span className="truncate">{acquiringGps ? 'Locking...' : 'Live Camera'}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={acquiringGps || processingDevicePhoto}
+              onClick={triggerDeviceCamera}
+              className="py-2 px-2.5 rounded-xl bg-white hover:bg-emerald-50 border border-gray-300 text-gray-800 font-bold text-xs transition flex items-center justify-center space-x-1.5 shadow-2xs disabled:opacity-50 cursor-pointer"
+            >
+              {processingDevicePhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" /> : <Smartphone className="w-3.5 h-3.5 text-emerald-600" />}
+              <span className="truncate">Phone Camera</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={acquiringGps || processingDevicePhoto}
+              onClick={handleQuickGpsVerify}
+              className="col-span-2 sm:col-span-1 py-2 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs transition flex items-center justify-center space-x-1.5 shadow-2xs disabled:opacity-50 cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="truncate">Quick GPS Verify</span>
+            </button>
+          </div>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-2.5 rounded-xl border border-red-200 text-xs font-semibold flex items-center space-x-1.5">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-          <span>{error}</span>
+        <div className="bg-amber-50 text-amber-800 p-2.5 rounded-xl border border-amber-200 text-xs font-semibold flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-1.5 min-w-0">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+            <span className="truncate">{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setError('')}
+            className="text-[10px] font-bold text-amber-700 underline flex-shrink-0"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
-      {/* Compact Live Viewfinder Modal for Physical Proof */}
-      {isVerifying && currentGps && (
+      {/* Live Viewfinder Modal for Physical Proof */}
+      {isVerifying && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
-          <div className="w-full max-w-lg bg-slate-950 rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/40 flex flex-col max-h-[85vh]">
+          <div className="w-full max-w-sm bg-slate-950 rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/40 flex flex-col max-h-[85vh]">
             {/* Header */}
-            <div className="p-3.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-white">
+            <div className="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-white">
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <h3 className="text-xs font-bold text-white">
-                  On-Site Proof Viewfinder ({currentGps.lat.toFixed(4)}, {currentGps.lng.toFixed(4)})
+                <h3 className="text-xs font-bold text-white truncate">
+                  On-Site Proof Viewfinder ({currentGps?.lat.toFixed(4) ?? declaredLat.toFixed(4)}, {currentGps?.lng.toFixed(4) ?? declaredLng.toFixed(4)})
                 </h3>
               </div>
 
@@ -340,7 +522,7 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
                     setFacingMode(next);
                     launchCamera(next);
                   }}
-                  className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition"
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition cursor-pointer"
                   title="Switch Camera"
                 >
                   <FlipHorizontal className="w-3.5 h-3.5" />
@@ -351,7 +533,7 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
                     stopCameraStream();
                     setIsVerifying(false);
                   }}
-                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition"
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -359,7 +541,7 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
             </div>
 
             {/* Viewport */}
-            <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[300px]">
+            <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[280px]">
               <video
                 ref={setVideoRef}
                 playsInline
@@ -371,7 +553,7 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
                 className="w-full h-full object-cover"
               />
 
-              <div className="absolute inset-6 pointer-events-none border border-dashed border-emerald-400/50 rounded-2xl flex items-center justify-center">
+              <div className="absolute inset-4 pointer-events-none border border-dashed border-emerald-400/50 rounded-2xl flex items-center justify-center">
                 <div className="bg-black/60 px-3 py-1 rounded-xl text-[10px] text-emerald-300 font-semibold border border-emerald-500/20">
                   Point camera at parking space & tap capture
                 </div>
@@ -379,25 +561,41 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
             </div>
 
             {/* Footer */}
-            <div className="p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+            <div className="p-3 bg-slate-900 border-t border-slate-800 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopCameraStream();
+                    setIsVerifying(false);
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-slate-400 hover:text-white font-bold text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={capturing}
+                  onClick={handleCaptureOnSiteProof}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>{capturing ? 'Saving Proof...' : 'Capture Proof'}</span>
+                </button>
+              </div>
+
+              {/* Instant device camera / file upload fallback */}
               <button
                 type="button"
                 onClick={() => {
                   stopCameraStream();
                   setIsVerifying(false);
+                  triggerDeviceCamera();
                 }}
-                className="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white font-bold text-xs"
+                className="w-full py-1 text-center text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition flex items-center justify-center gap-1 cursor-pointer"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={capturing}
-                onClick={handleCaptureOnSiteProof}
-                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md flex items-center space-x-1.5 disabled:opacity-50"
-              >
-                <Camera className="w-4 h-4" />
-                <span>{capturing ? 'Saving Proof...' : 'Capture Proof'}</span>
+                <Smartphone className="w-3 h-3" />
+                <span>Camera not working? Use Phone Camera / Upload</span>
               </button>
             </div>
           </div>

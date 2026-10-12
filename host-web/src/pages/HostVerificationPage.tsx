@@ -232,6 +232,10 @@ export const HostVerificationPage: React.FC = () => {
   // Camera Handlers
   const startCamera = async () => {
     setError('');
+    if (!navigator?.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError('Live camera requires HTTPS or localhost. Please use the device photo upload below.');
+      return;
+    }
     try {
       stopCamera();
       const stream = await navigator.mediaDevices.getUserMedia({

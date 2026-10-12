@@ -2,13 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { api } from '../services/api';
 import { 
   Camera, 
-  CheckCircle2, 
   AlertTriangle, 
   RotateCcw, 
   Trash2, 
   X, 
   FlipHorizontal,
-  Check
+  Smartphone,
+  Upload,
+  Loader2
 } from 'lucide-react';
 
 export type PhotoAngleKey = 'ENTRANCE' | 'PARKING_SLOT' | 'SURROUNDINGS' | 'ROOF_CLEARANCE' | 'GATE_ENTRY';
@@ -104,9 +105,11 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [cameraError, setCameraError] = useState('');
+  const [processingSlot, setProcessingSlot] = useState<PhotoAngleKey | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const formState = { isCovered, isIndoor, parkingType, hasGatedAccess };
 
@@ -134,10 +137,19 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
     };
   }, []);
 
+  // Open live in-browser camera stream
   const openCameraForSlot = async (slotKey: PhotoAngleKey, desiredFacing = facingMode) => {
     stopCameraStream();
     setActiveSlotKey(slotKey);
     setCameraError('');
+
+    // Check if getUserMedia is supported in the current browser/context
+    if (!navigator?.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError('Live camera stream requires HTTPS or localhost. Opening device camera instead...');
+      triggerDeviceCamera(slotKey);
+      return;
+    }
+
     let stream: MediaStream | null = null;
 
     try {
@@ -156,7 +168,8 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
           audio: false,
         });
       } catch (err: any) {
-        setCameraError('Camera access denied or unavailable. Please check your device camera permissions.');
+        setCameraError('In-browser camera access denied. Opening your device camera...');
+        triggerDeviceCamera(slotKey);
         return;
       }
     }
@@ -171,19 +184,50 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
     }
   };
 
+  // Direct trigger for phone camera / file input
+  const triggerDeviceCamera = (slotKey: PhotoAngleKey) => {
+    const input = fileInputRefs.current[slotKey];
+    if (input) {
+      input.click();
+    }
+  };
+
+  // Watermark helper for canvas
+  const applyWatermark = (
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    slotTitle: string,
+    timeStr: string
+  ) => {
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+    ctx.fillRect(0, h - 46, w, 46);
+
+    ctx.fillStyle = '#10b981';
+    ctx.fillRect(0, h - 46, w, 3);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`PARKSHARE • ${slotTitle.toUpperCase()}`, 12, h - 25);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '10px monospace';
+    ctx.fillText(`GPS: ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)} | ${timeStr} UTC`, 12, h - 10);
+  };
+
+  // Capture from live video stream
   const handleCapturePhoto = async () => {
     if (!videoRef.current || !activeSlotKey) return;
     const video = videoRef.current;
 
     if (!video.videoWidth || !video.videoHeight) {
-      setCameraError('Camera feed still initializing. Please wait a second.');
+      setCameraError('Camera feed still initializing. Please wait a moment.');
       return;
     }
 
     setCapturing(true);
 
     try {
-      // Scale canvas to efficient size (max 1280px) for ultra-fast processing
       const maxDim = 1280;
       let w = video.videoWidth;
       let h = video.videoHeight;
@@ -205,24 +249,11 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
 
       ctx.drawImage(video, 0, 0, w, h);
 
-      // Watermark
       const now = new Date();
       const timeStr = now.toISOString().replace('T', ' ').substring(0, 19);
       const slotDef = PHOTO_SLOTS.find((s) => s.key === activeSlotKey);
 
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
-      ctx.fillRect(0, h - 44, w, 44);
-
-      ctx.fillStyle = '#10b981';
-      ctx.fillRect(0, h - 44, w, 3);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 13px sans-serif';
-      ctx.fillText(`PARKSHARE • ${slotDef?.title.toUpperCase()}`, 12, h - 24);
-
-      ctx.fillStyle = '#cbd5e1';
-      ctx.font = '10px monospace';
-      ctx.fillText(`GPS: ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)} | ${timeStr} UTC`, 12, h - 10);
+      applyWatermark(ctx, w, h, slotDef?.title || activeSlotKey, timeStr);
 
       const targetKey = activeSlotKey;
 
@@ -234,7 +265,7 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
             return;
           }
 
-          // ⚡ INSTANT ZERO-LATENCY UPDATE: Show preview immediately to the user!
+          // Zero-latency instant local preview
           const instantPreviewUrl = URL.createObjectURL(blob);
           const updated = {
             ...photos,
@@ -247,12 +278,11 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
           };
           onPhotosChange(updated);
 
-          // Close camera immediately so the user never experiences lag!
           stopCameraStream();
           setActiveSlotKey(null);
           setCapturing(false);
 
-          // Background upload to server
+          // Upload in background to sync permanent URL
           try {
             const filename = `parking_${targetKey.toLowerCase()}_${Date.now()}.jpg`;
             const uploadRes = await api.uploadFile(blob, filename);
@@ -268,7 +298,7 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
           }
         },
         'image/jpeg',
-        0.82
+        0.85
       );
     } catch (err: any) {
       setCameraError(err.message || 'Capture failed');
@@ -276,7 +306,99 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
     }
   };
 
+  // Handle native device camera capture or photo selection
+  const handleDeviceFileChange = async (e: React.ChangeEvent<HTMLInputElement>, slotKey: PhotoAngleKey) => {
+    const file = e.target.files?.[0];
+    // Reset file input value so re-selecting same photo works
+    e.target.value = '';
+    if (!file) return;
 
+    setProcessingSlot(slotKey);
+    setCameraError('');
+
+    try {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image file'));
+      });
+
+      const maxDim = 1280;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context unavailable');
+
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(objectUrl);
+
+      const now = new Date();
+      const timeStr = now.toISOString().replace('T', ' ').substring(0, 19);
+      const slotDef = PHOTO_SLOTS.find((s) => s.key === slotKey);
+
+      applyWatermark(ctx, w, h, slotDef?.title || slotKey, timeStr);
+
+      canvas.toBlob(
+        async (blob) => {
+          if (!blob) {
+            setCameraError('Failed to process image');
+            setProcessingSlot(null);
+            return;
+          }
+
+          // Zero-latency instant local preview
+          const previewUrl = URL.createObjectURL(blob);
+          const updated = {
+            ...photos,
+            [slotKey]: {
+              url: previewUrl,
+              capturedAt: timeStr,
+              angleLabel: slotDef?.title || slotKey,
+              gpsCoords: { lat: currentLat, lng: currentLng },
+            },
+          };
+          onPhotosChange(updated);
+          setProcessingSlot(null);
+
+          // Background upload to server
+          try {
+            const filename = `parking_${slotKey.toLowerCase()}_${Date.now()}.jpg`;
+            const uploadRes = await api.uploadFile(blob, filename);
+            onPhotosChange({
+              ...updated,
+              [slotKey]: {
+                ...updated[slotKey]!,
+                url: uploadRes.url,
+              },
+            });
+          } catch (uploadErr) {
+            console.warn('Background upload synced to preview', uploadErr);
+          }
+        },
+        'image/jpeg',
+        0.85
+      );
+    } catch (err: any) {
+      setCameraError(err.message || 'Failed to process photo from device');
+      setProcessingSlot(null);
+    }
+  };
 
   const removePhoto = (slotKey: PhotoAngleKey) => {
     const updated = { ...photos };
@@ -290,13 +412,12 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
 
   return (
     <div className="space-y-3">
-
-
-      {/* Clean 2-Column Photo Card Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+      {/* 2-Column Photo Card Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
         {visibleSlots.map((slot) => {
           const photo = photos[slot.key];
           const isCaptured = Boolean(photo?.url);
+          const isBusy = processingSlot === slot.key;
 
           return (
             <div
@@ -304,13 +425,24 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
               className={`rounded-2xl border p-2.5 flex flex-col justify-between transition-all ${
                 isCaptured
                   ? 'bg-emerald-50/60 border-emerald-300 shadow-2xs'
-                  : 'bg-gray-50/70 border-gray-200 hover:border-emerald-300'
+                  : 'bg-white border-gray-200 hover:border-emerald-300 shadow-2xs'
               }`}
             >
+              {/* Hidden file input for native camera capture */}
+              <input
+                ref={(el) => { fileInputRefs.current[slot.key] = el; }}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => handleDeviceFileChange(e, slot.key)}
+              />
+
               {/* Header */}
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold text-gray-900 truncate">
-                  {slot.icon} {slot.title}
+                <span className="text-xs font-bold text-gray-900 truncate flex items-center gap-1">
+                  <span>{slot.icon}</span>
+                  <span>{slot.title}</span>
                 </span>
                 {isCaptured ? (
                   <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">
@@ -323,27 +455,35 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
                 )}
               </div>
 
-              {/* Thumbnail or Capture Box */}
+              {/* Thumbnail or Placeholder */}
               {isCaptured ? (
-                <div className="relative rounded-xl overflow-hidden aspect-4/3 bg-black/10 group mb-1.5">
+                <div className="relative rounded-xl overflow-hidden aspect-4/3 bg-black/10 group mb-2 border border-gray-200">
                   <img
                     src={photo!.url}
                     alt={slot.title}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center space-x-1.5">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center space-x-2">
                     <button
                       type="button"
                       onClick={() => openCameraForSlot(slot.key)}
-                      className="p-1 rounded-lg bg-white/90 text-gray-800 text-[10px] font-bold hover:bg-white transition"
-                      title="Retake Photo"
+                      className="p-1.5 rounded-lg bg-white text-gray-800 text-[10px] font-bold hover:bg-emerald-50 transition cursor-pointer"
+                      title="Retake with Live Camera"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
+                      onClick={() => triggerDeviceCamera(slot.key)}
+                      className="p-1.5 rounded-lg bg-white text-gray-800 text-[10px] font-bold hover:bg-emerald-50 transition cursor-pointer"
+                      title="Retake with Phone Camera / Upload"
+                    >
+                      <Smartphone className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => removePhoto(slot.key)}
-                      className="p-1 rounded-lg bg-red-600 text-white text-[10px] font-bold hover:bg-red-700 transition"
+                      className="p-1.5 rounded-lg bg-red-600 text-white text-[10px] font-bold hover:bg-red-700 transition cursor-pointer"
                       title="Delete"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -351,22 +491,44 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-gray-300 aspect-4/3 flex flex-col items-center justify-center p-2 text-center mb-1.5 bg-white">
-                  <span className="text-xl mb-1">{slot.icon}</span>
-                  <span className="text-[10px] text-gray-500 font-medium leading-tight">{slot.shortDesc}</span>
+                <div className="rounded-xl border border-dashed border-gray-300 aspect-4/3 flex flex-col items-center justify-center p-2 text-center mb-2 bg-slate-50/60">
+                  {isBusy ? (
+                    <div className="flex flex-col items-center gap-1 text-emerald-600">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-[10px] font-bold">Processing photo...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-xl mb-0.5">{slot.icon}</span>
+                      <span className="text-[10px] text-gray-500 font-medium leading-tight">{slot.shortDesc}</span>
+                    </>
+                  )}
                 </div>
               )}
 
-              {/* Action Button: Live Camera Only */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => openCameraForSlot(slot.key)}
-                  className="w-full py-2 px-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-2xs cursor-pointer"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>{isCaptured ? 'Retake Photo' : 'Live Camera'}</span>
-                </button>
+              {/* Dual Action Buttons: Live Camera & Phone Camera / Upload */}
+              <div className="space-y-1.5 pt-0.5">
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => openCameraForSlot(slot.key)}
+                    className="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl text-[11px] font-bold transition flex items-center justify-center space-x-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    <Camera className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{isCaptured ? 'Live Retake' : 'Live Cam'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => triggerDeviceCamera(slot.key)}
+                    className="py-1.5 px-2 bg-slate-100 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 text-slate-800 rounded-xl text-[11px] font-bold transition flex items-center justify-center space-x-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    <Smartphone className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                    <span className="truncate">{isCaptured ? 'Device Photo' : 'Device / Upload'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -374,13 +536,22 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
       </div>
 
       {cameraError && (
-        <div className="bg-red-50 text-red-700 p-2.5 rounded-xl border border-red-200 text-xs font-semibold flex items-center space-x-1.5">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-          <span>{cameraError}</span>
+        <div className="bg-amber-50 text-amber-800 p-2.5 rounded-xl border border-amber-200 text-xs font-semibold flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-1.5 min-w-0">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+            <span className="truncate">{cameraError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCameraError('')}
+            className="text-[10px] font-bold text-amber-700 underline flex-shrink-0"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
-      {/* Streamlined Live Camera Viewfinder Modal */}
+      {/* Live Camera Viewfinder Modal */}
       {isCameraActive && activeSlotKey && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
           <div className="w-full max-w-sm bg-slate-950 rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/40 flex flex-col max-h-[85vh]">
@@ -401,7 +572,7 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
                     setFacingMode(next);
                     openCameraForSlot(activeSlotKey, next);
                   }}
-                  className="p-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg transition"
+                  className="p-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg transition cursor-pointer"
                   title="Switch Camera"
                 >
                   <FlipHorizontal className="w-3.5 h-3.5" />
@@ -412,7 +583,7 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
                     stopCameraStream();
                     setActiveSlotKey(null);
                   }}
-                  className="p-1.5 bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"
+                  className="p-1.5 bg-slate-800 text-slate-400 hover:text-white rounded-lg transition cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -439,26 +610,43 @@ export const LiveSpaceCameraCapture: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+            {/* Footer with Capture & Device Fallback */}
+            <div className="p-3 bg-slate-900 border-t border-slate-800 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopCameraStream();
+                    setActiveSlotKey(null);
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-slate-400 hover:text-white font-bold text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={capturing}
+                  onClick={handleCapturePhoto}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>{capturing ? 'Snapping...' : 'Capture Photo'}</span>
+                </button>
+              </div>
+
+              {/* Instant device camera / file upload fallback */}
               <button
                 type="button"
                 onClick={() => {
+                  const key = activeSlotKey;
                   stopCameraStream();
                   setActiveSlotKey(null);
+                  if (key) triggerDeviceCamera(key);
                 }}
-                className="px-3 py-1.5 rounded-xl text-slate-400 hover:text-white font-bold text-xs"
+                className="w-full py-1 text-center text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition flex items-center justify-center gap-1 cursor-pointer"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={capturing}
-                onClick={handleCapturePhoto}
-                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer"
-              >
-                <Camera className="w-4 h-4" />
-                <span>{capturing ? 'Snapping...' : 'Capture Photo'}</span>
+                <Smartphone className="w-3 h-3" />
+                <span>Camera not opening? Tap here to use Phone Camera / Upload</span>
               </button>
             </div>
           </div>
