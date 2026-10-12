@@ -387,7 +387,7 @@ export const HostAuthPage: React.FC = () => {
       if (isLogin) {
         const res = await api.login(email.trim().toLowerCase(), password);
         login(res.access_token, res.user);
-        navigate('/dashboard');
+        navigate('/');
       } else {
         // Enforce mandatory verification items during host registration
         if (!legalName || legalName.trim().length < 2) {
@@ -436,7 +436,7 @@ export const HostAuthPage: React.FC = () => {
 
         const res = await api.login(email.trim().toLowerCase(), password);
         login(res.access_token, res.user);
-        navigate('/dashboard');
+        navigate('/?new_user=true');
       }
     } catch (err: any) {
       setError(err.message || 'Host authentication failed');

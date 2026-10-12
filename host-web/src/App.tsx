@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/Navbar';
 import { BottomNav } from './components/BottomNav';
 import { Footer } from './components/Footer';
+import { HostServicesHomePage } from './pages/HostServicesHomePage';
 import { HostLandingPage } from './pages/HostLandingPage';
 import { HostAuthPage } from './pages/HostAuthPage';
 import { HostDashboard } from './pages/HostDashboard';
@@ -32,7 +33,9 @@ export const AppContent: React.FC = () => {
       {!isAuthPage && <Navbar />}
       <main className={`flex-grow ${user && !isAuthPage ? 'pb-24' : ''}`}>
         <Routes>
-          <Route path="/" element={<HostLandingPage />} />
+          <Route path="/" element={<HostServicesHomePage />} />
+          <Route path="/services" element={<HostServicesHomePage />} />
+          <Route path="/landing" element={<HostLandingPage />} />
           <Route path="/auth" element={<HostAuthPage />} />
           <Route path="/register/driver" element={<RegisterDriverPage />} />
           <Route path="/partner/driver" element={<RegisterDriverPage />} />
@@ -40,6 +43,14 @@ export const AppContent: React.FC = () => {
           <Route path="/partner/car-spa" element={<RegisterCarSpaPage />} />
           <Route
             path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <HostDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parking"
             element={
               <ProtectedRoute>
                 <HostDashboard />

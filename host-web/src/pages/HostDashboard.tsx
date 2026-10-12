@@ -256,9 +256,16 @@ export const HostDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2 flex-shrink-0">
+          <Link
+            to="/"
+            className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800/80 px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+            title="All Services"
+          >
+            <span>🏠 Services</span>
+          </Link>
           <button
             onClick={() => fetchData()}
-            className="text-xs font-bold text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-2xs border border-transparent dark:border-slate-700"
+            className="text-xs font-bold text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-2xs border border-transparent dark:border-slate-700 cursor-pointer"
             title="Refresh Data"
           >
             <RotateCcw className="w-4 h-4 text-gray-500 dark:text-slate-400" />
