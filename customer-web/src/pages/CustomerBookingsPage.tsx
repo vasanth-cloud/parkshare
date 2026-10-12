@@ -66,11 +66,25 @@ export const CustomerBookingsPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // Service Classification Tab: ALL | PARKING | DRIVERS | CAR_SPA
-  const initialCategory = (searchParams.get('category')?.toUpperCase() as any) || 'ALL';
+  // Detect if user came from a specific service page (e.g. ?service=parking or ?category=parking)
+  const serviceParam = (searchParams.get('service') || searchParams.get('category') || '').toLowerCase();
+  const isParkingOnly = serviceParam === 'parking';
+  const isDriversOnly = serviceParam === 'drivers';
+  const isSpaOnly = serviceParam === 'car_spa' || serviceParam === 'spa';
+  const isServiceLocked = isParkingOnly || isDriversOnly || isSpaOnly;
+
+  // Active Classification Filter:
+  // If service is locked (e.g. from parking service page), lock to that service.
+  // Otherwise, default to ALL or user selection.
   const [serviceClassification, setServiceClassification] = useState<'ALL' | 'PARKING' | 'DRIVERS' | 'CAR_SPA'>(
-    ['ALL', 'PARKING', 'DRIVERS', 'CAR_SPA'].includes(initialCategory) ? initialCategory : 'ALL'
+    isParkingOnly ? 'PARKING' : isDriversOnly ? 'DRIVERS' : isSpaOnly ? 'CAR_SPA' : 'ALL'
   );
+
+  useEffect(() => {
+    if (isParkingOnly) setServiceClassification('PARKING');
+    else if (isDriversOnly) setServiceClassification('DRIVERS');
+    else if (isSpaOnly) setServiceClassification('CAR_SPA');
+  }, [serviceParam]);
 
   const [parkingBookings, setParkingBookings] = useState<Booking[]>([]);
   const [driverBookings, setDriverBookings] = useState<DriverBookingItem[]>([]);
@@ -88,13 +102,7 @@ export const CustomerBookingsPage: React.FC = () => {
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
 
-  // Report Problem Modal
-  const [reportBooking, setReportBooking] = useState<Booking | null>(null);
-  const [reportCategory, setReportCategory] = useState<string>('SPACE_UNAVAILABLE');
-  const [reportDescription, setReportDescription] = useState<string>('');
-  const [submittingReport, setSubmittingReport] = useState<boolean>(false);
-
-  // Leave Review Modal
+  // Review Modal
   const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>('');
@@ -108,41 +116,58 @@ export const CustomerBookingsPage: React.FC = () => {
   }, []);
 
   const loadLocalBookings = () => {
-    try {
-      const storedDrivers = JSON.parse(localStorage.getItem('parkshare_driver_bookings') || '[]');
-      setDriverBookings(storedDrivers);
-    } catch {
+    // Only load drivers if not locked to another service
+    if (!isParkingOnly && !isSpaOnly) {
+      try {
+        const storedDrivers = JSON.parse(localStorage.getItem('parkshare_driver_bookings') || '[]');
+        setDriverBookings(storedDrivers);
+      } catch {
+        setDriverBookings([]);
+      }
+    } else {
       setDriverBookings([]);
     }
 
-    try {
-      const storedSpa = JSON.parse(localStorage.getItem('parkshare_spa_bookings') || '[]');
-      setSpaBookings(storedSpa);
-    } catch {
+    // Only load spa if not locked to another service
+    if (!isParkingOnly && !isDriversOnly) {
+      try {
+        const storedSpa = JSON.parse(localStorage.getItem('parkshare_spa_bookings') || '[]');
+        setSpaBookings(storedSpa);
+      } catch {
+        setSpaBookings([]);
+      }
+    } else {
       setSpaBookings([]);
     }
   };
 
   const fetchBookings = () => {
     setLoading(true);
-    api.getMyBookings()
-      .then((data) => {
-        setParkingBookings(data || []);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    // If not locked to driver or spa, fetch parking
+    if (!isDriversOnly && !isSpaOnly) {
+      api.getMyBookings()
+        .then((data) => {
+          setParkingBookings(data || []);
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    } else {
+      setParkingBookings([]);
+      setLoading(false);
+    }
 
     loadLocalBookings();
   };
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [serviceParam]);
 
   const handleClassificationChange = (cls: 'ALL' | 'PARKING' | 'DRIVERS' | 'CAR_SPA') => {
     setServiceClassification(cls);
     if (cls === 'ALL') {
       searchParams.delete('category');
+      searchParams.delete('service');
       setSearchParams(searchParams);
     } else {
       setSearchParams({ category: cls.toLowerCase() });
@@ -165,9 +190,23 @@ export const CustomerBookingsPage: React.FC = () => {
   const activeSpa = spaBookings.filter((s) => s.status === 'CONFIRMED');
   const historySpa = spaBookings.filter((s) => ['COMPLETED', 'CANCELLED'].includes(s.status));
 
-  // Compute counts for classification pills
-  const totalActive = activeParking.length + activeDrivers.length + activeSpa.length;
-  const totalHistory = historyParking.length + historyDrivers.length + historySpa.length;
+  // Compute counts
+  const totalActive = isParkingOnly
+    ? activeParking.length
+    : isDriversOnly
+    ? activeDrivers.length
+    : isSpaOnly
+    ? activeSpa.length
+    : (activeParking.length + activeDrivers.length + activeSpa.length);
+
+  const totalHistory = isParkingOnly
+    ? historyParking.length
+    : isDriversOnly
+    ? historyDrivers.length
+    : isSpaOnly
+    ? historySpa.length
+    : (historyParking.length + historyDrivers.length + historySpa.length);
+
   const currentTotal = activeTab === 'ACTIVE' ? totalActive : totalHistory;
 
   const handlePayPendingBooking = async (b: Booking) => {
@@ -293,112 +332,152 @@ export const CustomerBookingsPage: React.FC = () => {
     }
   };
 
+  // Back button handler
+  const handleBack = () => {
+    if (isParkingOnly) {
+      navigate('/parking');
+    } else if (isDriversOnly) {
+      navigate('/services/drivers');
+    } else if (isSpaOnly) {
+      navigate('/services/car-spa');
+    } else if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F6F8FA] dark:bg-slate-950 text-slate-900 dark:text-slate-100 py-6 px-4 max-w-md mx-auto space-y-4 font-sans transition-colors duration-200 pb-24">
       
-      {/* 1. Header with Back Button */}
+      {/* 1. Header with Contextual Back Navigation */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <button
             type="button"
-            onClick={() => {
-              if (window.history.state && window.history.state.idx > 0) {
-                navigate(-1);
-              } else {
-                navigate('/');
-              }
-            }}
+            onClick={handleBack}
             className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shadow-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer flex-shrink-0"
             title="Go Back"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white">Bookings & Passes</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Classified by service category</p>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white">
+              {isParkingOnly
+                ? 'Parking Passes & History'
+                : isDriversOnly
+                ? 'Acting Driver Rides'
+                : isSpaOnly
+                ? 'Car Spa Bookings'
+                : 'Bookings & Passes'}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {isParkingOnly
+                ? 'Active gate entry passes & parking history'
+                : isDriversOnly
+                ? 'Active chauffeurs & trip receipts'
+                : isSpaOnly
+                ? 'Scheduled wash appointments & receipts'
+                : 'Classified by service category'}
+            </p>
           </div>
         </div>
 
-        <Link
-          to="/"
-          className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-0.5"
-        >
-          <span>+ New Booking</span>
-        </Link>
+        {/* Action Link on Top Right */}
+        {isParkingOnly ? (
+          <Link
+            to="/parking"
+            className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-0.5"
+          >
+            <span>+ Find Spots</span>
+          </Link>
+        ) : (
+          <Link
+            to="/"
+            className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-0.5"
+          >
+            <span>+ New Booking</span>
+          </Link>
+        )}
       </div>
 
-      {/* 2. Service Classification Filter Pills */}
-      <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1.5">
-        <div className="flex items-center justify-between px-1 text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
-          <span className="flex items-center space-x-1">
-            <Layers className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Service Classification</span>
-          </span>
-          <span className="text-[10px] text-slate-400">Filter your reservations</span>
+      {/* ========================================================================= */}
+      {/* 2. SERVICE CLASSIFICATION PILLS (ONLY SHOWN BEFORE SELECTING A SERVICE)    */}
+      {/* If accessed from parking page, this whole block is hidden!               */}
+      {/* ========================================================================= */}
+      {!isServiceLocked && (
+        <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1.5">
+          <div className="flex items-center justify-between px-1 text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
+            <span className="flex items-center space-x-1">
+              <Layers className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Service Classification</span>
+            </span>
+            <span className="text-[10px] text-slate-400">Filter your reservations</span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => handleClassificationChange('ALL')}
+              className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
+                serviceClassification === 'ALL'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
+              }`}
+            >
+              <span>All</span>
+              <span className="text-[9px] opacity-75 mt-0.5">({currentTotal})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleClassificationChange('PARKING')}
+              className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
+                serviceClassification === 'PARKING'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
+              }`}
+            >
+              <span>🅿️ Parking</span>
+              <span className="text-[9px] opacity-75 mt-0.5">
+                ({activeTab === 'ACTIVE' ? activeParking.length : historyParking.length})
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleClassificationChange('DRIVERS')}
+              className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
+                serviceClassification === 'DRIVERS'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
+              }`}
+            >
+              <span>🧑‍✈️ Drivers</span>
+              <span className="text-[9px] opacity-75 mt-0.5">
+                ({activeTab === 'ACTIVE' ? activeDrivers.length : historyDrivers.length})
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleClassificationChange('CAR_SPA')}
+              className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
+                serviceClassification === 'CAR_SPA'
+                  ? 'bg-cyan-600 text-white shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
+              }`}
+            >
+              <span>✨ Car Spa</span>
+              <span className="text-[9px] opacity-75 mt-0.5">
+                ({activeTab === 'ACTIVE' ? activeSpa.length : historySpa.length})
+              </span>
+            </button>
+          </div>
         </div>
+      )}
 
-        <div className="grid grid-cols-4 gap-1.5 pt-1">
-          <button
-            type="button"
-            onClick={() => handleClassificationChange('ALL')}
-            className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
-              serviceClassification === 'ALL'
-                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
-            }`}
-          >
-            <span>All</span>
-            <span className="text-[9px] opacity-75 mt-0.5">({currentTotal})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleClassificationChange('PARKING')}
-            className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
-              serviceClassification === 'PARKING'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
-            }`}
-          >
-            <span>🅿️ Parking</span>
-            <span className="text-[9px] opacity-75 mt-0.5">
-              ({activeTab === 'ACTIVE' ? activeParking.length : historyParking.length})
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleClassificationChange('DRIVERS')}
-            className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
-              serviceClassification === 'DRIVERS'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
-            }`}
-          >
-            <span>🧑‍✈️ Drivers</span>
-            <span className="text-[9px] opacity-75 mt-0.5">
-              ({activeTab === 'ACTIVE' ? activeDrivers.length : historyDrivers.length})
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleClassificationChange('CAR_SPA')}
-            className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
-              serviceClassification === 'CAR_SPA'
-                ? 'bg-cyan-600 text-white shadow-xs'
-                : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
-            }`}
-          >
-            <span>✨ Car Spa</span>
-            <span className="text-[9px] opacity-75 mt-0.5">
-              ({activeTab === 'ACTIVE' ? activeSpa.length : historySpa.length})
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Clean Active vs History Switcher */}
+      {/* 3. Active vs History Switcher */}
       <div className="flex bg-white dark:bg-slate-900 p-1 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
         <button
           type="button"
@@ -409,7 +488,7 @@ export const CustomerBookingsPage: React.FC = () => {
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
           }`}
         >
-          <span>Active Passes & Trips</span>
+          <span>{isParkingOnly ? 'Active Passes' : 'Active Passes & Trips'}</span>
           <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500 text-white rounded-full font-bold">
             {totalActive}
           </span>
@@ -424,7 +503,7 @@ export const CustomerBookingsPage: React.FC = () => {
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
           }`}
         >
-          <span>History & Receipts</span>
+          <span>{isParkingOnly ? 'Past Parking' : 'History & Receipts'}</span>
           <span className="text-[10px] px-1.5 py-0.2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white rounded-full font-bold">
             {totalHistory}
           </span>
@@ -435,19 +514,19 @@ export const CustomerBookingsPage: React.FC = () => {
       {loading ? (
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-200/90 dark:border-slate-800">
           <div className="w-6 h-6 border-2 border-slate-900 dark:border-white border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-          <p className="text-xs text-slate-500">Loading your reservations...</p>
+          <p className="text-xs text-slate-500">Loading reservations...</p>
         </div>
       ) : (
         <div className="space-y-4">
           
           {/* ========================================================= */}
-          {/* A. PARKING BOOKINGS SECTION                               */}
+          {/* A. PARKING BOOKINGS (ONLY IF IN PARKING OR ALL)          */}
           {/* ========================================================= */}
           {(serviceClassification === 'ALL' || serviceClassification === 'PARKING') && (
             <>
               {activeTab === 'ACTIVE' && activeParking.length > 0 && (
                 <div className="space-y-3">
-                  {serviceClassification === 'ALL' && (
+                  {!isParkingOnly && serviceClassification === 'ALL' && (
                     <div className="flex items-center justify-between px-1">
                       <span className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center space-x-1">
                         <span>🅿️ Parking Passes</span>
@@ -515,7 +594,7 @@ export const CustomerBookingsPage: React.FC = () => {
 
               {activeTab === 'HISTORY' && historyParking.length > 0 && (
                 <div className="space-y-3">
-                  {serviceClassification === 'ALL' && (
+                  {!isParkingOnly && serviceClassification === 'ALL' && (
                     <div className="flex items-center justify-between px-1">
                       <span className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center space-x-1">
                         <span>🅿️ Past Parking</span>
@@ -598,9 +677,9 @@ export const CustomerBookingsPage: React.FC = () => {
           )}
 
           {/* ========================================================= */}
-          {/* B. ACTING DRIVERS BOOKINGS SECTION                        */}
+          {/* B. ACTING DRIVERS (ONLY IF NOT IN PARKING SERVICE)        */}
           {/* ========================================================= */}
-          {(serviceClassification === 'ALL' || serviceClassification === 'DRIVERS') && (
+          {!isParkingOnly && (serviceClassification === 'ALL' || serviceClassification === 'DRIVERS') && (
             <>
               {activeTab === 'ACTIVE' && activeDrivers.length > 0 && (
                 <div className="space-y-3">
@@ -629,7 +708,6 @@ export const CustomerBookingsPage: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Driver Info Header */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="w-11 h-11 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-black text-lg border border-indigo-200 dark:border-indigo-800">
@@ -657,7 +735,6 @@ export const CustomerBookingsPage: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Trip Details Box */}
                       <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3 space-y-2 text-xs">
                         <div className="flex items-center justify-between">
                           <span className="text-slate-500 text-[11px] font-semibold">Trip Type</span>
@@ -679,7 +756,6 @@ export const CustomerBookingsPage: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Actions */}
                       <div className="flex items-center space-x-2 pt-1">
                         <a
                           href={`tel:${d.driver?.phone || '+919876543210'}`}
@@ -744,9 +820,9 @@ export const CustomerBookingsPage: React.FC = () => {
           )}
 
           {/* ========================================================= */}
-          {/* C. CAR SPA & DETAILING BOOKINGS SECTION                   */}
+          {/* C. CAR SPA (ONLY IF NOT IN PARKING SERVICE)               */}
           {/* ========================================================= */}
-          {(serviceClassification === 'ALL' || serviceClassification === 'CAR_SPA') && (
+          {!isParkingOnly && (serviceClassification === 'ALL' || serviceClassification === 'CAR_SPA') && (
             <>
               {activeTab === 'ACTIVE' && activeSpa.length > 0 && (
                 <div className="space-y-3">
@@ -879,51 +955,61 @@ export const CustomerBookingsPage: React.FC = () => {
 
           {/* EMPTY STATE */}
           {((activeTab === 'ACTIVE' && (
-            (serviceClassification === 'ALL' && totalActive === 0) ||
-            (serviceClassification === 'PARKING' && activeParking.length === 0) ||
-            (serviceClassification === 'DRIVERS' && activeDrivers.length === 0) ||
-            (serviceClassification === 'CAR_SPA' && activeSpa.length === 0)
+            (isParkingOnly && activeParking.length === 0) ||
+            (!isParkingOnly && serviceClassification === 'ALL' && totalActive === 0) ||
+            (!isParkingOnly && serviceClassification === 'PARKING' && activeParking.length === 0) ||
+            (!isParkingOnly && serviceClassification === 'DRIVERS' && activeDrivers.length === 0) ||
+            (!isParkingOnly && serviceClassification === 'CAR_SPA' && activeSpa.length === 0)
           )) ||
           (activeTab === 'HISTORY' && (
-            (serviceClassification === 'ALL' && totalHistory === 0) ||
-            (serviceClassification === 'PARKING' && historyParking.length === 0) ||
-            (serviceClassification === 'DRIVERS' && historyDrivers.length === 0) ||
-            (serviceClassification === 'CAR_SPA' && historySpa.length === 0)
+            (isParkingOnly && historyParking.length === 0) ||
+            (!isParkingOnly && serviceClassification === 'ALL' && totalHistory === 0) ||
+            (!isParkingOnly && serviceClassification === 'PARKING' && historyParking.length === 0) ||
+            (!isParkingOnly && serviceClassification === 'DRIVERS' && historyDrivers.length === 0) ||
+            (!isParkingOnly && serviceClassification === 'CAR_SPA' && historySpa.length === 0)
           ))) && (
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-200/90 dark:border-slate-800 space-y-3">
               <Calendar className="w-8 h-8 text-slate-400 mx-auto" />
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                {activeTab === 'ACTIVE' ? 'No Active Reservations' : 'No Past History'}
+                {activeTab === 'ACTIVE' ? 'No Active Parking Passes' : 'No Past Parking Sessions'}
               </h3>
               <p className="text-xs text-slate-400 max-w-xs mx-auto">
                 {activeTab === 'ACTIVE'
-                  ? serviceClassification === 'PARKING'
-                    ? 'No active parking passes found. Book a spot to get instant gate QR & PIN.'
-                    : serviceClassification === 'DRIVERS'
-                    ? 'No acting chauffeurs hired. Hire a certified driver for your car.'
-                    : serviceClassification === 'CAR_SPA'
-                    ? 'No scheduled car wash or detailing appointments.'
-                    : 'You currently have no active passes or service bookings.'
-                  : 'Completed and past session receipts will appear here.'}
+                  ? 'Book a spot on the parking radar to receive your instant digital gate pass & PIN.'
+                  : 'Completed parking sessions and receipts will appear here.'}
               </p>
               
               <div className="pt-2 flex flex-wrap gap-2 justify-center">
                 <Link
-                  to={serviceClassification === 'DRIVERS' ? '/services/drivers' : serviceClassification === 'CAR_SPA' ? '/services/car-spa' : '/parking'}
-                  className="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold px-4 py-2.5 rounded-2xl text-xs transition shadow-xs"
+                  to="/parking"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-2xl text-xs transition shadow-xs"
                 >
-                  {serviceClassification === 'DRIVERS' ? 'Hire Acting Driver' : serviceClassification === 'CAR_SPA' ? 'Schedule Car Spa' : 'Find Parking Spots'}
+                  Find Parking Spots
                 </Link>
-                <Link
-                  to="/"
-                  className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold px-4 py-2.5 rounded-2xl text-xs transition"
-                >
-                  Browse All Services
-                </Link>
+                {isParkingOnly && (
+                  <Link
+                    to="/bookings"
+                    className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold px-4 py-2.5 rounded-2xl text-xs transition"
+                  >
+                    View All Services Bookings
+                  </Link>
+                )}
               </div>
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* Helper Link when locked to parking: Option to view all classified bookings */}
+      {isParkingOnly && (
+        <div className="pt-2 text-center">
+          <Link
+            to="/bookings"
+            className="text-[11px] font-bold text-slate-400 hover:text-emerald-600 transition"
+          >
+            Switch to All Services Classified Bookings →
+          </Link>
         </div>
       )}
 
@@ -985,7 +1071,7 @@ export const CustomerBookingsPage: React.FC = () => {
                     }}
                     className="text-xs font-black text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-0.5 cursor-pointer"
                   >
-                    <Navigation className="w-3 h-3" />
+                    <Navigation className="w-3.5 h-3.5" />
                     <span>Navigate</span>
                   </button>
                 )}
@@ -1076,7 +1162,7 @@ export const CustomerBookingsPage: React.FC = () => {
 
             <textarea
               rows={3}
-              placeholder="How was the space access, lighting, or service quality?"
+              placeholder="How was the space access, lighting, or host?"
               value={reviewComment}
               onChange={(e) => setReviewComment(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none"

@@ -23,7 +23,8 @@ import {
   Layers,
   Crosshair,
   UserCheck,
-  Droplets
+  Droplets,
+  Calendar
 } from 'lucide-react';
 import { api } from '../services/api';
 import { ParkingListing, Booking } from '../types';
@@ -383,7 +384,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
         {/* Compact Floating Active Trip Banner */}
         {activeBooking && (
           <div 
-            onClick={() => navigate('/bookings')}
+            onClick={() => navigate('/bookings?service=parking')}
             className="pointer-events-auto bg-gradient-to-r from-slate-900 via-slate-900 to-blue-950 text-white rounded-2xl p-2.5 shadow-xl border border-blue-500/30 flex items-center justify-between gap-2.5 transition active:scale-[0.99] cursor-pointer"
           >
             <div className="flex items-center space-x-2.5 min-w-0">
@@ -425,7 +426,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate('/bookings');
+                  navigate('/bookings?service=parking');
                 }}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center space-x-1 shadow-xs cursor-pointer"
               >
@@ -544,6 +545,16 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
           ) : (
             <Crosshair className="w-5 h-5 text-emerald-600" />
           )}
+        </button>
+
+        {/* Parking Passes & Bookings History Shortcut */}
+        <button
+          type="button"
+          onClick={() => navigate('/bookings?service=parking')}
+          className="w-11 h-11 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-lg border border-white/80 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-emerald-600 transition active:scale-95 cursor-pointer"
+          title="My Parking Passes & History"
+        >
+          <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
         </button>
 
         {/* Floating ParkBot AI Concierge Trigger */}

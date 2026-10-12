@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Car, Search, Calendar, LogOut, Sun, Moon, Bot, Sparkles, ChevronDown, Layers } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -13,7 +13,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showBookingsDropdown, setShowBookingsDropdown] = useState(false);
+
+  // If on parking page, bookings defaults to parking bookings
+  const getBookingsLink = () => {
+    if (location.pathname === '/parking' || location.pathname.startsWith('/listing') || location.pathname === '/search') {
+      return '/bookings?service=parking';
+    }
+    if (location.pathname.startsWith('/services/drivers') || location.pathname === '/drivers') {
+      return '/bookings?service=drivers';
+    }
+    if (location.pathname.startsWith('/services/car-spa') || location.pathname === '/car-spa') {
+      return '/bookings?service=car_spa';
+    }
+    return '/bookings';
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs dark:shadow-md border-b border-slate-200/90 dark:border-slate-800 transition-colors duration-200">
@@ -51,7 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
             onMouseLeave={() => setShowBookingsDropdown(false)}
           >
             <Link
-              to="/bookings"
+              to={getBookingsLink()}
               className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-2"
             >
               <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />

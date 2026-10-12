@@ -220,7 +220,7 @@ export const CustomerListingDetail: React.FC = () => {
               payment_id: response.razorpay_payment_id,
               signature: response.razorpay_signature,
             });
-            navigate('/bookings');
+            navigate('/bookings?service=parking');
           } catch (verifyErr: any) {
             setError(verifyErr.message || 'Payment verification failed.');
           } finally {
@@ -309,7 +309,7 @@ export const CustomerListingDetail: React.FC = () => {
               payment_id: response.razorpay_payment_id,
               signature: response.razorpay_signature,
             });
-            navigate('/bookings');
+            navigate('/bookings?service=parking');
           } catch (verifyErr: any) {
             setError(verifyErr.message || 'Payment verification failed.');
           } finally {
@@ -609,7 +609,7 @@ export const CustomerListingDetail: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => navigate('/bookings')}
+              onClick={() => navigate('/bookings?service=parking')}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-1.5 rounded-xl transition text-xs shadow-xs flex-shrink-0 cursor-pointer"
             >
               View Pass
