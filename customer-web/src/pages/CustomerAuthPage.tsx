@@ -438,32 +438,7 @@ export const CustomerAuthPage: React.FC = () => {
             <ArrowRight className="w-4 h-4" />
           </button>
 
-          {isLogin && (
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  setEmail('parker@parkshare.com');
-                  setPassword('Parker@123');
-                  setLoading(true);
-                  setError('');
-                  try {
-                    const data = await api.login('parker@parkshare.com', 'Parker@123');
-                    login(data.access_token, data.user);
-                    navigate('/dashboard');
-                  } catch (err: any) {
-                    setError(err.message || 'Demo login failed');
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                disabled={loading}
-                className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold py-2.5 px-4 rounded-xl border border-emerald-300 transition text-xs flex items-center justify-center space-x-2 cursor-pointer shadow-xs"
-              >
-                <span>⚡ Quick Demo Parker Login (1-Click)</span>
-              </button>
-            </div>
-          )}
+
         </form>
 
         <div className="text-center pt-2">

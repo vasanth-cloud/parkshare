@@ -1274,29 +1274,6 @@ export const HostAuthPage: React.FC = () => {
                 <span>{loading ? 'Processing...' : 'Sign In to Host Portal'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  setEmail('host@parkshare.com');
-                  setPassword('Host@123');
-                  setLoading(true);
-                  setError('');
-                  try {
-                    const data = await api.login('host@parkshare.com', 'Host@123');
-                    login(data.access_token, data.user);
-                    navigate('/dashboard');
-                  } catch (err: any) {
-                    setError(err.message || 'Demo host login failed');
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                disabled={loading}
-                className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold py-2.5 px-4 rounded-full border border-emerald-300 transition text-xs flex items-center justify-center space-x-2 cursor-pointer shadow-xs mt-2"
-              >
-                <span>⚡ Quick Demo Host Login (1-Click)</span>
-              </button>
             </>
           )}
         </form>

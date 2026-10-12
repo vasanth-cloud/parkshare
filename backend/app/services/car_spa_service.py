@@ -75,59 +75,8 @@ SAMPLE_PACKAGES: List[SpaPackageSchema] = [
     ),
 ]
 
-SAMPLE_SPAS: List[CarSpaCenterSchema] = [
-    CarSpaCenterSchema(
-        id="spa-101",
-        centerName="AquaGlow Doorstep Eco Detailing",
-        ownerName="Kiran Kumar",
-        phone="+91 98450 77112",
-        city="Bengaluru",
-        address="12th Main Road, HAL 2nd Stage, Indiranagar",
-        serviceType="DOORSTEP_MOBILE",
-        bayCapacity=4,
-        operatingHours="07:30 AM - 08:30 PM",
-        servicesOffered=["Eco Waterless Wash", "Active Snow Foam", "Interior Steam Sanitization"],
-        rating=4.95,
-        totalOrders=640,
-        isVerified=True,
-        status="ACTIVE",
-        photo="https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&w=400&q=80",
-    ),
-    CarSpaCenterSchema(
-        id="spa-102",
-        centerName="CeramicPro Precision Studio",
-        ownerName="Venkatesh Rao",
-        phone="+91 98860 88223",
-        city="Bengaluru",
-        address="80 Feet Road, 4th Block, Koramangala",
-        serviceType="WORKSHOP_BAY",
-        bayCapacity=6,
-        operatingHours="08:00 AM - 09:00 PM",
-        servicesOffered=["3M Ceramic Polish", "Machine Buffing", "Engine Bay De-grease", "Leather Treatment"],
-        rating=4.91,
-        totalOrders=1120,
-        isVerified=True,
-        status="ACTIVE",
-        photo="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?auto=format&fit=crop&w=400&q=80",
-    ),
-    CarSpaCenterSchema(
-        id="spa-103",
-        centerName="SpeedWash Mobile Van Express",
-        ownerName="Mohammed Arif",
-        phone="+91 99001 33445",
-        city="Bengaluru",
-        address="27th Main Rd, Sector 1, HSR Layout",
-        serviceType="BOTH",
-        bayCapacity=3,
-        operatingHours="07:00 AM - 07:00 PM",
-        servicesOffered=["High-Pressure Foam Rinse", "Underbody Wash", "AC Vent Sanitization"],
-        rating=4.88,
-        totalOrders=430,
-        isVerified=True,
-        status="ACTIVE",
-        photo="https://images.unsplash.com/photo-1552930294-6b595f4c2974?auto=format&fit=crop&w=400&q=80",
-    ),
-]
+# Active in-memory registered car spas (starts empty; populated by partner registrations)
+SAMPLE_SPAS: List[CarSpaCenterSchema] = []
 
 class CarSpaService:
     @staticmethod

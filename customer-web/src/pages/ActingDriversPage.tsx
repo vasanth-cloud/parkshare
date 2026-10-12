@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -34,50 +34,12 @@ interface DriverProfile {
   hourlyRate: number;
 }
 
-const SAMPLE_DRIVERS: DriverProfile[] = [
-  {
-    id: 'd1',
-    name: 'Ramesh K. Kumar',
-    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-    rating: 4.96,
-    trips: 1420,
-    experienceYears: 9,
-    transmission: ['Manual', 'Automatic', 'EV'],
-    languages: ['Kannada', 'English', 'Hindi'],
-    badge: 'Elite Chauffeur',
-    eta: '8 mins away',
-    hourlyRate: 149,
-  },
-  {
-    id: 'd2',
-    name: 'Suresh V. Gowda',
-    photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-    rating: 4.92,
-    trips: 980,
-    experienceYears: 7,
-    transmission: ['Automatic', 'Luxury SUV'],
-    languages: ['Kannada', 'Telugu', 'English'],
-    badge: 'Luxury Specialist',
-    eta: '12 mins away',
-    hourlyRate: 169,
-  },
-  {
-    id: 'd3',
-    name: 'Anand R. Murthy',
-    photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
-    rating: 4.88,
-    trips: 2150,
-    experienceYears: 12,
-    transmission: ['Manual', 'Automatic'],
-    languages: ['Kannada', 'Tamil', 'Hindi'],
-    badge: 'Night Drive Pro',
-    eta: '15 mins away',
-    hourlyRate: 139,
-  },
-];
-
 export const ActingDriversPage: React.FC = () => {
   const navigate = useNavigate();
+
+  // Dynamic drivers from backend
+  const [drivers, setDrivers] = useState<DriverProfile[]>([]);
+  const [loadingDrivers, setLoadingDrivers] = useState(true);
 
   // Booking form state
   const [tripType, setTripType] = useState<'CITY' | 'NIGHT' | 'OUTSTATION' | 'VALET'>('CITY');
@@ -92,6 +54,35 @@ export const ActingDriversPage: React.FC = () => {
   // Modal / Confirmed state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<any | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDrivers = async () => {
+      setLoadingDrivers(true);
+      try {
+        const queryParams = new URLSearchParams();
+        queryParams.set('city', 'Bengaluru');
+        if (transmission !== 'ANY') {
+          queryParams.set('transmission', transmission === 'AUTOMATIC' ? 'Automatic' : 'Manual');
+        }
+        const res = await fetch(`/api/v1/drivers/available?${queryParams.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) setDrivers(Array.isArray(data) ? data : []);
+        } else {
+          if (isMounted) setDrivers([]);
+        }
+      } catch (err) {
+        if (isMounted) setDrivers([]);
+      } finally {
+        if (isMounted) setLoadingDrivers(false);
+      }
+    };
+    fetchDrivers();
+    return () => {
+      isMounted = false;
+    };
+  }, [transmission]);
 
   // Pricing calculations
   const baseRates = {
@@ -111,7 +102,7 @@ export const ActingDriversPage: React.FC = () => {
   const handleBookNow = (driver?: DriverProfile) => {
     setIsSubmitting(true);
     setTimeout(() => {
-      const assigned = driver || selectedDriver || SAMPLE_DRIVERS[0];
+      const assigned = driver || selectedDriver || (drivers.length > 0 ? drivers[0] : null);
       setConfirmedBooking({
         bookingId: `DRV-${Math.floor(100000 + Math.random() * 900000)}`,
         driver: assigned,
@@ -122,7 +113,7 @@ export const ActingDriversPage: React.FC = () => {
         otp: Math.floor(1000 + Math.random() * 9000),
       });
       setIsSubmitting(false);
-    }, 900);
+    }, 600);
   };
 
   return (
@@ -379,66 +370,91 @@ export const ActingDriversPage: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Available Drivers Around You</span>
             </h3>
-            <span className="text-[11px] font-bold text-slate-500">Nearby ({SAMPLE_DRIVERS.length})</span>
+            <span className="text-[11px] font-bold text-slate-500">
+              {loadingDrivers ? 'Checking...' : `Nearby (${drivers.length})`}
+            </span>
           </div>
 
-          <div className="space-y-3">
-            {SAMPLE_DRIVERS.map((driver) => (
-              <div
-                key={driver.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-xs space-y-3 hover:border-indigo-400 transition"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={driver.photo}
-                      alt={driver.name}
-                      className="w-12 h-12 rounded-2xl object-cover border-2 border-indigo-500/20"
-                    />
-                    <div>
-                      <div className="flex items-center space-x-1.5">
-                        <h4 className="text-xs font-black text-slate-900 dark:text-white">{driver.name}</h4>
-                        <span className="text-[9px] font-extrabold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.2 rounded">
-                          {driver.badge}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2 mt-0.5 text-[11px] text-slate-500">
-                        <span className="flex items-center text-amber-500 font-bold">
-                          <Star className="w-3 h-3 fill-amber-500 mr-0.5" />
-                          {driver.rating}
-                        </span>
-                        <span>• {driver.trips} trips</span>
-                        <span>• {driver.experienceYears} yrs exp</span>
+          {loadingDrivers ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center space-y-3">
+              <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-xs text-slate-500 font-bold">Scanning for verified acting drivers...</p>
+            </div>
+          ) : drivers.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 text-center space-y-3 shadow-xs">
+              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-500 rounded-2xl flex items-center justify-center mx-auto">
+                <Car className="w-6 h-6" />
+              </div>
+              <h4 className="text-xs font-black text-slate-900 dark:text-white">No Acting Drivers Registered Yet</h4>
+              <p className="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
+                As drivers register through the ParkShare Partner Portal or Host Dashboard, verified chauffeurs will appear here.
+              </p>
+              <div className="pt-1">
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1 rounded-full">
+                  <Sparkles className="w-3 h-3" />
+                  Realtime Registry Ready
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {drivers.map((driver) => (
+                <div
+                  key={driver.id}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-xs space-y-3 hover:border-indigo-400 transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={driver.photo}
+                        alt={driver.name}
+                        className="w-12 h-12 rounded-2xl object-cover border-2 border-indigo-500/20"
+                      />
+                      <div>
+                        <div className="flex items-center space-x-1.5">
+                          <h4 className="text-xs font-black text-slate-900 dark:text-white">{driver.name}</h4>
+                          <span className="text-[9px] font-extrabold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.2 rounded">
+                            {driver.badge}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2 mt-0.5 text-[11px] text-slate-500">
+                          <span className="flex items-center text-amber-500 font-bold">
+                            <Star className="w-3 h-3 fill-amber-500 mr-0.5" />
+                            {driver.rating}
+                          </span>
+                          <span>• {driver.trips} trips</span>
+                          <span>• {driver.experienceYears} yrs exp</span>
+                        </div>
                       </div>
                     </div>
+
+                    <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                      {driver.eta}
+                    </span>
                   </div>
 
-                  <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
-                    {driver.eta}
-                  </span>
-                </div>
+                  <div className="flex items-center justify-between text-[11px] border-t border-slate-100 dark:border-slate-800 pt-2.5">
+                    <div className="flex items-center space-x-1 text-slate-500 text-[10px]">
+                      <span>Drives:</span>
+                      <strong className="text-slate-700 dark:text-slate-300">{driver.transmission.join(', ')}</strong>
+                    </div>
 
-                <div className="flex items-center justify-between text-[11px] border-t border-slate-100 dark:border-slate-800 pt-2.5">
-                  <div className="flex items-center space-x-1 text-slate-500 text-[10px]">
-                    <span>Drives:</span>
-                    <strong className="text-slate-700 dark:text-slate-300">{driver.transmission.join(', ')}</strong>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDriver(driver);
+                        handleBookNow(driver);
+                      }}
+                      className="text-xs font-black text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 flex items-center space-x-1 cursor-pointer"
+                    >
+                      <span>Request Now</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedDriver(driver);
-                      handleBookNow(driver);
-                    }}
-                    className="text-xs font-black text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 flex items-center space-x-1 cursor-pointer"
-                  >
-                    <span>Request Now</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* ParkShare Synergy Card */}
           <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-3xl p-4 shadow-md space-y-2">
@@ -466,23 +482,38 @@ export const ActingDriversPage: React.FC = () => {
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 space-y-2.5">
-              <div className="flex items-center space-x-3">
-                <img
-                  src={confirmedBooking.driver.photo}
-                  alt={confirmedBooking.driver.name}
-                  className="w-10 h-10 rounded-xl object-cover"
-                />
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-xs font-black truncate">{confirmedBooking.driver.name}</h4>
-                  <p className="text-[10px] text-slate-500">Arriving in ~8 mins</p>
+              {confirmedBooking.driver ? (
+                <div className="flex items-center space-x-3">
+                  <img
+                    src={confirmedBooking.driver.photo}
+                    alt={confirmedBooking.driver.name}
+                    className="w-10 h-10 rounded-xl object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs font-black truncate">{confirmedBooking.driver.name}</h4>
+                    <p className="text-[10px] text-slate-500">{confirmedBooking.driver.eta || 'Arriving in ~8 mins'}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-slate-400 block">Trip OTP</span>
+                    <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 tracking-wider">
+                      {confirmedBooking.otp}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-bold text-slate-400 block">Trip OTP</span>
-                  <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 tracking-wider">
-                    {confirmedBooking.otp}
-                  </span>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-900 dark:text-white">Driver Broadcasted</h4>
+                    <p className="text-[10px] text-slate-500">Matching nearest verified driver</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-slate-400 block">Trip OTP</span>
+                    <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 tracking-wider">
+                      {confirmedBooking.otp}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex items-center justify-between text-xs font-bold">
                 <span className="text-slate-500">Estimated Total:</span>

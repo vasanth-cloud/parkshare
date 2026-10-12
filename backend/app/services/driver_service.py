@@ -3,62 +3,9 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from app.schemas.driver import DriverProfileSchema, DriverBookingCreate, DriverBookingOut, DriverRegistrationCreate
 
-SAMPLE_DRIVERS: List[DriverProfileSchema] = [
-    DriverProfileSchema(
-        id="d1",
-        name="Ramesh K. Kumar",
-        photo="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
-        rating=4.96,
-        trips=1420,
-        experienceYears=9,
-        transmission=["Manual", "Automatic", "EV"],
-        languages=["Kannada", "English", "Hindi"],
-        badge="Elite Chauffeur",
-        eta="8 mins away",
-        hourlyRate=149.0,
-        isAvailable=True,
-        phone="+91 98450 12345",
-        city="Bengaluru",
-        dlNumber="KA01 20150001234",
-        status="ACTIVE",
-    ),
-    DriverProfileSchema(
-        id="d2",
-        name="Suresh V. Gowda",
-        photo="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
-        rating=4.92,
-        trips=980,
-        experienceYears=7,
-        transmission=["Automatic", "Luxury SUV"],
-        languages=["Kannada", "Telugu", "English"],
-        badge="Luxury Specialist",
-        eta="12 mins away",
-        hourlyRate=169.0,
-        isAvailable=True,
-        phone="+91 98801 56789",
-        city="Bengaluru",
-        dlNumber="KA03 20170009876",
-        status="ACTIVE",
-    ),
-    DriverProfileSchema(
-        id="d3",
-        name="Anand R. Murthy",
-        photo="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80",
-        rating=4.88,
-        trips=2150,
-        experienceYears=12,
-        transmission=["Manual", "Automatic"],
-        languages=["Kannada", "Tamil", "Hindi"],
-        badge="Night Drive Pro",
-        eta="15 mins away",
-        hourlyRate=139.0,
-        isAvailable=True,
-        phone="+91 97412 34567",
-        city="Bengaluru",
-        dlNumber="KA05 20120005432",
-        status="ACTIVE",
-    ),
-]
+# Active in-memory registered drivers (starts empty; populated by partner registrations)
+SAMPLE_DRIVERS: List[DriverProfileSchema] = []
+
 
 class DriverService:
     @staticmethod
@@ -144,7 +91,7 @@ class DriverService:
         total_fare = base + (extra_hours * extra_rate)
 
         # Match driver
-        assigned_driver = SAMPLE_DRIVERS[0]
+        assigned_driver = SAMPLE_DRIVERS[0] if len(SAMPLE_DRIVERS) > 0 else None
         if data.driverId:
             matched = [d for d in SAMPLE_DRIVERS if d.id == data.driverId]
             if matched:

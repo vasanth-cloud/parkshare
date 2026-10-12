@@ -722,13 +722,24 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
                 <span>Locating spaces on map...</span>
               </div>
             ) : filteredListings.length === 0 ? (
-              <div className="py-4 text-center space-y-1">
+              <div className="py-5 text-center space-y-2">
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  No spots found in "{area || city}"
+                  No parking spots listed yet in "{area || city}"
                 </p>
-                <p className="text-[10px] text-slate-400">
-                  Tap 'All City' or BTM Layout on top to explore available hubs.
+                <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                  Be the first to list! Hosts can publish private driveways, garages, or commercial slots on ParkShare.
                 </p>
+                <div className="pt-1">
+                  <a
+                    href="http://localhost:5174"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center space-x-1.5 bg-[#0f8b5f] text-white text-[11px] font-extrabold px-3 py-1.5 rounded-xl shadow-xs hover:bg-[#0c754f] transition"
+                  >
+                    <span>List a Parking Space on Host Portal</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
               </div>
             ) : (
               <div className="flex items-center space-x-2.5 overflow-x-auto scrollbar-none py-1 px-0.5">

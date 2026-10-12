@@ -49,7 +49,7 @@ class DriverBookingCreate(BaseModel):
 
 class DriverBookingOut(BaseModel):
     bookingId: str
-    driver: DriverProfileSchema
+    driver: Optional[DriverProfileSchema] = None
     tripType: str
     pickupLocation: str
     durationHours: int
