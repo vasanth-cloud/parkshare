@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ShieldCheck,
   Star,
@@ -36,6 +36,9 @@ interface DriverProfile {
 
 export const ActingDriversPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const initialPickup = searchParams.get('pickup') || 'Indiranagar 100ft Road, Bengaluru';
 
   // Dynamic drivers from backend
   const [drivers, setDrivers] = useState<DriverProfile[]>([]);
@@ -44,7 +47,7 @@ export const ActingDriversPage: React.FC = () => {
   // Booking form state
   const [tripType, setTripType] = useState<'CITY' | 'NIGHT' | 'OUTSTATION' | 'VALET'>('CITY');
   const [transmission, setTransmission] = useState<'ANY' | 'MANUAL' | 'AUTOMATIC'>('AUTOMATIC');
-  const [pickupLocation, setPickupLocation] = useState('Indiranagar 100ft Road, Bengaluru');
+  const [pickupLocation, setPickupLocation] = useState(initialPickup);
   const [durationHours, setDurationHours] = useState(2);
   const [bookingDate, setBookingDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [bookingTime, setBookingTime] = useState('18:00');
@@ -103,7 +106,7 @@ export const ActingDriversPage: React.FC = () => {
     setIsSubmitting(true);
     setTimeout(() => {
       const assigned = driver || selectedDriver || (drivers.length > 0 ? drivers[0] : null);
-      setConfirmedBooking({
+      const newBooking = {
         bookingId: `DRV-${Math.floor(100000 + Math.random() * 900000)}`,
         driver: assigned,
         tripType,
@@ -111,7 +114,14 @@ export const ActingDriversPage: React.FC = () => {
         durationHours,
         totalFare: calculateTotal(),
         otp: Math.floor(1000 + Math.random() * 9000),
-      });
+        status: 'CONFIRMED',
+        createdAt: new Date().toISOString(),
+      };
+      try {
+        const prev = JSON.parse(localStorage.getItem('parkshare_driver_bookings') || '[]');
+        localStorage.setItem('parkshare_driver_bookings', JSON.stringify([newBooking, ...prev]));
+      } catch {}
+      setConfirmedBooking(newBooking);
       setIsSubmitting(false);
     }, 600);
   };
@@ -127,7 +137,7 @@ export const ActingDriversPage: React.FC = () => {
             className="flex items-center space-x-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Home</span>
+            <span>Back to Services</span>
           </button>
           <div className="flex items-center space-x-2">
             <span className="text-xs font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">

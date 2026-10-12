@@ -787,6 +787,43 @@ export const CustomerListingDetail: React.FC = () => {
             )}
           </div>
 
+          {/* Multi-Service Companion Add-Ons */}
+          <div className="bg-gradient-to-r from-cyan-500/5 via-indigo-500/5 to-transparent rounded-2xl p-3 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center space-x-1">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-500" />
+                <span>Combine with Other Services</span>
+              </span>
+              <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-extrabold px-1.5 py-0.5 rounded-full border border-emerald-500/20">
+                Multi-Service
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={() => navigate(`/services/car-spa?parkingId=${listing.id}&address=${encodeURIComponent(listing.approximate_address || listing.area || '')}`)}
+                className="p-2.5 rounded-xl bg-white dark:bg-slate-800/90 border border-cyan-500/30 text-left hover:border-cyan-500 transition shadow-2xs active:scale-95 cursor-pointer"
+              >
+                <div className="flex items-center space-x-1 text-xs font-black text-cyan-600 dark:text-cyan-400">
+                  <span>✨ Car Spa</span>
+                  <span className="text-[9px] text-slate-400 font-normal">from ₹199</span>
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">Wash car at this bay</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/services/drivers?pickup=${encodeURIComponent(listing.approximate_address || listing.area || '')}`)}
+                className="p-2.5 rounded-xl bg-white dark:bg-slate-800/90 border border-indigo-500/30 text-left hover:border-indigo-500 transition shadow-2xs active:scale-95 cursor-pointer"
+              >
+                <div className="flex items-center space-x-1 text-xs font-black text-indigo-600 dark:text-indigo-400">
+                  <span>🧑‍✈️ Acting Driver</span>
+                  <span className="text-[9px] text-slate-400 font-normal">from ₹299</span>
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">Hire chauffeur here</p>
+              </button>
+            </div>
+          </div>
+
           {/* Simple Price Summary */}
           {priceBreakdown && (
             <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-3 border border-slate-200/60 dark:border-slate-800 text-xs space-y-1.5">

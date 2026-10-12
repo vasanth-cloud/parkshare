@@ -9,9 +9,7 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = () => {
   const navItems = [
     { to: '/', label: 'Services', icon: Layers },
-    { to: '/parking', label: 'Parking', icon: MapPin },
     { to: '/bookings', label: 'Bookings', icon: Calendar },
-    { to: '/vehicles', label: 'Vehicles', icon: Car },
     { to: '/profile', label: 'Profile', icon: User },
   ];
 

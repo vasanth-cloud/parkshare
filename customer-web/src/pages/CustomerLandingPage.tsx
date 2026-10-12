@@ -9,6 +9,7 @@ import {
   Shield,
   Navigation,
   ArrowRight,
+  ArrowLeft,
   Sparkles,
   X,
   CheckCircle2,
@@ -439,6 +440,16 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
         <div className="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-[24px] p-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-white/80 dark:border-slate-800 space-y-2">
           
           <div className="flex items-center space-x-2">
+            {/* Back to Services Launcher */}
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center justify-center flex-shrink-0 cursor-pointer shadow-xs active:scale-95"
+              title="Back to Services Selection"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+
             {/* Search Input Box */}
             <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center bg-slate-100 dark:bg-slate-800/80 rounded-2xl px-3 py-2 space-x-2">
               <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
@@ -493,36 +504,8 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
             </div>
           </div>
 
-          {/* Quick Area Chips & Services */}
+          {/* Quick Area Hotspots */}
           <div className="flex items-center space-x-1.5 overflow-x-auto scrollbar-none pb-0.5">
-            {/* Quick All Services Link */}
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="text-[11px] font-black px-2.5 py-1 rounded-full whitespace-nowrap transition cursor-pointer flex-shrink-0 bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs flex items-center space-x-1 active:scale-95"
-            >
-              <span>🏠 Services</span>
-            </button>
-
-            {/* Quick Service Short-cuts */}
-            <button
-              type="button"
-              onClick={() => navigate('/services/drivers')}
-              className="text-[11px] font-black px-3 py-1 rounded-full whitespace-nowrap transition cursor-pointer flex-shrink-0 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-xs hover:from-indigo-500 hover:to-indigo-600 flex items-center space-x-1 border border-indigo-400/30 active:scale-95"
-            >
-              <span>🧑‍✈️ Acting Drivers</span>
-              <span className="text-[9px] bg-white/20 text-white font-extrabold px-1.5 py-0.2 rounded-full">NEW</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/services/car-spa')}
-              className="text-[11px] font-black px-3 py-1 rounded-full whitespace-nowrap transition cursor-pointer flex-shrink-0 bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow-xs hover:from-cyan-500 hover:to-teal-500 flex items-center space-x-1 border border-cyan-400/30 active:scale-95"
-            >
-              <span>✨ Car Spa</span>
-              <span className="text-[9px] bg-white/20 text-white font-extrabold px-1.5 py-0.2 rounded-full">NEW</span>
-            </button>
-
             {quickHotspots.map((hotspot) => {
               const isActive = (area === hotspot.area) || (!area && !hotspot.area);
               return (
@@ -727,18 +710,20 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
                   No parking spots listed yet in "{area || city}"
                 </p>
                 <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                  Be the first to list! Hosts can publish private driveways, garages, or commercial slots on ParkShare.
+                  Try searching a nearby area or select a hotspot like Koramangala or Indiranagar.
                 </p>
                 <div className="pt-1">
-                  <a
-                    href="http://localhost:5174"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center space-x-1.5 bg-[#0f8b5f] text-white text-[11px] font-extrabold px-3 py-1.5 rounded-xl shadow-xs hover:bg-[#0c754f] transition"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setArea('');
+                      setSearchInput('');
+                      fetchListings(city, '', vehicleType);
+                    }}
+                    className="inline-flex items-center space-x-1.5 bg-emerald-600 text-white text-[11px] font-extrabold px-3.5 py-1.5 rounded-xl shadow-xs hover:bg-emerald-500 transition cursor-pointer"
                   >
-                    <span>List a Parking Space on Host Portal</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </a>
+                    <span>Show All Available Spots</span>
+                  </button>
                 </div>
               </div>
             ) : (

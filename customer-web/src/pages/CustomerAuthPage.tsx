@@ -47,7 +47,7 @@ export const CustomerAuthPage: React.FC = () => {
 
   React.useEffect(() => {
     if (user) {
-      navigate('/profile');
+      navigate('/');
     }
   }, [user, navigate]);
 
@@ -150,6 +150,37 @@ export const CustomerAuthPage: React.FC = () => {
         login(res.access_token, res.user);
         navigate('/');
       } else {
+        if (!fullName.trim()) {
+          setError('Please enter your full legal name');
+          setLoading(false);
+          return;
+        }
+        if (!phone.trim() || phone.trim().length < 10) {
+          setError('Please enter a valid 10-digit mobile number');
+          setLoading(false);
+          return;
+        }
+        if (!isPhoneVerified) {
+          setError('⚠️ Mobile Verification Required: Please click "Send OTP" and enter the 6-digit code to verify your phone number.');
+          setLoading(false);
+          return;
+        }
+        if (!email.trim() || !email.includes('@')) {
+          setError('Please enter a valid email address');
+          setLoading(false);
+          return;
+        }
+        if (!isEmailVerified) {
+          setError('⚠️ Email Verification Required: Please click "Send OTP" and enter the 6-digit code to verify your email address.');
+          setLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters long');
+          setLoading(false);
+          return;
+        }
+
         await api.register({
           email: email.trim().toLowerCase(),
           password,
@@ -161,7 +192,7 @@ export const CustomerAuthPage: React.FC = () => {
         // Auto login after register
         const res = await api.login(email.trim().toLowerCase(), password);
         login(res.access_token, res.user);
-        navigate('/');
+        navigate('/?new_user=true');
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed');

@@ -49,30 +49,41 @@ async function extractErrorMessage(res: Response, fallback: string): Promise<str
   return fallback;
 }
 
+async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, options);
+  } catch (err: any) {
+    if (err.name === 'TypeError' || err.message?.toLowerCase().includes('fetch')) {
+      throw new Error(`Unable to reach ParkShare server at ${BACKEND_BASE}. Please verify that the backend is started.`);
+    }
+    throw err;
+  }
+}
+
 export const api = {
   // Auth
   login: async (email: string, password: string) => {
-    const res = await fetch(`${API_BASE}/auth/login`, {
+    const res = await safeFetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
     });
-    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Login failed'));
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Login failed. Please check your email and password.'));
     return res.json();
   },
 
   register: async (data: any) => {
-    const res = await fetch(`${API_BASE}/auth/register`, {
+    const res = await safeFetch(`${API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, role: 'PARKER' }),
     });
-    if (!res.ok) throw new Error((await res.json()).detail || 'Registration failed');
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Registration failed.'));
     return res.json();
   },
 
   getMe: async (): Promise<User> => {
-    const res = await fetch(`${API_BASE}/auth/me`, { headers: getHeaders() });
+    const res = await safeFetch(`${API_BASE}/auth/me`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Unauthorized');
     return res.json();
   },
@@ -244,7 +255,7 @@ export const api = {
 
   // Identity & OTP Verification
   sendMobileOtp: async (phone_number: string) => {
-    const res = await fetch(`${API_BASE}/verification/send-mobile-otp`, {
+    const res = await safeFetch(`${API_BASE}/verification/send-mobile-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone_number }),
@@ -254,7 +265,7 @@ export const api = {
   },
 
   verifyMobileOtp: async (phone_number: string, otp: string) => {
-    const res = await fetch(`${API_BASE}/verification/verify-mobile-otp`, {
+    const res = await safeFetch(`${API_BASE}/verification/verify-mobile-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone_number, otp }),
@@ -264,7 +275,7 @@ export const api = {
   },
 
   sendEmailOtp: async (email: string) => {
-    const res = await fetch(`${API_BASE}/verification/send-email-otp`, {
+    const res = await safeFetch(`${API_BASE}/verification/send-email-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -274,7 +285,7 @@ export const api = {
   },
 
   verifyEmailOtp: async (email: string, otp: string) => {
-    const res = await fetch(`${API_BASE}/verification/verify-email-otp`, {
+    const res = await safeFetch(`${API_BASE}/verification/verify-email-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, otp }),

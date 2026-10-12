@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Sparkles,
   Droplets,
@@ -94,12 +94,16 @@ const SPA_PACKAGES: SpaPackage[] = [
 
 export const CarSpaPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const parkingId = searchParams.get('parkingId');
+  const initialAddress = searchParams.get('address') || 'Indiranagar 100ft Road, Bengaluru';
 
   // Booking states
   const [selectedPackageId, setSelectedPackageId] = useState<string>('FOAM_PRESSURE');
   const [vehicleCategory, setVehicleCategory] = useState<'HATCHBACK' | 'SEDAN' | 'SUV' | 'BIKE'>('SEDAN');
-  const [locationType, setLocationType] = useState<'DOORSTEP' | 'PARKSHARE_BAY'>('DOORSTEP');
-  const [address, setAddress] = useState('Indiranagar 100ft Road, Bengaluru');
+  const [locationType, setLocationType] = useState<'DOORSTEP' | 'PARKSHARE_BAY'>(parkingId ? 'PARKSHARE_BAY' : 'DOORSTEP');
+  const [address, setAddress] = useState(initialAddress);
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [timeSlot, setTimeSlot] = useState('11:00 AM');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,7 +124,7 @@ export const CarSpaPage: React.FC = () => {
   const handleBook = () => {
     setIsSubmitting(true);
     setTimeout(() => {
-      setBookingConfirmed({
+      const newBooking = {
         id: `SPA-${Math.floor(100000 + Math.random() * 900000)}`,
         packageName: selectedPkg.name,
         price: finalPrice,
@@ -129,7 +133,14 @@ export const CarSpaPage: React.FC = () => {
         address,
         vehicleCategory,
         otp: Math.floor(1000 + Math.random() * 9000),
-      });
+        status: 'CONFIRMED',
+        createdAt: new Date().toISOString(),
+      };
+      try {
+        const prev = JSON.parse(localStorage.getItem('parkshare_spa_bookings') || '[]');
+        localStorage.setItem('parkshare_spa_bookings', JSON.stringify([newBooking, ...prev]));
+      } catch {}
+      setBookingConfirmed(newBooking);
       setIsSubmitting(false);
     }, 800);
   };
@@ -145,7 +156,7 @@ export const CarSpaPage: React.FC = () => {
             className="flex items-center space-x-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Home</span>
+            <span>Back to Services</span>
           </button>
           <div className="flex items-center space-x-2">
             <span className="text-xs font-black bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
