@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   PlusCircle, 
@@ -16,6 +16,23 @@ export const Navbar: React.FC = () => {
   const location = useLocation();
 
   const [showManageDropdown, setShowManageDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowManageDropdown(false);
+      }
+    };
+    if (showManageDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showManageDropdown]);
 
   return (
     <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-gray-900 dark:text-slate-100 border-b border-gray-100 dark:border-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] sticky top-0 z-30 transition-colors duration-200">
@@ -43,32 +60,36 @@ export const Navbar: React.FC = () => {
           {/* Navigation Links */}
           <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
             
-            {/* Desktop Navigation Links */}
-            <div className="hidden md:flex items-center space-x-6 text-xs font-bold tracking-wide">
+            {/* Navigation Links - Accessible on both Mobile & Desktop */}
+            <div className="flex items-center space-x-2 sm:space-x-4 text-xs font-bold tracking-wide">
               {user && (
                 <>
                   {/* Manage Dropdown with Classification */}
                   <div
+                    ref={dropdownRef}
                     className="relative"
                     onMouseEnter={() => setShowManageDropdown(true)}
                     onMouseLeave={() => setShowManageDropdown(false)}
                   >
                     <button
                       type="button"
-                      onClick={() => navigate('/dashboard')}
-                      className={`flex items-center space-x-1 py-2 transition-colors cursor-pointer ${
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowManageDropdown((prev) => !prev);
+                      }}
+                      className={`flex items-center space-x-1 py-1.5 px-2 sm:px-2.5 rounded-xl transition-colors cursor-pointer ${
                         location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/create-listing') || location.pathname.startsWith('/pin-verify')
-                          ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
+                          ? 'text-emerald-600 dark:text-emerald-400 font-extrabold bg-emerald-50/80 dark:bg-emerald-950/50'
                           : 'text-gray-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                       }`}
                     >
                       <LayoutDashboard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                      <span>📋 Manage</span>
-                      <ChevronDown className="w-3 h-3 text-slate-400" />
+                      <span>Manage</span>
+                      <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${showManageDropdown ? 'rotate-180' : ''}`} />
                     </button>
 
                     {showManageDropdown && (
-                      <div className="absolute top-full left-0 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150 z-50">
+                      <div className="absolute top-full right-0 sm:left-0 sm:right-auto mt-1 w-52 sm:w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150 z-50">
                         <div className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-wider">
                           Partner Services
                         </div>
@@ -129,9 +150,9 @@ export const Navbar: React.FC = () => {
                   {/* KYC Status */}
                   <Link 
                     to="/verification" 
-                    className={`flex items-center space-x-1.5 transition-colors ${
+                    className={`flex items-center space-x-1 sm:space-x-1.5 py-1.5 px-1.5 sm:px-2 rounded-xl transition-colors ${
                       location.pathname === '/verification' || location.pathname === '/kyc'
-                        ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
+                        ? 'text-emerald-600 dark:text-emerald-400 font-extrabold bg-emerald-50/80 dark:bg-emerald-950/50'
                         : 'text-gray-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                     }`}
                   >
