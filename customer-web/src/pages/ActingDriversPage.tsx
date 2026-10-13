@@ -133,11 +133,11 @@ export const ActingDriversPage: React.FC = () => {
       <div className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(-1)}
             className="flex items-center space-x-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Services</span>
+            <span>Back</span>
           </button>
           <div className="flex items-center space-x-2">
             <span className="text-xs font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">

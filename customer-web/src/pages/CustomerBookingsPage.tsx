@@ -332,19 +332,9 @@ export const CustomerBookingsPage: React.FC = () => {
     }
   };
 
-  // Back button handler
+  // Back button handler: Go back to previous page
   const handleBack = () => {
-    if (isParkingOnly) {
-      navigate('/parking');
-    } else if (isDriversOnly) {
-      navigate('/services/drivers');
-    } else if (isSpaOnly) {
-      navigate('/services/car-spa');
-    } else if (window.history.state && window.history.state.idx > 0) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
+    navigate(-1);
   };
 
   return (

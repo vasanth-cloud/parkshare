@@ -238,11 +238,11 @@ export const HostPinVerificationPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <button
           type="button"
-          onClick={() => navigate('/')}
+          onClick={() => navigate(-1)}
           className="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 py-1.5 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs hover:shadow-xs transition cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>← Back to Services</span>
+          <span>← Back</span>
         </button>
         <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full">
           🔑 Driver Gate Check-in

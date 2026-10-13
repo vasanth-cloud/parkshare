@@ -461,11 +461,11 @@ export const HostVerificationPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(-1)}
             className="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-600 hover:text-emerald-600 py-1.5 px-3 rounded-xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>← Back to Services</span>
+            <span>← Back</span>
           </button>
           <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
             🛡️ KYC Verified
@@ -647,11 +647,11 @@ export const HostVerificationPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <button
           type="button"
-          onClick={() => navigate('/')}
+          onClick={() => navigate(-1)}
           className="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-600 hover:text-emerald-600 py-1.5 px-3 rounded-xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>← Back to Services</span>
+          <span>← Back</span>
         </button>
         <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
           🛡️ Host Identity Verification
