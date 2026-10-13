@@ -317,7 +317,7 @@ export const BottomNav: React.FC = () => {
                         type="text"
                         value={editCity}
                         onChange={(e) => setEditCity(e.target.value)}
-                        placeholder="e.g. Bengaluru"
+                        placeholder="e.g. City"
                         className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white"
                       />
                     </div>
@@ -329,7 +329,7 @@ export const BottomNav: React.FC = () => {
                         type="text"
                         value={editState}
                         onChange={(e) => setEditState(e.target.value)}
-                        placeholder="e.g. Karnataka"
+                        placeholder="e.g. State"
                         className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white"
                       />
                     </div>

@@ -83,11 +83,17 @@ export const ActiveParkingCard: React.FC<{ booking: Booking; onRefresh: () => vo
   const hostName = booking.host_name || 'Ravi';
   const hostPhone = booking.host_phone || '+91 98765 43210';
   const listingTitle = booking.listing?.title || `${hostName}'s Parking Space`;
-  const address = booking.listing?.exact_address || booking.listing?.approximate_address || 'Indiranagar, Bengaluru';
-  const lat = booking.listing?.latitude || 12.9784;
-  const lng = booking.listing?.longitude || 77.6408;
+  const address = booking.listing?.exact_address || booking.listing?.approximate_address || 'Reserved Parking Location';
+  const lat = booking.listing?.latitude;
+  const lng = booking.listing?.longitude;
 
   const handleNavigate = () => {
+    if (!lat || !lng) {
+      if (address) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {

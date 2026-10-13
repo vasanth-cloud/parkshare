@@ -26,7 +26,7 @@ export const RegisterDriverPage: React.FC = () => {
   // Registration Form State
   const [name, setName] = useState(user?.full_name || '');
   const [phone, setPhone] = useState(user?.phone_number || '');
-  const [city, setCity] = useState(user?.city || 'Bengaluru');
+  const [city, setCity] = useState(user?.city || '');
   const [dlNumber, setDlNumber] = useState('');
   const [experienceYears, setExperienceYears] = useState('5');
   const [hourlyRate, setHourlyRate] = useState('149');
@@ -109,7 +109,7 @@ export const RegisterDriverPage: React.FC = () => {
           </h1>
 
           <p className="text-xs sm:text-sm text-indigo-100 max-w-2xl">
-            Drive premium personal cars for vetted car owners in Bengaluru. Set your own hourly rate, select your preferred transmission vehicles, and receive direct instant payouts.
+            Drive premium personal cars for vetted car owners in your city. Set your own hourly rate, select your preferred transmission vehicles, and receive direct instant payouts.
           </p>
 
           {/* Key Partner Benefits */}
@@ -276,7 +276,7 @@ export const RegisterDriverPage: React.FC = () => {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Bengaluru"
+                      placeholder="e.g. City"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"

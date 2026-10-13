@@ -49,13 +49,13 @@ export const CreateListingPage: React.FC = () => {
   // Step 2: Location
   const [area, setArea] = useState('');
   const [city, setCity] = useState('');
-  const [state, setState] = useState('Karnataka');
+  const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
   const [approxAddress, setApproxAddress] = useState('');
   const [exactAddress, setExactAddress] = useState('');
   const [accessInstructions, setAccessInstructions] = useState('');
-  const [lat, setLat] = useState<number>(12.9716);
-  const [lng, setLng] = useState<number>(77.5946);
+  const [lat, setLat] = useState<number>(0);
+  const [lng, setLng] = useState<number>(0);
   const [locationProof, setLocationProof] = useState<LocationProof | null>(null);
   const [detectingGps, setDetectingGps] = useState(false);
   const [gpsLocked, setGpsLocked] = useState(false);
@@ -73,6 +73,11 @@ export const CreateListingPage: React.FC = () => {
   }>>([]);
   const [fetchingPincode, setFetchingPincode] = useState(false);
   const [geoStatusMsg, setGeoStatusMsg] = useState('');
+
+  // Auto-detect host location on page load
+  useEffect(() => {
+    detectLocation();
+  }, []);
 
   // Step 3: Dimensions & Features
   const [maxLengthM, setMaxLengthM] = useState<number | undefined>(5.2);
@@ -175,25 +180,29 @@ export const CreateListingPage: React.FC = () => {
       }
     }
 
-    // Apply detected or reasonable fallback
-    const finalCity = detectedCity || 'Bengaluru';
-    const finalArea = detectedArea || 'Indiranagar';
-    const finalState = detectedState || 'Karnataka';
+    // Apply detected details without forcing hardcoded city/area/state
+    const finalCity = detectedCity || '';
+    const finalArea = detectedArea || '';
+    const finalState = detectedState || '';
 
-    setCity(finalCity);
-    setArea(finalArea);
-    setState(finalState);
+    if (finalCity) setCity(finalCity);
+    if (finalArea) setArea(finalArea);
+    if (finalState) setState(finalState);
     if (detectedPostcode) setPincode(detectedPostcode);
 
-    const publicAddr = `${finalArea}, ${finalCity}`;
-    setApproxAddress(publicAddr);
+    const publicAddr = [finalArea, finalCity].filter(Boolean).join(', ');
+    if (publicAddr) setApproxAddress(publicAddr);
 
     const exactAddr = fullDisplayName 
       ? fullDisplayName 
       : [detectedStreet, finalArea, finalCity, detectedPostcode].filter(Boolean).join(', ');
-    setExactAddress(exactAddr || publicAddr);
+    if (exactAddr || publicAddr) setExactAddress(exactAddr || publicAddr);
 
-    setGeoStatusMsg(`✓ Address detected: ${finalArea}, ${finalCity} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+    if (finalArea || finalCity) {
+      setGeoStatusMsg(`✓ Address detected: ${[finalArea, finalCity].filter(Boolean).join(', ')} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+    } else {
+      setGeoStatusMsg(`✓ GPS coordinates locked (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+    }
   };
 
   // Robust GPS detector with high-accuracy + network + IP fallback
@@ -273,8 +282,8 @@ export const CreateListingPage: React.FC = () => {
           return {
             title,
             subtitle,
-            lat: f.geometry?.coordinates?.[1] || 12.9716,
-            lng: f.geometry?.coordinates?.[0] || 77.5946,
+            lat: f.geometry?.coordinates?.[1] || 0,
+            lng: f.geometry?.coordinates?.[0] || 0,
             city: p.city,
             area: p.locality || p.district || p.name,
             state: p.state,
@@ -338,16 +347,16 @@ export const CreateListingPage: React.FC = () => {
         const data = await res.json();
         if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice?.length > 0) {
           const po = data[0].PostOffice[0];
-          const detectedCity = po.District || po.Division || po.Block || 'Bengaluru';
-          const detectedState = po.State || 'Karnataka';
+          const detectedCity = po.District || po.Division || po.Block || '';
+          const detectedState = po.State || '';
           const detectedArea = po.Name?.replace(/\s*\(.*\)/, '') || '';
 
-          setCity(detectedCity);
-          setState(detectedState);
+          if (detectedCity) setCity(detectedCity);
+          if (detectedState) setState(detectedState);
           if (detectedArea && !area) setArea(detectedArea);
           if (!approxAddress) setApproxAddress(`${detectedArea || detectedCity}, ${detectedCity}`);
 
-          setGeoStatusMsg(`✓ Pincode matched: ${detectedCity}, ${detectedState}`);
+          setGeoStatusMsg(`✓ Pincode matched: ${[detectedCity, detectedState].filter(Boolean).join(', ')}`);
           geocodeTypedAddress(`${detectedCity}, ${detectedState}, ${pin}`);
         } else {
           setError('Pincode details not found. Please enter city & area manually.');
@@ -407,6 +416,10 @@ export const CreateListingPage: React.FC = () => {
     if (step === 2) {
       if (!city.trim() || !area.trim()) {
         setError('Please fill in both City and Area.');
+        return false;
+      }
+      if (!lat || !lng) {
+        setError('Please click "Detect Address & GPS" or search your address to set spot coordinates.');
         return false;
       }
       if (!approxAddress.trim()) {
@@ -557,7 +570,7 @@ export const CreateListingPage: React.FC = () => {
         area,
         city,
         state,
-        pincode: pincode || '560001',
+        pincode: pincode || '',
         approximate_address: approxAddress,
         exact_address: exactAddress || approxAddress,
         access_instructions: accessInstructions || 'Gate code shared upon confirmation.',
@@ -841,7 +854,7 @@ export const CreateListingPage: React.FC = () => {
                       handleSearchAddress();
                     }
                   }}
-                  placeholder="e.g. 100ft Road Indiranagar, Bengaluru or Landmark"
+                  placeholder="Search area, street, landmark, or city"
                   className="flex-1 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
                 <button
@@ -884,7 +897,7 @@ export const CreateListingPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Bengaluru"
+                  placeholder="e.g. City"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -896,7 +909,7 @@ export const CreateListingPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Indiranagar"
+                  placeholder="e.g. Area / Locality"
                   value={area}
                   onChange={(e) => setArea(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -910,7 +923,7 @@ export const CreateListingPage: React.FC = () => {
                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">State</label>
                 <input
                   type="text"
-                  placeholder="e.g. Karnataka"
+                  placeholder="e.g. State"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -934,7 +947,7 @@ export const CreateListingPage: React.FC = () => {
                 <input
                   type="text"
                   maxLength={6}
-                  placeholder="e.g. 560038"
+                  placeholder="6-digit Pincode"
                   value={pincode}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 6);

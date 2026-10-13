@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import {
@@ -45,7 +45,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
   const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
 
   // Search & Filter state
-  const [city, setCity] = useState('Bengaluru');
+  const [city, setCity] = useState('');
   const [area, setArea] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [vehicleType, setVehicleType] = useState<'CAR' | 'BIKE'>('CAR');
@@ -57,8 +57,8 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
   const [selectedSpot, setSelectedSpot] = useState<ParkingListing | null>(null);
 
   // Live Location & GPS state
-  const [liveLocationName, setLiveLocationName] = useState<string>('BTM Layout, Bengaluru');
-  const [currentCoords, setCurrentCoords] = useState<[number, number]>([12.9166, 77.6101]); // BTM Layout default
+  const [liveLocationName, setLiveLocationName] = useState<string>('Detecting location...');
+  const [currentCoords, setCurrentCoords] = useState<[number, number] | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationSuccessMsg, setLocationSuccessMsg] = useState<string | null>(null);
 
@@ -69,16 +69,27 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
   const userMarkerLayerRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
-  // Quick parking hotspots in Bengaluru
-  const quickHotspots = [
-    { label: 'All City', area: '', coords: [12.9352, 77.6245] as [number, number] },
-    { label: 'BTM Layout', area: 'BTM Layout', coords: [12.9166, 77.6101] as [number, number] },
-    { label: 'Whitefield', area: 'Whitefield', coords: [12.9698, 77.7499] as [number, number] },
-    { label: 'Koramangala', area: 'Koramangala', coords: [12.9352, 77.6245] as [number, number] },
-    { label: 'Indiranagar', area: 'Indiranagar', coords: [12.9784, 77.6408] as [number, number] },
-  ];
+  // Dynamic parking hotspots derived from active listings + live GPS position
+  const dynamicHotspots = useMemo(() => {
+    const list: Array<{ label: string; area: string; coords?: [number, number] }> = [
+      { label: '📍 Near Me', area: '', coords: currentCoords || undefined },
+    ];
+    const seenAreas = new Set<string>();
+    listings.forEach((item) => {
+      const areaTrimmed = item.area?.trim();
+      if (areaTrimmed && !seenAreas.has(areaTrimmed.toLowerCase())) {
+        seenAreas.add(areaTrimmed.toLowerCase());
+        list.push({
+          label: areaTrimmed,
+          area: areaTrimmed,
+          coords: item.latitude && item.longitude ? [item.latitude, item.longitude] : undefined,
+        });
+      }
+    });
+    return list;
+  }, [listings, currentCoords]);
 
-  // Fetch listings
+  // Fetch listings (defaults to all active listings, no hardcoded city restrictions)
   const fetchListings = async (searchCity = city, searchArea = area, vType = vehicleType) => {
     setLoading(true);
     try {
@@ -108,9 +119,107 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
     }
   };
 
+  // Reverse Geocoding with BigDataCloud + Nominatim
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      const bdcRes = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+      );
+      if (bdcRes.ok) {
+        const bdc = await bdcRes.json();
+        if (bdc) {
+          const locName = [bdc.locality || bdc.city, bdc.principalSubdivision].filter(Boolean).join(', ');
+          if (locName) {
+            setLiveLocationName(locName);
+            if (bdc.city) setCity(bdc.city);
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('BDC reverse geocode error:', e);
+    }
+
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.address) {
+          const locName = [
+            data.address.suburb || data.address.neighbourhood || data.address.residential,
+            data.address.city || data.address.town || data.address.county,
+          ].filter(Boolean).join(', ') || data.display_name.split(',').slice(0, 2).join(',');
+
+          setLiveLocationName(locName);
+          if (data.address.city || data.address.town) {
+            setCity(data.address.city || data.address.town);
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Nominatim reverse geocode error:', e);
+    }
+
+    setLiveLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+  };
+
+  // Robust live geolocation trigger with high accuracy + IP fallback
+  const useCurrentLocation = (isAuto = false) => {
+    setIsLocating(true);
+
+    const onCoordsFound = async (lat: number, lng: number) => {
+      setCurrentCoords([lat, lng]);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.flyTo([lat, lng], 15, { duration: 1 });
+      }
+      await reverseGeocode(lat, lng);
+      setIsLocating(false);
+      if (!isAuto) {
+        setLocationSuccessMsg('📍 Live position locked • Showing nearby parking');
+        setTimeout(() => setLocationSuccessMsg(null), 3500);
+      }
+    };
+
+    const tryIpFallback = async () => {
+      try {
+        const ipRes = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client');
+        if (ipRes.ok) {
+          const ipData = await ipRes.json();
+          if (ipData && ipData.latitude && ipData.longitude) {
+            await onCoordsFound(ipData.latitude, ipData.longitude);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('IP geolocation error:', e);
+      }
+      setIsLocating(false);
+      setLiveLocationName('Current Location');
+    };
+
+    if (!navigator.geolocation) {
+      tryIpFallback();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        onCoordsFound(pos.coords.latitude, pos.coords.longitude);
+      },
+      () => {
+        tryIpFallback();
+      },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
+    );
+  };
+
   useEffect(() => {
-    fetchListings();
+    fetchListings('', '');
     checkActiveBooking();
+    useCurrentLocation(true);
   }, [user]);
 
   // Distance calculations
@@ -129,11 +238,12 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
   };
 
   const getSpotDistance = (spot: ParkingListing): number => {
-    if (!spot.latitude || !spot.longitude) return 999;
+    if (!spot.latitude || !spot.longitude || !currentCoords) return 999;
     return calculateDistanceKm(currentCoords[0], currentCoords[1], spot.latitude, spot.longitude);
   };
 
   const formatApproxDistance = (distKm: number): string => {
+    if (distKm >= 900) return 'Nearby';
     if (distKm <= 0.08) return '~100 m';
     if (distKm < 1) {
       const meters = Math.round((distKm * 1000) / 50) * 50;
@@ -152,53 +262,6 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
     return true;
   });
 
-  // Geolocation trigger
-  const useCurrentLocation = () => {
-    if (!navigator.geolocation) return;
-
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const latitude = pos.coords.latitude;
-        const longitude = pos.coords.longitude;
-        setCurrentCoords([latitude, longitude]);
-
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.flyTo([latitude, longitude], 15, { duration: 1 });
-        }
-
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-          );
-          const data = await res.json();
-          if (data && data.address) {
-            const locName = [
-              data.address.suburb || data.address.neighbourhood || data.address.residential,
-              data.address.city || data.address.town,
-            ]
-              .filter(Boolean)
-              .join(', ') || data.display_name.split(',').slice(0, 2).join(',');
-
-            setLiveLocationName(locName);
-            if (data.address.city) setCity(data.address.city);
-          }
-          setLocationSuccessMsg(`📍 Position locked • Showing nearby parking`);
-          setTimeout(() => setLocationSuccessMsg(null), 3500);
-          fetchListings(city, '');
-        } catch {
-          // Fallback
-        } finally {
-          setIsLocating(false);
-        }
-      },
-      () => {
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
   // Initialize Leaflet Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -209,9 +272,11 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
       mapInstanceRef.current = null;
     }
 
+    const defaultCenter: [number, number] = currentCoords || (listings.length > 0 && listings[0].latitude && listings[0].longitude ? [listings[0].latitude, listings[0].longitude] : [12.9716, 77.5946]);
+
     const map = L.map(mapContainerRef.current, {
-      center: currentCoords,
-      zoom: 14,
+      center: defaultCenter,
+      zoom: currentCoords ? 14 : 12,
       zoomControl: false,
       attributionControl: false,
     });
@@ -249,6 +314,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
   useEffect(() => {
     if (!userMarkerLayerRef.current) return;
     userMarkerLayerRef.current.clearLayers();
+    if (!currentCoords) return;
 
     const userBeaconHtml = `
       <div class="relative flex items-center justify-center pointer-events-none">
@@ -344,22 +410,24 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
     e.preventDefault();
     setSelectedSpot(null);
     setArea(searchInput);
-    fetchListings(city, searchInput, vehicleType);
+    fetchListings('', searchInput, vehicleType);
   };
 
-  const handleHotspotClick = (hArea: string, coords: [number, number]) => {
+  const handleHotspotClick = (hArea: string, coords?: [number, number]) => {
     setArea(hArea);
     setSearchInput(hArea);
     setSelectedSpot(null);
-    fetchListings(city, hArea, vehicleType);
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo(coords, 14, { duration: 0.8 });
+    fetchListings('', hArea, vehicleType);
+    if (coords && mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo(coords, 15, { duration: 0.8 });
+    } else if (!hArea && currentCoords && mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo(currentCoords, 15, { duration: 0.8 });
     }
   };
 
   const handleVehicleChange = (newType: 'CAR' | 'BIKE') => {
     setVehicleType(newType);
-    fetchListings(city, area, newType);
+    fetchListings('', area, newType);
   };
 
   return (
@@ -456,7 +524,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
               <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
               <input
                 type="text"
-                placeholder="Search area, metro, locality..."
+                placeholder={liveLocationName && liveLocationName !== 'Detecting location...' ? `Search near ${liveLocationName}...` : "Search area, city, locality..."}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
@@ -467,7 +535,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
                   onClick={() => {
                     setSearchInput('');
                     setArea('');
-                    fetchListings(city, '', vehicleType);
+                    fetchListings('', '', vehicleType);
                   }}
                   className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
                 >
@@ -505,9 +573,9 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
             </div>
           </div>
 
-          {/* Quick Area Hotspots */}
+          {/* Dynamic Area Hotspots from Active Listings */}
           <div className="flex items-center space-x-1.5 overflow-x-auto scrollbar-none pb-0.5">
-            {quickHotspots.map((hotspot) => {
+            {dynamicHotspots.map((hotspot) => {
               const isActive = (area === hotspot.area) || (!area && !hotspot.area);
               return (
                 <button
@@ -535,7 +603,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
         {/* Current GPS Location Button */}
         <button
           type="button"
-          onClick={useCurrentLocation}
+          onClick={() => useCurrentLocation(false)}
           disabled={isLocating}
           className="w-11 h-11 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-lg border border-white/80 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-emerald-600 transition active:scale-95 cursor-pointer"
           title="Locate Me (GPS)"
@@ -718,10 +786,10 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
             ) : filteredListings.length === 0 ? (
               <div className="py-5 text-center space-y-2">
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  No parking spots listed yet in "{area || city}"
+                  {area ? `No parking spots listed yet in "${area}"` : 'No parking spots found nearby'}
                 </p>
                 <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                  Try searching a nearby area or select a hotspot like Koramangala or Indiranagar.
+                  Try searching a different locality or view all available spots across the map.
                 </p>
                 <div className="pt-1">
                   <button
@@ -729,7 +797,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
                     onClick={() => {
                       setArea('');
                       setSearchInput('');
-                      fetchListings(city, '', vehicleType);
+                      fetchListings('', '', vehicleType);
                     }}
                     className="inline-flex items-center space-x-1.5 bg-emerald-600 text-white text-[11px] font-extrabold px-3.5 py-1.5 rounded-xl shadow-xs hover:bg-emerald-500 transition cursor-pointer"
                   >

@@ -27,7 +27,7 @@ export const RegisterCarSpaPage: React.FC = () => {
   const [centerName, setCenterName] = useState('');
   const [ownerName, setOwnerName] = useState(user?.full_name || '');
   const [phone, setPhone] = useState(user?.phone_number || '');
-  const [city, setCity] = useState(user?.city || 'Bengaluru');
+  const [city, setCity] = useState(user?.city || '');
   const [address, setAddress] = useState(user?.address || '');
   const [serviceType, setServiceType] = useState<'DOORSTEP_MOBILE' | 'WORKSHOP_BAY' | 'BOTH'>('BOTH');
   const [bayCapacity, setBayCapacity] = useState('3');
@@ -309,7 +309,7 @@ export const RegisterCarSpaPage: React.FC = () => {
                     <input
                       type="text"
                       required
-                      placeholder="Bengaluru"
+                      placeholder="City"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"

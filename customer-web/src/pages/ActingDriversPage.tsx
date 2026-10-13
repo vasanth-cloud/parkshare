@@ -38,7 +38,7 @@ export const ActingDriversPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const initialPickup = searchParams.get('pickup') || 'Indiranagar 100ft Road, Bengaluru';
+  const initialPickup = searchParams.get('pickup') || '';
 
   // Dynamic drivers from backend
   const [drivers, setDrivers] = useState<DriverProfile[]>([]);
@@ -64,7 +64,10 @@ export const ActingDriversPage: React.FC = () => {
       setLoadingDrivers(true);
       try {
         const queryParams = new URLSearchParams();
-        queryParams.set('city', 'Bengaluru');
+        const cityParam = searchParams.get('city');
+        if (cityParam) {
+          queryParams.set('city', cityParam);
+        }
         if (transmission !== 'ANY') {
           queryParams.set('transmission', transmission === 'AUTOMATIC' ? 'Automatic' : 'Manual');
         }
@@ -196,7 +199,7 @@ export const ActingDriversPage: React.FC = () => {
                 <p className="text-xs text-slate-500">Select your ride type & customize details</p>
               </div>
               <span className="text-xs font-black bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-xl">
-                Active in Bengaluru
+                Active & Verified Drivers
               </span>
             </div>
 
@@ -266,7 +269,7 @@ export const ActingDriversPage: React.FC = () => {
                   <MapPin className="w-4 h-4 text-rose-500 flex-shrink-0" />
                   <input
                     type="text"
-                    placeholder="Enter pickup address in Bengaluru"
+                    placeholder="Enter pickup address or landmark"
                     value={pickupLocation}
                     onChange={(e) => setPickupLocation(e.target.value)}
                     className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"

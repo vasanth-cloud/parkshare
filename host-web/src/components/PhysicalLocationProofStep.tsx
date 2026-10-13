@@ -90,7 +90,7 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
     setAcquiringGps(true);
 
     if (!navigator.geolocation) {
-      const fallback = { lat: declaredLat, lng: declaredLng, accuracy: 25, distanceM: 0 };
+      const fallback = { lat: declaredLat || 0, lng: declaredLng || 0, accuracy: 25, distanceM: 0 };
       setCurrentGps(fallback);
       setAcquiringGps(false);
       callback(fallback);
@@ -101,7 +101,7 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
       const accuracy = Math.round(pos.coords.accuracy || 15);
-      const distM = calculateDistanceMeters(declaredLat, declaredLng, lat, lng);
+      const distM = (!declaredLat || !declaredLng) ? 0 : calculateDistanceMeters(declaredLat, declaredLng, lat, lng);
       const coords = { lat, lng, accuracy, distanceM: distM };
       setCurrentGps(coords);
       setAcquiringGps(false);
@@ -114,7 +114,7 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
         onGpsSuccess,
         () => {
           // Fallback 2: Use declared coordinates gracefully so user is never stuck
-          const coords = { lat: declaredLat, lng: declaredLng, accuracy: 30, distanceM: 0 };
+          const coords = { lat: declaredLat || 0, lng: declaredLng || 0, accuracy: 30, distanceM: 0 };
           setCurrentGps(coords);
           setAcquiringGps(false);
           callback(coords);

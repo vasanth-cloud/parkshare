@@ -27,7 +27,7 @@ export const HostDashboard: React.FC = () => {
     if (l.area && l.city) {
       return `${l.area}, ${l.city}`;
     }
-    if (!l.approximate_address) return 'Bengaluru, Karnataka';
+    if (!l.approximate_address) return [l.area, l.city, l.state].filter(Boolean).join(', ') || 'Listing Location';
     const rawParts = l.approximate_address.split(',').map((s) => s.trim());
     const filtered = rawParts.filter(
       (p) =>

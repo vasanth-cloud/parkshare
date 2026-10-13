@@ -97,7 +97,7 @@ export const CarSpaPage: React.FC = () => {
   const [searchParams] = useSearchParams();
 
   const parkingId = searchParams.get('parkingId');
-  const initialAddress = searchParams.get('address') || 'Indiranagar 100ft Road, Bengaluru';
+  const initialAddress = searchParams.get('address') || '';
 
   // Booking states
   const [selectedPackageId, setSelectedPackageId] = useState<string>('FOAM_PRESSURE');
@@ -331,7 +331,7 @@ export const CarSpaPage: React.FC = () => {
                 <MapPin className="w-4 h-4 text-rose-500 flex-shrink-0" />
                 <input
                   type="text"
-                  placeholder="Service address in Bengaluru..."
+                  placeholder="Service address or landmark..."
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
