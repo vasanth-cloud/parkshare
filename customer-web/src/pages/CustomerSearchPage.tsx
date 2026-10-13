@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, MapPin, Filter, Car, Zap, Shield, Star, DollarSign, Navigation, Info, Lock } from 'lucide-react';
+import { Search, MapPin, Filter, Car, Zap, Shield, Star, DollarSign, Navigation, Info, Lock, ArrowLeft } from 'lucide-react';
 import { api } from '../services/api';
 import { ParkingListing } from '../types';
 
@@ -111,6 +111,20 @@ export const CustomerSearchPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
+      {/* Back to Services Nav */}
+      <div className="mb-4 flex items-center justify-between">
+        <Link
+          to="/"
+          className="inline-flex items-center space-x-2 text-xs font-bold text-slate-600 hover:text-emerald-600 py-1.5 px-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>← Back to Services</span>
+        </Link>
+        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+          🅿️ Parking Radar & Spaces
+        </span>
+      </div>
+
       {/* Header & Filter Card */}
       <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

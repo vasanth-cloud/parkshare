@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Booking } from '../types';
 import { 
@@ -9,6 +10,7 @@ import {
   AlertCircle, 
   ShieldCheck, 
   ArrowRight, 
+  ArrowLeft,
   Car, 
   Lock, 
   RotateCcw, 
@@ -22,6 +24,7 @@ import {
 } from 'lucide-react';
 
 export const HostPinVerificationPage: React.FC = () => {
+  const navigate = useNavigate();
   // Tabs: 'handover' is the primary default tab matching the user screenshot!
   const [activeTab, setActiveTab] = useState<'handover' | 'qr' | 'pin'>('handover');
 
@@ -229,8 +232,23 @@ export const HostPinVerificationPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f3faf7] via-white to-[#f4faf7] dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-gray-900 dark:text-slate-100 py-6 px-3.5 sm:px-6 lg:px-8 max-w-2xl mx-auto space-y-6 pb-28 transition-colors duration-200">
+    <div className="min-h-screen bg-gradient-to-b from-[#f3faf7] via-white to-[#f4faf7] dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-gray-900 dark:text-slate-100 py-6 px-3.5 sm:px-6 lg:px-8 max-w-2xl mx-auto space-y-5 pb-28 transition-colors duration-200">
       
+      {/* Back Navigation Bar */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 py-1.5 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs hover:shadow-xs transition cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>← Back to Services</span>
+        </button>
+        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full">
+          🔑 Driver Gate Check-in
+        </span>
+      </div>
+
       {/* 1. TOP HERO BANNER: Gate Access & Vehicle Handover (Matching screenshot) */}
       <div className="text-center space-y-3 pt-1">
         {/* Boom Barrier Gate + Car Illustration */}

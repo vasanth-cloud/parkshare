@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   DollarSign, 
   ArrowUpRight, 
@@ -9,6 +10,7 @@ import {
   Clock, 
   Car, 
   ArrowRight,
+  ArrowLeft,
   ShieldCheck,
   Edit3,
   Check,
@@ -19,6 +21,7 @@ import { api } from '../services/api';
 import { HostSummary, Booking } from '../types';
 
 export const HostEarningsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [summary, setSummary] = useState<HostSummary | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -102,6 +105,22 @@ export const HostEarningsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/60 dark:bg-slate-950 text-gray-900 dark:text-slate-100 pb-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-5 pt-4 transition-colors duration-200">
+      
+      {/* Back Navigation Bar */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 py-1.5 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs hover:shadow-xs transition cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>← Back to Services</span>
+        </button>
+        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full">
+          💰 Earnings & Payouts
+        </span>
+      </div>
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

@@ -602,6 +602,25 @@ export const CreateListingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-slate-50 to-gray-100 py-4 px-3.5 sm:px-6 lg:px-8 max-w-lg mx-auto space-y-3.5 pb-28">
+      {/* Back Navigation Bar */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-600 hover:text-emerald-600 transition cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>← Back to Services</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className="text-xs font-bold text-slate-500 hover:text-emerald-600 transition cursor-pointer"
+        >
+          My Spaces
+        </button>
+      </div>
+
       {/* Title */}
       <div className="flex items-center justify-between">
         <div>

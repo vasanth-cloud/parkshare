@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api, getFullImageUrl } from '../services/api';
 import { VerificationStatus } from '../types';
 import { 
@@ -30,6 +30,7 @@ import { useAuth } from '../context/AuthContext';
 import { compressImageToDataUrl } from '../utils/imageCompressor';
 
 export const HostVerificationPage: React.FC = () => {
+  const navigate = useNavigate();
   const { updateUser } = useAuth();
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -455,7 +456,22 @@ export const HostVerificationPage: React.FC = () => {
   // ----------------------------------------------------
   if (verificationStatus?.is_identity_verified && !showEditMode) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-300">
+      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6 animate-in fade-in duration-300">
+        {/* Back Navigation Bar */}
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-600 hover:text-emerald-600 py-1.5 px-3 rounded-xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>← Back to Services</span>
+          </button>
+          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+            🛡️ KYC Verified
+          </span>
+        </div>
+
         {/* Verification Success Toast */}
         {successMsg && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-xs font-semibold flex items-center space-x-2">
@@ -625,8 +641,23 @@ export const HostVerificationPage: React.FC = () => {
   // 2. IN-PROGRESS / NEW: 3-Step Simple & Attractive KYC Flow
   // ----------------------------------------------------
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 space-y-6 animate-in fade-in duration-300">
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-5 animate-in fade-in duration-300">
       
+      {/* Back Navigation Bar */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-600 hover:text-emerald-600 py-1.5 px-3 rounded-xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>← Back to Services</span>
+        </button>
+        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+          🛡️ Host Identity Verification
+        </span>
+      </div>
+
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-xl border border-emerald-800/40 relative overflow-hidden">
         <div className="absolute right-0 top-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
