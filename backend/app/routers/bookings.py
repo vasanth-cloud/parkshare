@@ -389,14 +389,27 @@ def generate_release_otp(
     if not host_profile or (booking.listing and host_profile.id != booking.listing.host_profile_id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the space host can generate the release OTP")
 
-    # SECURITY CHECK
-    if booking.status != BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED:
+    allowed_statuses = [
+        BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED,
+        BookingStatusEnum.PARKING_ACTIVE,
+        BookingStatusEnum.ACTIVE,
+        BookingStatusEnum.KEY_RECEIVED,
+        BookingStatusEnum.KEY_HANDOVER_PENDING,
+        BookingStatusEnum.ODOMETER_PHOTO_SUBMITTED,
+        BookingStatusEnum.DRIVER_ARRIVED,
+        BookingStatusEnum.CONFIRMED,
+    ]
+    if booking.status not in allowed_statuses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The host cannot generate the vehicle-release OTP before the driver requests vehicle collection."
+            detail=f"Cannot generate end trip OTP for booking in status {format_status(booking.status)}"
         )
 
     now = datetime.now(timezone.utc)
+    if booking.status != BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED:
+        booking.collection_requested_at = now
+        BookingService.update_booking_status(db, booking, BookingStatusEnum.VEHICLE_COLLECTION_REQUESTED)
+
     otp = f"{random.randint(100000, 999999):06d}"
 
     # Stored hashed rather than plain text
@@ -411,7 +424,7 @@ def generate_release_otp(
         "booking_id": booking.id,
         "release_otp": otp,
         "expires_at": booking.release_otp_expires_at,
-        "message": "One-time vehicle release OTP generated. Provide this code to the driver to complete handover."
+        "message": "One-time vehicle checkout OTP generated. Provide this code to the driver to complete checkout."
     }
 
 

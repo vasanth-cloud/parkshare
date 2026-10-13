@@ -14,6 +14,8 @@ export const HostDashboard: React.FC = () => {
   const [summary, setSummary] = useState<HostSummary | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
   const [hostBookings, setHostBookings] = useState<Booking[]>([]);
+  const [generatedOtps, setGeneratedOtps] = useState<Record<number, { otp: string; expires_at: string }>>({});
+  const [otpLoadingId, setOtpLoadingId] = useState<number | null>(null);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [selectedListingForRectify, setSelectedListingForRectify] = useState<ParkingListing | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,6 +95,22 @@ export const HostDashboard: React.FC = () => {
       alert(err.message || 'Failed to submit customer report');
     } finally {
       setSubmittingReport(false);
+    }
+  };
+
+  const handleGenerateCheckoutOtp = async (bookingId: number) => {
+    try {
+      setOtpLoadingId(bookingId);
+      const res = await api.generateReleaseOtp(bookingId);
+      setGeneratedOtps((prev) => ({
+        ...prev,
+        [bookingId]: { otp: res.release_otp, expires_at: res.expires_at },
+      }));
+      await fetchData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to generate End Trip OTP');
+    } finally {
+      setOtpLoadingId(null);
     }
   };
 
@@ -321,9 +339,148 @@ export const HostDashboard: React.FC = () => {
       </div>
 
 
+      {/* Active Parkings & End Trip Checkout Section */}
+      {hostBookings.some((b) =>
+        [
+          'CONFIRMED',
+          'PARKING_ACTIVE',
+          'ACTIVE',
+          'VEHICLE_COLLECTION_REQUESTED',
+          'DRIVER_ARRIVED',
+        ].includes(b.status)
+      ) && (
+        <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 rounded-3xl p-5 sm:p-6 shadow-xl border border-emerald-500/40 text-white space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-800/60 pb-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-400/30">
+                <Car className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-black text-white flex items-center space-x-2">
+                  <span>Active Parkings & End Trip Checkout</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                </h2>
+                <p className="text-xs text-emerald-200/80">
+                  Generate secure 6-digit checkout OTPs for drivers departing your parking spaces.
+                </p>
+              </div>
+            </div>
 
+            <button
+              onClick={() => fetchData()}
+              className="text-xs font-bold text-emerald-300 hover:text-white bg-emerald-900/60 hover:bg-emerald-900 px-3.5 py-1.5 rounded-xl border border-emerald-700/60 transition flex items-center space-x-1.5 self-start sm:self-center cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Refresh</span>
+            </button>
+          </div>
 
-      {/* Compact & Attractive Host Identity Verification Card */}
+          <div className="space-y-3">
+            {hostBookings
+              .filter((b) =>
+                [
+                  'CONFIRMED',
+                  'PARKING_ACTIVE',
+                  'ACTIVE',
+                  'VEHICLE_COLLECTION_REQUESTED',
+                  'DRIVER_ARRIVED',
+                ].includes(b.status)
+              )
+              .map((b) => {
+                const isCollectionStage = b.status === 'VEHICLE_COLLECTION_REQUESTED';
+                const activeOtp = generatedOtps[b.id];
+
+                return (
+                  <div
+                    key={b.id}
+                    className={`rounded-2xl p-4 sm:p-5 border transition ${
+                      isCollectionStage
+                        ? 'bg-amber-950/40 border-amber-500/80 shadow-lg ring-1 ring-amber-500/40'
+                        : 'bg-slate-900/80 border-slate-700/80'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      {/* Left: Info */}
+                      <div className="space-y-1.5 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-mono font-bold bg-slate-800 text-emerald-400 border border-slate-700 px-2.5 py-0.5 rounded-full">
+                            Ref: #{b.booking_reference}
+                          </span>
+                          <span className="text-xs font-bold text-slate-300">
+                            Slot {b.space_number || 'A01'} • {b.listing?.title}
+                          </span>
+                          {isCollectionStage ? (
+                            <span className="bg-amber-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                              🚨 End Trip Requested
+                            </span>
+                          ) : (
+                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                              Parking Active
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300 pt-0.5">
+                          <span className="text-white font-extrabold flex items-center space-x-1">
+                            <Car className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Plate: {b.vehicle?.registration_number || b.vehicle_license_plate || 'KA 01 AB 1234'}</span>
+                          </span>
+                          {b.user?.full_name && (
+                            <span>
+                              Driver: <strong className="text-white">{b.user.full_name}</strong>
+                            </span>
+                          )}
+                          {b.user?.phone_number && (
+                            <a
+                              href={`tel:${b.user.phone_number}`}
+                              className="text-emerald-400 font-bold hover:underline"
+                            >
+                              📞 {b.user.phone_number}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: OTP Generation */}
+                      <div className="flex-shrink-0">
+                        {activeOtp ? (
+                          <div className="bg-amber-950/90 border-2 border-amber-400 p-3 rounded-2xl space-y-1 text-center shadow-lg min-w-[200px]">
+                            <span className="text-[10px] text-amber-300 font-extrabold uppercase tracking-wider block">
+                              End Trip Checkout OTP
+                            </span>
+                            <span className="text-2xl font-black font-mono text-white tracking-widest block bg-black/70 px-4 py-1 rounded-xl border border-amber-500/60">
+                              {activeOtp.otp}
+                            </span>
+                            <span className="text-[10px] text-amber-200/90 block">
+                              Valid for 10 min • Driver enters this to end trip
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleGenerateCheckoutOtp(b.id)}
+                              disabled={otpLoadingId === b.id}
+                              className="text-[10px] text-amber-400 hover:text-white underline mt-1 block mx-auto cursor-pointer font-bold"
+                            >
+                              🔄 Regenerate OTP
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateCheckoutOtp(b.id)}
+                            disabled={otpLoadingId === b.id}
+                            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black px-5 py-3 rounded-2xl text-xs transition shadow-lg flex items-center justify-center space-x-2 hover:scale-[1.02] cursor-pointer"
+                          >
+                            <span>{otpLoadingId === b.id ? 'Generating...' : '🔐 Generate End Trip OTP'}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
       {verificationStatus?.is_identity_verified ? (
         <div className="bg-gradient-to-r from-emerald-500/10 via-emerald-50 to-white dark:from-emerald-950/40 dark:via-emerald-950/20 dark:to-slate-900 rounded-2xl p-4 sm:p-5 border border-emerald-200 dark:border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-center space-x-3.5">
