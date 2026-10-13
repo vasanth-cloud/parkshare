@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../services/api';
+import { api, getFullImageUrl } from '../services/api';
 import { DriverProfile } from '../types';
 import {
   Users,
@@ -284,7 +284,7 @@ export const AdminDriversPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center space-x-3 min-w-0">
                       <img
-                        src={driver.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'}
+                        src={getFullImageUrl(driver.photo) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'}
                         alt={driver.name}
                         className="w-12 h-12 rounded-2xl object-cover border-2 border-indigo-500/30 flex-shrink-0"
                       />

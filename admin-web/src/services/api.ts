@@ -1,9 +1,49 @@
 import { User, ParkingListing, AdminStats, Dispute, DriverProfile, CarSpaCenter } from '../types';
 
-const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
-const API_BASE = rawApiUrl 
-  ? `${rawApiUrl.replace(/\/+$/, '')}/api/v1` 
-  : 'https://parkshare-backend-9anh.onrender.com/api/v1';
+function resolveBackendBase(): string {
+  const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
+  if (rawApiUrl) {
+    return `${rawApiUrl.replace(/\/+$/, '')}/api/v1`;
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:8000/api/v1';
+    }
+  }
+  return 'https://parkshare-backend-9anh.onrender.com/api/v1';
+}
+
+const API_BASE = resolveBackendBase();
+
+export function getFullImageUrl(url?: string): string {
+  if (!url) return '';
+  if (url.startsWith('blob:') || url.startsWith('data:')) {
+    return url;
+  }
+  
+  // Extract upload path if URL contains /uploads/ (even if prefixed with an unreachable LAN IP or other domain)
+  const uploadsIdx = url.indexOf('/uploads/');
+  if (uploadsIdx !== -1) {
+    const uploadPath = url.substring(uploadsIdx); // e.g. "/uploads/kyc_84a8b2f85cf0.jpg"
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      // In local dev on localhost, use relative path which Vite proxies to port 8000
+      if (host === 'localhost' || host === '127.0.0.1') {
+        return uploadPath;
+      }
+    }
+    const backendOrigin = API_BASE.replace(/\/api\/v1\/?$/, '');
+    return `${backendOrigin}${uploadPath}`;
+  }
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return cleanPath;
+}
 
 function getHeaders(): HeadersInit {
   const token = localStorage.getItem('parkshare_admin_token');

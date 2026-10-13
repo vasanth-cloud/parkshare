@@ -27,7 +27,21 @@ const API_BASE = `${BACKEND_BASE}/api/v1`;
 
 export function getFullImageUrl(url?: string): string {
   if (!url) return '';
-  if (url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+  if (url.startsWith('blob:') || url.startsWith('data:')) {
+    return url;
+  }
+  const uploadsIdx = url.indexOf('/uploads/');
+  if (uploadsIdx !== -1) {
+    const uploadPath = url.substring(uploadsIdx);
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      if (host === 'localhost' || host === '127.0.0.1') {
+        return uploadPath;
+      }
+    }
+    return `${BACKEND_BASE}${uploadPath}`;
+  }
+  if (url.startsWith('http://') || url.startsWith('https://')) {
     return url;
   }
   return `${BACKEND_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
@@ -310,9 +324,6 @@ export const api = {
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to upload verification file'));
     const data = await res.json();
-    if (data.url) {
-      data.url = getFullImageUrl(data.url);
-    }
     return data;
   },
 

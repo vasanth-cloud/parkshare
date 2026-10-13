@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../services/api';
+import { api, getFullImageUrl } from '../services/api';
 import { CarSpaCenter } from '../types';
 import {
   Sparkles,
@@ -299,7 +299,7 @@ export const AdminCarSpaPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center space-x-3 min-w-0">
                       <img
-                        src={spa.photo || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&w=400&q=80'}
+                        src={getFullImageUrl(spa.photo) || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&w=400&q=80'}
                         alt={spa.centerName}
                         className="w-14 h-14 rounded-2xl object-cover border border-cyan-500/30 flex-shrink-0"
                       />

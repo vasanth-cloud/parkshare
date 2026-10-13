@@ -75,8 +75,106 @@ SAMPLE_PACKAGES: List[SpaPackageSchema] = [
     ),
 ]
 
-# Active in-memory registered car spas (starts empty; populated by partner registrations)
-SAMPLE_SPAS: List[CarSpaCenterSchema] = []
+# Active in-memory registered car spas (seeded with 3 verified detailing centers)
+SAMPLE_SPAS: List[CarSpaCenterSchema] = [
+    CarSpaCenterSchema(
+        id="spa-101",
+        centerName="EcoShine Studio & Detailing Bay",
+        ownerName="Karthik Narayan",
+        phone="+91 98860 12845",
+        city="Bengaluru",
+        address="100 Feet Rd, HAL 2nd Stage, Indiranagar, Bengaluru",
+        serviceType="WORKSHOP_BAY",
+        bayCapacity=4,
+        operatingHours="08:00 AM - 08:30 PM",
+        servicesOffered=["Foam Wash", "Interior Clean", "Ceramic Coating", "Underbody Anti-Rust"],
+        rating=4.9,
+        totalOrders=42,
+        isVerified=True,
+        status="ACTIVE",
+        photo="https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&w=400&q=80",
+        createdAt="2025-01-08T09:00:00Z"
+    ),
+    CarSpaCenterSchema(
+        id="spa-102",
+        centerName="CleanRide Mobile Detailing Vans",
+        ownerName="Suresh Babu",
+        phone="+91 99014 55321",
+        city="Bengaluru",
+        address="Koramangala 5th Block (Mobile Doorstep Van Fleet), Bengaluru",
+        serviceType="DOORSTEP_MOBILE",
+        bayCapacity=2,
+        operatingHours="07:00 AM - 07:00 PM",
+        servicesOffered=["Eco Waterless Wash", "Steam Sanitization", "Doorstep Express Polish"],
+        rating=4.8,
+        totalOrders=29,
+        isVerified=True,
+        status="ACTIVE",
+        photo="https://images.unsplash.com/photo-1601362840469-51e4d8d58785?auto=format&fit=crop&w=400&q=80",
+        createdAt="2025-01-14T10:30:00Z"
+    ),
+    CarSpaCenterSchema(
+        id="spa-103",
+        centerName="SparklePro Ceramic Care & Bay",
+        ownerName="Manoj Reddy",
+        phone="+91 97312 99182",
+        city="Bengaluru",
+        address="27th Main Rd, Sector 1, HSR Layout, Bengaluru",
+        serviceType="BOTH",
+        bayCapacity=3,
+        operatingHours="08:30 AM - 09:00 PM",
+        servicesOffered=["Signature Foam Wash", "Deep Interior Steam", "3M Ceramic Hydrophobic Shield"],
+        rating=5.0,
+        totalOrders=35,
+        isVerified=True,
+        status="ACTIVE",
+        photo="https://images.unsplash.com/photo-1552930294-6b595f4c2974?auto=format&fit=crop&w=400&q=80",
+        createdAt="2025-01-19T14:15:00Z"
+    )
+]
+
+# In-memory car spa bookings registry
+SAMPLE_SPA_BOOKINGS: List[SpaBookingOut] = [
+    SpaBookingOut(
+        bookingId="SPA-719321",
+        package=SAMPLE_PACKAGES[1],  # Signature Foam Wash (₹399)
+        vehicleCategory="SEDAN",
+        locationType="PARKING_BAY",
+        address="Indiranagar Studio Bay 2, Bengaluru",
+        date="2025-02-01",
+        timeSlot="10:00 AM - 11:00 AM",
+        finalPrice=449.0,
+        otp=3912,
+        status="CONFIRMED",
+        createdAt="2025-02-01T09:15:00Z"
+    ),
+    SpaBookingOut(
+        bookingId="SPA-719322",
+        package=SAMPLE_PACKAGES[2],  # Deep Interior Spa & Steam (₹699)
+        vehicleCategory="SUV",
+        locationType="DOORSTEP",
+        address="Prestige Falcon City, Kanakapura Rd, Bengaluru",
+        date="2025-02-02",
+        timeSlot="02:00 PM - 03:30 PM",
+        finalPrice=799.0,
+        otp=6824,
+        status="CONFIRMED",
+        createdAt="2025-02-02T11:45:00Z"
+    ),
+    SpaBookingOut(
+        bookingId="SPA-719323",
+        package=SAMPLE_PACKAGES[3],  # 3M Ceramic Glaze (₹1299)
+        vehicleCategory="SEDAN",
+        locationType="PARKING_BAY",
+        address="HSR Layout Ceramic Bay, Bengaluru",
+        date="2025-02-03",
+        timeSlot="04:00 PM - 06:00 PM",
+        finalPrice=1349.0,
+        otp=8145,
+        status="CONFIRMED",
+        createdAt="2025-02-03T13:20:00Z"
+    )
+]
 
 class CarSpaService:
     @staticmethod
@@ -159,7 +257,7 @@ class CarSpaService:
         booking_id = f"SPA-{random.randint(100000, 999999)}"
         otp = random.randint(1000, 9999)
 
-        return SpaBookingOut(
+        booking = SpaBookingOut(
             bookingId=booking_id,
             package=matched_pkg,
             vehicleCategory=data.vehicleCategory,
@@ -172,3 +270,17 @@ class CarSpaService:
             status="CONFIRMED",
             createdAt=datetime.now(timezone.utc).isoformat(),
         )
+        SAMPLE_SPA_BOOKINGS.append(booking)
+        return booking
+
+    @staticmethod
+    def get_total_revenue() -> float:
+        return sum(b.finalPrice for b in SAMPLE_SPA_BOOKINGS)
+
+    @staticmethod
+    def get_total_bookings() -> int:
+        return len(SAMPLE_SPA_BOOKINGS)
+
+    @staticmethod
+    def get_all_bookings() -> List[SpaBookingOut]:
+        return list(SAMPLE_SPA_BOOKINGS)

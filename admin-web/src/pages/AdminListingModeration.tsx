@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../services/api';
+import { api, getFullImageUrl } from '../services/api';
 import { ParkingListing, ListingImage } from '../types';
 import { 
   CheckSquare, 
@@ -431,12 +431,23 @@ export const AdminListingModeration: React.FC = () => {
                               <span className="text-[10px] text-emerald-400">Tamper-Proof Watermark</span>
                             </div>
                             <div
-                              onClick={() => setInspectImage({ url: l.verification_photo_url!, caption: 'Physical Presence Live Verification Photo', title: l.title })}
+                              onClick={() => setInspectImage({ url: getFullImageUrl(l.verification_photo_url!), caption: 'Physical Presence Live Verification Photo', title: l.title })}
                               className="group relative rounded-xl overflow-hidden border border-emerald-800/80 hover:border-emerald-400 cursor-pointer bg-black h-28 flex items-center justify-center transition"
                             >
                               <img
-                                src={l.verification_photo_url}
+                                src={getFullImageUrl(l.verification_photo_url)}
                                 alt="On-Site Proof"
+                                onError={(e) => {
+                                  // Fallback to direct localhost:8000 URL if needed
+                                  const target = e.target as HTMLImageElement;
+                                  const uploadsIdx = l.verification_photo_url?.indexOf('/uploads/');
+                                  if (uploadsIdx !== undefined && uploadsIdx !== -1) {
+                                    const path = l.verification_photo_url!.substring(uploadsIdx);
+                                    if (!target.src.includes('localhost:8000')) {
+                                      target.src = `http://localhost:8000${path}`;
+                                    }
+                                  }
+                                }}
                                 className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center space-x-1.5 text-xs font-bold text-white">
@@ -498,13 +509,23 @@ export const AdminListingModeration: React.FC = () => {
                               return (
                                 <div
                                   key={idx}
-                                  onClick={() => setInspectImage({ url: img.image_url, caption: img.caption, title: l.title })}
+                                  onClick={() => setInspectImage({ url: getFullImageUrl(img.image_url), caption: img.caption, title: l.title })}
                                   className="group relative rounded-lg overflow-hidden border border-slate-800 hover:border-emerald-400 cursor-pointer bg-black aspect-video transition"
                                   title={angle.label}
                                 >
                                   <img
-                                    src={img.image_url}
+                                    src={getFullImageUrl(img.image_url)}
                                     alt={img.caption || `Photo ${idx + 1}`}
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      const uploadsIdx = img.image_url?.indexOf('/uploads/');
+                                      if (uploadsIdx !== undefined && uploadsIdx !== -1) {
+                                        const path = img.image_url.substring(uploadsIdx);
+                                        if (!target.src.includes('localhost:8000')) {
+                                          target.src = `http://localhost:8000${path}`;
+                                        }
+                                      }
+                                    }}
                                     className="w-full h-full object-cover group-hover:scale-105 transition"
                                   />
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -642,8 +663,18 @@ export const AdminListingModeration: React.FC = () => {
 
             <div className="rounded-2xl overflow-hidden bg-black flex items-center justify-center">
               <img
-                src={inspectImage.url}
+                src={getFullImageUrl(inspectImage.url)}
                 alt="Enlarged space inspection"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  const uploadsIdx = inspectImage.url?.indexOf('/uploads/');
+                  if (uploadsIdx !== undefined && uploadsIdx !== -1) {
+                    const path = inspectImage.url.substring(uploadsIdx);
+                    if (!target.src.includes('localhost:8000')) {
+                      target.src = `http://localhost:8000${path}`;
+                    }
+                  }
+                }}
                 className="w-full h-auto max-h-[75vh] object-contain"
               />
             </div>

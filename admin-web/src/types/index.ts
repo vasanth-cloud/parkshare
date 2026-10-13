@@ -87,6 +87,37 @@ export interface ParkingListing {
   created_at: string;
 }
 
+export interface ServiceFinancialClassification {
+  service_id: 'PARKING' | 'DRIVERS' | 'CAR_SPA' | string;
+  service_name: string;
+  short_name: string;
+  category: string;
+  icon: string;
+  gross_collected: number;
+  platform_commission: number;
+  partner_payouts: number;
+  total_bookings: number;
+  active_units: number;
+  contribution_percentage: number;
+  avg_ticket_size: number;
+  status: 'ACTIVE' | 'GROWING' | 'PENDING' | string;
+}
+
+export interface ClassifiedTransaction {
+  id: string;
+  service: 'PARKING' | 'DRIVERS' | 'CAR_SPA' | string;
+  service_label: string;
+  service_icon: string;
+  booking_reference: string;
+  customer_name: string;
+  gross_amount: number;
+  commission: number;
+  net_payout: number;
+  status: 'PAID' | 'COMPLETED' | 'REFUNDED' | string;
+  date: string;
+  payment_method: string;
+}
+
 export interface AdminStats {
   total_users: number;
   total_hosts: number;
@@ -99,6 +130,8 @@ export interface AdminStats {
   total_payouts: number;
   total_drivers?: number;
   total_car_spas?: number;
+  services_classification?: ServiceFinancialClassification[];
+  classified_transactions?: ClassifiedTransaction[];
 }
 
 export interface Dispute {
