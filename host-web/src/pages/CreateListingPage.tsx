@@ -418,12 +418,16 @@ export const CreateListingPage: React.FC = () => {
         setError('Please fill in both City and Area.');
         return false;
       }
+      if (!exactAddress.trim()) {
+        setError('Please enter the exact location/address of your parking space.');
+        return false;
+      }
       if (!lat || !lng) {
         setError('Please click "Detect Address & GPS" or search your address to set spot coordinates.');
         return false;
       }
       if (!approxAddress.trim()) {
-        setApproxAddress(`${area.trim()}, ${city.trim()}`);
+        setApproxAddress(exactAddress.trim());
       }
       if (!locationProof || !locationProof.is_location_verified) {
         // Graceful on-site proof auto-fill with coordinates so host is never stuck
@@ -958,41 +962,30 @@ export const CreateListingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Public Address */}
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                Area / Public Address *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Near 100ft Road, Indiranagar"
-                value={approxAddress}
-                onChange={(e) => setApproxAddress(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
-            </div>
-
-            {/* Exact Address */}
+            {/* Exact Location / Address */}
             <div>
               <div className="flex justify-between items-center mb-1">
                 <label className="block text-xs font-bold text-gray-700 uppercase">
-                  Exact Address (Shared after booking)
+                  Exact Location / Address *
                 </label>
                 <button
                   type="button"
-                  onClick={() => geocodeTypedAddress()}
-                  className="text-[11px] font-bold text-emerald-700 underline cursor-pointer"
+                  onClick={() => geocodeTypedAddress(exactAddress)}
+                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 underline cursor-pointer"
                 >
-                  Sync Pin
+                  Sync Map Pin
                 </button>
               </div>
               <input
                 type="text"
-                placeholder="House / Building #, Cross, Landmark"
+                required
+                placeholder="Building Name, House/Flat #, Street, Landmark"
                 value={exactAddress}
-                onChange={(e) => setExactAddress(e.target.value)}
-                onBlur={() => geocodeTypedAddress()}
+                onChange={(e) => {
+                  setExactAddress(e.target.value);
+                  setApproxAddress(e.target.value);
+                }}
+                onBlur={() => geocodeTypedAddress(exactAddress)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
             </div>
