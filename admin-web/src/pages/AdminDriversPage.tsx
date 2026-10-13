@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { DriverProfile } from '../types';
 import {
@@ -17,7 +18,8 @@ import {
   RotateCcw,
   X,
   AlertTriangle,
-  Award
+  Award,
+  ArrowLeft
 } from 'lucide-react';
 
 export const AdminDriversPage: React.FC = () => {
@@ -120,6 +122,17 @@ export const AdminDriversPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
       
+      {/* Back to Services Navigation */}
+      <div>
+        <Link
+          to="/"
+          className="inline-flex items-center space-x-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl transition shadow-xs"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>← Back to Services</span>
+        </Link>
+      </div>
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

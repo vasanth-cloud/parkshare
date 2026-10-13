@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AdminAuthPage } from './pages/AdminAuthPage';
+import { AdminServicesHomePage } from './pages/AdminServicesHomePage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AdminListingModeration } from './pages/AdminListingModeration';
 import { AdminUserDirectory } from './pages/AdminUserDirectory';
@@ -25,14 +26,26 @@ export const AppContent: React.FC = () => {
       <main className="flex-grow">
         <Routes>
           <Route path="/auth" element={<AdminAuthPage />} />
+          
+          {/* Services Home Page - Displays ONLY the 3 services initially */}
           <Route
-            path="/dashboard"
+            path="/"
             element={
               <ProtectedRoute>
-                <AdminDashboard />
+                <AdminServicesHomePage />
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/services"
+            element={
+              <ProtectedRoute>
+                <AdminServicesHomePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Service 1: Parking Space Moderation & Approvals */}
           <Route
             path="/approvals"
             element={
@@ -41,6 +54,8 @@ export const AppContent: React.FC = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* Service 2: Acting Drivers Fleet Operations */}
           <Route
             path="/drivers"
             element={
@@ -49,6 +64,8 @@ export const AppContent: React.FC = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* Service 3: Car Spa Detailing & Workshops */}
           <Route
             path="/car-spas"
             element={
@@ -57,6 +74,18 @@ export const AppContent: React.FC = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* Platform Financials & KPIs Overview */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Disputes & Moderation */}
           <Route
             path="/disputes"
             element={
@@ -65,6 +94,8 @@ export const AppContent: React.FC = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* User Directory */}
           <Route
             path="/users"
             element={
@@ -73,7 +104,8 @@ export const AppContent: React.FC = () => {
               </ProtectedRoute>
             }
           />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       <Footer />
@@ -92,4 +124,3 @@ export function App() {
 }
 
 export default App;
-

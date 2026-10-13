@@ -25,7 +25,7 @@ export const AdminAuthPage: React.FC = () => {
         return;
       }
       login(res.access_token, res.user);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err: any) {
       setError(err.message || 'Admin login failed');
     } finally {
