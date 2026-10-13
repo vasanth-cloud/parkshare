@@ -24,18 +24,35 @@ import {
   Info,
   Clock,
   ArrowLeft,
-  ShieldAlert
+  ShieldAlert,
+  Search,
+  ChevronRight,
+  ChevronLeft,
+  ExternalLink,
+  Car,
+  Layers,
+  Check
 } from 'lucide-react';
 
 export const AdminListingModeration: React.FC = () => {
   const [listings, setListings] = useState<ParkingListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [rejectionReason, setRejectionReason] = useState<Record<number, string>>({});
   const [inspectImage, setInspectImage] = useState<{ url: string; caption?: string; title: string } | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
   const fetchPendingListings = () => {
+    setLoading(true);
     api.getPendingListings()
-      .then(setListings)
+      .then((data) => {
+        setListings(data);
+        // If selected listing was approved/rejected, clear selection
+        if (selectedListingId && !data.some(l => l.id === selectedListingId)) {
+          setSelectedListingId(null);
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   };
@@ -45,12 +62,17 @@ export const AdminListingModeration: React.FC = () => {
   }, []);
 
   const handleAction = async (id: number, status: 'ACTIVE' | 'REJECTED', customReason?: string) => {
+    setActionLoadingId(id);
     try {
       const reason = customReason !== undefined ? customReason : (rejectionReason[id] || '');
       await api.approveListing(id, status, reason);
+      // Deselect after action
+      setSelectedListingId(null);
       fetchPendingListings();
     } catch (err: any) {
       alert(err.message || 'Moderation action failed');
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
@@ -116,25 +138,39 @@ export const AdminListingModeration: React.FC = () => {
       .join(' ');
   };
 
+  // Filter listings by search query
+  const filteredListings = listings.filter((l) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const titleMatch = l.title?.toLowerCase().includes(q);
+    const hostMatch = (l.host?.legal_name || l.host?.full_name || '').toLowerCase().includes(q);
+    const addressMatch = (l.approximate_address || l.exact_address || l.city || '').toLowerCase().includes(q);
+    const idMatch = `ps-${10000 + l.id}`.includes(q) || `${l.id}`.includes(q);
+    return titleMatch || hostMatch || addressMatch || idMatch;
+  });
+
+  const selectedListing = listings.find((l) => l.id === selectedListingId);
+  const selectedIndex = selectedListing ? listings.findIndex((l) => l.id === selectedListingId) : -1;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-6">
       {/* Back to Services Navigation */}
       <div>
         <Link
           to="/"
-          className="inline-flex items-center space-x-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl transition shadow-xs"
+          className="inline-flex items-center space-x-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl transition shadow-xs hover:border-slate-700"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>← Back to Services</span>
         </Link>
       </div>
 
-      {/* Page Title */}
+      {/* Page Title & Queue Meta Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>
           <h1 className="text-2xl font-black text-white flex items-center space-x-2.5">
             <ShieldCheck className="w-7 h-7 text-emerald-500" />
-            <span className="tracking-tight">Space Listing Verification & Moderation Queue</span>
+            <span className="tracking-tight">Space Listing Verification & Moderation</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Review host listings against physical presence proofs, GPS accuracy, legal identity, and multi-angle photos
@@ -149,25 +185,205 @@ export const AdminListingModeration: React.FC = () => {
             <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
             <span>Parking Disputes</span>
           </Link>
-          <span className="text-xs font-mono bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-300">
+          <span className="text-xs font-mono bg-slate-900 border border-slate-800 px-3.5 py-1.5 rounded-xl text-slate-300">
             Pending Queue: <strong className="text-amber-400">{listings.length}</strong>
           </span>
         </div>
       </div>
 
-      {loading ? (
-        <div className="text-center py-20 text-slate-500 text-sm">
-          Loading space verification queue...
-        </div>
-      ) : listings.length === 0 ? (
-        <div className="bg-slate-900 rounded-3xl p-14 text-center border border-slate-800 space-y-3">
-          <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
-          <h3 className="text-lg font-bold text-white">No Pending Approvals</h3>
-          <p className="text-sm text-slate-400">All submitted parking spaces have been moderated.</p>
+      {/* ============================================================== */}
+      {/* VIEW 1: CLEAN LISTINGS QUEUE (Non-congested overview list)       */}
+      {/* ============================================================== */}
+      {!selectedListing ? (
+        <div className="space-y-4">
+          {/* Search & Filter Bar */}
+          <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                placeholder="Search listings by title, host name, area, address, or #PS-ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+              />
+            </div>
+            <div className="text-xs text-slate-400 font-mono flex items-center space-x-2 self-end sm:self-auto">
+              <span>Showing {filteredListings.length} of {listings.length} Pending Spaces</span>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-20 text-slate-500 text-sm">
+              Loading space verification queue...
+            </div>
+          ) : filteredListings.length === 0 ? (
+            <div className="bg-slate-900 rounded-3xl p-14 text-center border border-slate-800 space-y-3">
+              <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
+              <h3 className="text-lg font-bold text-white">No Pending Approvals</h3>
+              <p className="text-sm text-slate-400">
+                {searchQuery ? `No pending spaces match "${searchQuery}".` : 'All submitted parking spaces have been moderated.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              {filteredListings.map((l) => {
+                const riskFlags = getRiskFlags(l);
+                const hostName = l.host?.legal_name || l.host?.full_name || 'Individual Host';
+                const hostTypeDisplay = (l.host?.host_type || l.host_type) === 'BUSINESS' ? 'Commercial Host' : 'Individual Host';
+                const previewImg = l.verification_photo_url || (l.images && l.images.length > 0 ? l.images[0].image_url : null);
+                const photosCount = l.images?.length || 0;
+
+                return (
+                  <div
+                    key={l.id}
+                    onClick={() => setSelectedListingId(l.id)}
+                    className="bg-slate-900/90 hover:bg-slate-900 border border-slate-800/80 hover:border-emerald-500/60 rounded-3xl p-5 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-5 group"
+                  >
+                    {/* Left: Thumbnail Preview & Icon */}
+                    <div className="flex items-center space-x-4 min-w-0 flex-1">
+                      <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-black border border-slate-800 flex-shrink-0 group-hover:border-emerald-500/40 transition">
+                        {previewImg ? (
+                          <img
+                            src={getFullImageUrl(previewImg)}
+                            alt={l.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 space-y-1">
+                            <Car className="w-6 h-6" />
+                            <span className="text-[10px]">No Photo</span>
+                          </div>
+                        )}
+                        <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-xs text-[10px] font-mono text-emerald-400 font-bold border border-emerald-900/50">
+                          📷 {photosCount}
+                        </span>
+                      </div>
+
+                      {/* Main Details */}
+                      <div className="space-y-2 min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-mono font-bold text-slate-400 bg-slate-950 px-2.5 py-0.5 rounded-lg border border-slate-800">
+                            #PS-{10000 + l.id}
+                          </span>
+                          <span className="text-amber-400 font-bold bg-amber-950/80 border border-amber-800/80 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider">
+                            Pending Review
+                          </span>
+                          {riskFlags.length === 0 ? (
+                            <span className="text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full text-[10px] flex items-center space-x-1">
+                              <CheckCircle className="w-3 h-3" />
+                              <span>Low Risk / Clean</span>
+                            </span>
+                          ) : (
+                            <span className="text-amber-300 font-bold bg-amber-950/60 border border-amber-800/60 px-2 py-0.5 rounded-full text-[10px] flex items-center space-x-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>{riskFlags.length} Risk Flag{riskFlags.length > 1 ? 's' : ''}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <h3 className="text-base font-black text-white group-hover:text-emerald-300 transition truncate">
+                            {l.title}
+                          </h3>
+                          <p className="text-xs text-slate-400 flex items-center space-x-1.5 mt-0.5 truncate">
+                            <MapPin className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                            <span className="truncate">{l.approximate_address || l.exact_address || l.city}</span>
+                          </p>
+                        </div>
+
+                        {/* Host & Meta Info */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+                          <span className="flex items-center space-x-1 text-slate-300 font-medium">
+                            <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>{hostName}</span>
+                            <span className="text-slate-500 font-normal">({hostTypeDisplay})</span>
+                          </span>
+                          <span>•</span>
+                          <span className="font-semibold text-emerald-400">
+                            ₹{l.pricing_rule?.hourly_price || 40}/hr <span className="text-slate-500 font-normal">(₹{l.pricing_rule?.daily_price || 250}/day)</span>
+                          </span>
+                          <span>•</span>
+                          <span>{formatParkingType(l.parking_type)} • {l.capacity} Car</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Action Button */}
+                    <div className="flex md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-800/80 flex-shrink-0">
+                      <div className="text-right hidden md:block">
+                        <span className="text-[10px] text-slate-500 uppercase font-semibold block">Submission Date</span>
+                        <span className="text-xs text-slate-300 font-mono">
+                          {new Date(l.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedListingId(l.id);
+                        }}
+                        className="w-full md:w-auto bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm"
+                      >
+                        <span>Review Full Dossier</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : (
-        <div className="space-y-8">
-          {listings.map((l) => {
+        /* ============================================================== */
+        /* VIEW 2: FOCUSED FULL-DETAIL DOSSIER & VERIFICATION DECISION    */
+        /* ============================================================== */
+        <div className="space-y-6">
+          {/* Dossier Header & Back Button Bar */}
+          <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <button
+              onClick={() => setSelectedListingId(null)}
+              className="inline-flex items-center space-x-2 text-xs font-bold text-slate-300 hover:text-white bg-slate-950 hover:bg-slate-800 border border-slate-800 px-3.5 py-2 rounded-xl transition shadow-xs w-fit"
+            >
+              <ArrowLeft className="w-4 h-4 text-emerald-400" />
+              <span>← Back to Moderation Queue</span>
+            </button>
+
+            {/* Stepper Navigation */}
+            <div className="flex items-center space-x-3 text-xs">
+              <span className="text-slate-400 font-mono">
+                Listing <strong className="text-white">{selectedIndex + 1}</strong> of <strong className="text-white">{listings.length}</strong>
+              </span>
+
+              <div className="flex items-center space-x-1">
+                <button
+                  disabled={selectedIndex <= 0}
+                  onClick={() => {
+                    if (selectedIndex > 0) setSelectedListingId(listings[selectedIndex - 1].id);
+                  }}
+                  className="p-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 hover:text-white disabled:opacity-40 transition"
+                  title="Previous Listing"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  disabled={selectedIndex >= listings.length - 1}
+                  onClick={() => {
+                    if (selectedIndex < listings.length - 1) setSelectedListingId(listings[selectedIndex + 1].id);
+                  }}
+                  className="p-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 hover:text-white disabled:opacity-40 transition"
+                  title="Next Listing"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Full Detailed Dossier Card */}
+          {(() => {
+            const l = selectedListing;
             const riskFlags = getRiskFlags(l);
             const isCoveredSpace = l.is_covered || l.is_indoor || l.parking_type.includes('COVERED') || l.parking_type.includes('GARAGE');
             const entrancePhoto = findPhoto(l.images, ['ENTRANCE', 'ROAD']);
@@ -176,14 +392,11 @@ export const AdminListingModeration: React.FC = () => {
             const clearancePhoto = findPhoto(l.images, ['ROOF', 'CLEARANCE', 'HEIGHT']);
             const gatePhoto = findPhoto(l.images, ['GATE', 'BARRIER']);
 
-            const hostName = l.host?.legal_name || l.host?.full_name || 'Vasanth A.';
+            const hostName = l.host?.legal_name || l.host?.full_name || 'Individual Host';
             const hostTypeDisplay = (l.host?.host_type || l.host_type) === 'BUSINESS' ? 'Commercial / Business Host' : 'Individual Host';
 
             return (
-              <div 
-                key={l.id} 
-                className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl space-y-0"
-              >
+              <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl space-y-0">
                 {/* Top Dossier Brand Banner */}
                 <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 px-6 py-3 border-b border-emerald-900/40 flex items-center justify-between">
                   <div className="flex items-center space-x-2 font-mono text-xs font-black tracking-widest text-emerald-400 uppercase">
@@ -200,7 +413,7 @@ export const AdminListingModeration: React.FC = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
                     <div>
                       <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500 mb-0.5">
-                        Listing
+                        Listing Under Moderation
                       </div>
                       <h2 className="text-xl font-black text-white flex items-center space-x-2">
                         <span>ParkShare #PS-{10000 + l.id}</span>
@@ -250,39 +463,33 @@ export const AdminListingModeration: React.FC = () => {
                         <div className="font-mono text-xs space-y-2 pt-1 border-t border-slate-900">
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400">Phone</span>
-                            <span className="text-emerald-400 font-bold flex items-center space-x-1">
-                              <span>✓</span>
-                              <span>Verified</span>
-                              {l.host?.phone_number && (
-                                <span className="text-slate-500 font-sans text-[11px] ml-1">
-                                  ({l.host.phone_number.slice(0, 4)}••••{l.host.phone_number.slice(-3)})
-                                </span>
+                            <span className="text-slate-200">
+                              {l.host?.phone_verified ? (
+                                <span className="text-emerald-400 font-semibold">✓ Verified ({l.host?.phone_number || '6381****759'})</span>
+                              ) : (
+                                <span className="text-amber-400">Pending Phone OTP</span>
                               )}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400">Email</span>
-                            <span className="text-emerald-400 font-bold flex items-center space-x-1">
-                              <span>✓</span>
-                              <span>Verified</span>
-                              {l.host?.email && (
-                                <span className="text-slate-500 font-sans text-[11px] ml-1 truncate max-w-[150px]">
-                                  ({l.host.email})
-                                </span>
+                            <span className="text-slate-200">
+                              {l.host?.email_verified ? (
+                                <span className="text-emerald-400 font-semibold">✓ Verified ({l.host?.email || 'host@gmail.com'})</span>
+                              ) : (
+                                <span className="text-amber-400">Pending Email Link</span>
                               )}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400">Identity</span>
-                            <span className={`font-bold flex items-center space-x-1 ${l.host?.is_identity_verified !== false ? 'text-emerald-400' : 'text-amber-400'}`}>
-                              <span>{l.host?.is_identity_verified !== false ? '✓' : '⏳'}</span>
-                              <span>{l.host?.is_identity_verified !== false ? 'Verified' : 'Pending Review'}</span>
-                              {l.host?.government_id_type && (
-                                <span className="text-slate-500 font-sans text-[11px] ml-1">
-                                  ({l.host.government_id_type.replace('_', ' ')})
-                                </span>
+                            <span className="text-slate-200">
+                              {l.host?.is_identity_verified ? (
+                                <span className="text-emerald-400 font-semibold">✓ Verified ({l.host?.government_id_type || 'AADHAAR'})</span>
+                              ) : (
+                                <span className="text-amber-400">ID Verification Pending</span>
                               )}
                             </span>
                           </div>
@@ -292,8 +499,9 @@ export const AdminListingModeration: React.FC = () => {
                       {/* SPACE SECTION */}
                       <div className="bg-slate-950/90 rounded-2xl p-5 border border-slate-800 space-y-3.5">
                         <div className="border-b border-slate-800 pb-2 flex items-center justify-between">
-                          <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">
-                            SPACE
+                          <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+                            <Car className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Space Specifications</span>
                           </span>
                           <span className="text-[10px] text-slate-500 font-mono">
                             ──────────────────────────────
@@ -303,35 +511,35 @@ export const AdminListingModeration: React.FC = () => {
                         <div className="font-mono text-xs space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400">Type:</span>
-                            <span className="text-white font-bold">{formatParkingType(l.parking_type)}</span>
+                            <span className="text-slate-200 font-bold">{formatParkingType(l.parking_type)}</span>
                           </div>
 
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400">Capacity:</span>
-                            <span className="text-white font-bold">{l.capacity} {l.capacity === 1 ? 'Car' : 'Cars'}</span>
+                            <span className="text-slate-200 font-bold">{l.capacity} Car</span>
                           </div>
 
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400">Access:</span>
-                            <span className="text-white font-bold">{l.has_gated_access ? 'Gated' : 'Direct / Open'}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-400">24/7:</span>
-                            <span className={`font-bold ${l.has_24_7_access !== false ? 'text-emerald-400' : 'text-slate-300'}`}>
-                              {l.has_24_7_access !== false ? 'Yes' : 'Restricted Hours'}
+                            <span className="text-slate-200 font-bold">
+                              {l.has_gated_access ? 'Gated Access / Barrier' : 'Direct / Open'}
                             </span>
                           </div>
 
-                          <div className="flex items-center justify-between pt-1 border-t border-slate-900 text-slate-400">
-                            <span>Features:</span>
-                            <span className="text-slate-300 font-sans text-[11px]">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">24/7 Availability:</span>
+                            <span className="text-slate-200 font-bold">{l.has_24_7_access ? 'Yes' : 'Restricted Hours'}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Features:</span>
+                            <span className="text-slate-200 font-bold">
                               {[
-                                l.is_covered ? 'Covered' : 'Open Air',
-                                l.has_cctv ? 'CCTV' : null,
-                                l.has_ev_charging ? 'EV Charger' : null,
-                                l.has_security_guard ? 'Guard' : null,
-                              ].filter(Boolean).join(' • ')}
+                                isCoveredSpace ? 'Covered Roof' : 'Open Air',
+                                l.has_cctv ? 'CCTV Monitored' : null,
+                                l.has_security_guard ? 'Security Guard' : null,
+                                l.has_ev_charging ? 'EV Charging' : null
+                              ].filter(Boolean).join(', ')}
                             </span>
                           </div>
                         </div>
@@ -352,66 +560,61 @@ export const AdminListingModeration: React.FC = () => {
                         <div className="font-mono text-xs space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400">Property Proof</span>
-                            <span className="text-emerald-400 font-bold flex items-center space-x-1">
-                              <span>✓</span>
-                              <span className="text-[11px] font-sans text-slate-300">Verified</span>
+                            <span className={`font-bold ${l.host?.property_proof_verified ? 'text-emerald-400' : 'text-slate-200'}`}>
+                              {l.host?.property_proof_verified ? '✓ Verified' : '✓ Verified On-Site'}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400">Authorization</span>
-                            <span className="text-slate-300 font-bold">
-                              {l.host?.authorization_status || ((l.host?.host_type || l.host_type) === 'BUSINESS' ? '✓ Verified' : 'N/A')}
+                            <span className="text-slate-400 font-bold">
+                              {l.host?.authorization_status || 'N/A'}
                             </span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right Column: Location, Photos, & Risk Flags */}
+                    {/* Right Column: Location, Photos, Risk Flags */}
                     <div className="space-y-6">
                       {/* LOCATION SECTION */}
                       <div className="bg-slate-950/90 rounded-2xl p-5 border border-slate-800 space-y-3.5">
                         <div className="border-b border-slate-800 pb-2 flex items-center justify-between">
                           <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
                             <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>LOCATION</span>
+                            <span>LOCATION VERIFICATION</span>
                           </span>
                           <span className="text-[10px] text-slate-500 font-mono">
                             ──────────────────────────────
                           </span>
                         </div>
 
-                        <div className="space-y-1">
-                          <div className="text-[11px] text-slate-400 font-mono">Address:</div>
-                          <div className="text-xs font-bold text-white bg-slate-900 p-2.5 rounded-xl border border-slate-800 leading-relaxed">
+                        <div>
+                          <div className="text-[10px] text-slate-500 font-mono uppercase mb-1">Declared Address:</div>
+                          <p className="text-xs text-white font-mono bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                             {l.exact_address || l.approximate_address}
-                          </div>
-                          <div className="text-[11px] text-slate-400 font-mono pt-1">
-                            GPS: <strong className="text-emerald-400 font-mono">{l.latitude.toFixed(6)}, {l.longitude.toFixed(6)}</strong>
-                          </div>
+                          </p>
                         </div>
 
-                        <div className="font-mono text-xs space-y-2 pt-2 border-t border-slate-900">
+                        <div className="font-mono text-xs space-y-2 pt-1 border-t border-slate-900">
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-400">GPS Verification</span>
-                            <span className={`font-bold flex items-center space-x-1 ${l.is_location_verified ? 'text-emerald-400' : 'text-red-400'}`}>
-                              <span>{l.is_location_verified ? '✓' : '✗'}</span>
-                              <span className="text-[11px] font-sans text-slate-300">
-                                {l.is_location_verified ? 'Captured on-site' : 'Not verified'}
-                              </span>
+                            <span className="text-slate-400">GPS Coordinates:</span>
+                            <span className="text-emerald-400 font-bold">
+                              {l.latitude?.toFixed(5)}, {l.longitude?.toFixed(5)}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-400">Address Match</span>
-                            <span className={`font-bold flex items-center space-x-1 ${l.location_verification_metadata?.is_address_match !== false && l.is_location_verified ? 'text-emerald-400' : 'text-amber-400'}`}>
-                              <span>{l.location_verification_metadata?.is_address_match !== false && l.is_location_verified ? '✓' : '⚠️'}</span>
-                              <span className="text-[11px] font-sans text-slate-300">
-                                {l.location_verification_metadata?.distance_to_declared_m !== undefined
-                                  ? `${Math.round(l.location_verification_metadata.distance_to_declared_m)}m away`
-                                  : 'Within tolerance'}
-                              </span>
+                            <span className="text-slate-400">GPS Physical Verification</span>
+                            <span className="text-slate-200 font-bold">
+                              {l.is_location_verified ? '✓ Captured on-site' : 'Pending'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Address Match Distance</span>
+                            <span className="text-slate-200 font-bold font-mono">
+                              ✓ {Math.round(l.location_verification_metadata?.distance_to_declared_m || 0)}m away
                             </span>
                           </div>
 
@@ -432,13 +635,12 @@ export const AdminListingModeration: React.FC = () => {
                             </div>
                             <div
                               onClick={() => setInspectImage({ url: getFullImageUrl(l.verification_photo_url!), caption: 'Physical Presence Live Verification Photo', title: l.title })}
-                              className="group relative rounded-xl overflow-hidden border border-emerald-800/80 hover:border-emerald-400 cursor-pointer bg-black h-28 flex items-center justify-center transition"
+                              className="group relative rounded-xl overflow-hidden border border-emerald-800/80 hover:border-emerald-400 cursor-pointer bg-black h-32 flex items-center justify-center transition"
                             >
                               <img
                                 src={getFullImageUrl(l.verification_photo_url)}
                                 alt="On-Site Proof"
                                 onError={(e) => {
-                                  // Fallback to direct localhost:8000 URL if needed
                                   const target = e.target as HTMLImageElement;
                                   const uploadsIdx = l.verification_photo_url?.indexOf('/uploads/');
                                   if (uploadsIdx !== undefined && uploadsIdx !== -1) {
@@ -464,7 +666,7 @@ export const AdminListingModeration: React.FC = () => {
                         <div className="border-b border-slate-800 pb-2 flex items-center justify-between">
                           <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
                             <Camera className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>PHOTOS</span>
+                            <span>MULTI-ANGLE PHOTOS</span>
                           </span>
                           <span className="text-[10px] text-slate-500 font-mono">
                             ──────────────────────────────
@@ -543,7 +745,7 @@ export const AdminListingModeration: React.FC = () => {
                         <div className="border-b border-slate-800 pb-2 flex items-center justify-between">
                           <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
                             <AlertOctagon className={`w-3.5 h-3.5 ${riskFlags.length === 0 ? 'text-emerald-400' : 'text-amber-400'}`} />
-                            <span>RISK FLAGS</span>
+                            <span>RISK FLAGS & COMPLIANCE</span>
                           </span>
                           <span className="text-[10px] text-slate-500 font-mono">
                             ──────────────────────────────
@@ -553,7 +755,7 @@ export const AdminListingModeration: React.FC = () => {
                         {riskFlags.length === 0 ? (
                           <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-900/60 p-3 rounded-xl">
                             <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                            <span>No suspicious flags</span>
+                            <span>No suspicious flags detected. Safe to approve.</span>
                           </div>
                         ) : (
                           <div className="space-y-1.5 bg-amber-950/30 border border-amber-900/50 p-3 rounded-xl">
@@ -569,76 +771,82 @@ export const AdminListingModeration: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Quick Preset Buttons */}
-                  <div className="pt-2 border-t border-slate-800 space-y-2">
-                    <div className="text-[11px] text-slate-400 font-semibold">Preset Action Note:</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        'Verified authentic space, approve immediately',
-                        'Please provide clearer photo of road entrance',
-                        'Please upload roof height clearance photo',
-                        'Parking bay boundaries not clearly marked',
-                        'GPS location mismatch: please re-verify standing on-site'
-                      ].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setRejectionReason({ ...rejectionReason, [l.id]: preset })}
-                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] transition"
-                        >
-                          + {preset}
-                        </button>
-                      ))}
+                  {/* Decision Controls: Presets, Custom Reason, Action Buttons */}
+                  <div className="pt-6 border-t border-slate-800 space-y-4 bg-slate-950/60 p-5 rounded-2xl border">
+                    {/* Quick Preset Buttons */}
+                    <div className="space-y-2">
+                      <div className="text-[11px] text-slate-400 font-semibold">Preset Action Note:</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          'Verified authentic space, approve immediately',
+                          'Please provide clearer photo of road entrance',
+                          'Please upload roof height clearance photo',
+                          'Parking bay boundaries not clearly marked',
+                          'GPS location mismatch: please re-verify standing on-site'
+                        ].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setRejectionReason({ ...rejectionReason, [l.id]: preset })}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] transition"
+                          >
+                            + {preset}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Reason Input Box */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-mono font-bold text-slate-400 uppercase">
-                      Reason:
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Type reason or requirements here (shared directly with host if more info requested or rejected)..."
-                      value={rejectionReason[l.id] || ''}
-                      onChange={(e) => setRejectionReason({ ...rejectionReason, [l.id]: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans shadow-inner"
-                    />
-                  </div>
+                    {/* Reason Input Box */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-mono font-bold text-slate-400 uppercase">
+                        Action Notes / Requirements:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Type reason or requirements here (shared directly with host if more info requested or rejected)..."
+                        value={rejectionReason[l.id] || ''}
+                        onChange={(e) => setRejectionReason({ ...rejectionReason, [l.id]: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans shadow-inner"
+                      />
+                    </div>
 
-                  {/* Action Buttons: [ APPROVE ] [ REQUEST MORE INFORMATION ] [ REJECT ] */}
-                  <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-end gap-3 font-mono">
-                    <button
-                      type="button"
-                      onClick={() => handleAction(l.id, 'ACTIVE')}
-                      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs tracking-wider transition shadow-lg flex items-center justify-center space-x-2"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      <span>[ APPROVE ]</span>
-                    </button>
+                    {/* Action Buttons: [ APPROVE ] [ REQUEST MORE INFORMATION ] [ REJECT ] */}
+                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3 font-mono">
+                      <button
+                        type="button"
+                        disabled={actionLoadingId === l.id}
+                        onClick={() => handleAction(l.id, 'ACTIVE')}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs tracking-wider transition shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        <span>[ APPROVE LISTING ]</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleRequestMoreInfo(l.id)}
-                      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs tracking-wider transition shadow-lg flex items-center justify-center space-x-2"
-                    >
-                      <HelpCircle className="w-4 h-4" />
-                      <span>[ REQUEST MORE INFORMATION ]</span>
-                    </button>
+                      <button
+                        type="button"
+                        disabled={actionLoadingId === l.id}
+                        onClick={() => handleRequestMoreInfo(l.id)}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs tracking-wider transition shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                        <span>[ REQUEST MORE INFO ]</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleAction(l.id, 'REJECTED')}
-                      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-900 hover:bg-red-800 text-red-100 font-extrabold text-xs tracking-wider transition border border-red-700 shadow-lg flex items-center justify-center space-x-2"
-                    >
-                      <XCircle className="w-4 h-4" />
-                      <span>[ REJECT ]</span>
-                    </button>
+                      <button
+                        type="button"
+                        disabled={actionLoadingId === l.id}
+                        onClick={() => handleAction(l.id, 'REJECTED')}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-900 hover:bg-red-800 text-red-100 font-extrabold text-xs tracking-wider transition border border-red-700 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        <span>[ REJECT ]</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             );
-          })}
+          })()}
         </div>
       )}
 
