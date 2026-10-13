@@ -4,19 +4,14 @@ import {
   PlusCircle, 
   LayoutDashboard, 
   KeyRound, 
-  LogOut, 
   ShieldCheck, 
-  Sun, 
-  Moon,
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { HostAvatar } from './HostAvatar';
 
 export const Navbar: React.FC = () => {
-  const { user, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -147,44 +142,16 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* Theme Toggle Button */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-1.5 sm:p-2 rounded-xl text-gray-500 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white transition cursor-pointer"
-              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            >
-              {isDark ? (
-                <Sun className="w-4 h-4 text-amber-400" />
-              ) : (
-                <Moon className="w-4 h-4 text-slate-600" />
-              )}
-            </button>
-
             {user ? (
-              <div className="flex items-center space-x-1.5 sm:space-x-2 md:border-l md:border-gray-200 dark:md:border-slate-800 md:pl-3">
-
-                <div className="flex items-center space-x-1.5">
-                  <HostAvatar 
-                    url={user.profile_photo_url} 
-                    name={user.full_name} 
-                    size="sm" 
-                  />
-                  <span className="hidden xl:inline text-xs font-bold text-gray-800 dark:text-slate-200 truncate max-w-[110px]">
-                    {user.full_name?.split(' ')[0]}
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => {
-                    logout();
-                    navigate('/auth');
-                  }}
-                  className="p-1.5 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <HostAvatar 
+                  url={user.profile_photo_url} 
+                  name={user.full_name} 
+                  size="sm" 
+                />
+                <span className="hidden xl:inline text-xs font-bold text-gray-800 dark:text-slate-200 truncate max-w-[110px]">
+                  {user.full_name?.split(' ')[0]}
+                </span>
               </div>
             ) : (
               <div className="flex items-center space-x-2">

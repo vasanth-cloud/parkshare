@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Car, Search, Calendar, LogOut, Sun, Moon, Bot, Sparkles, ChevronDown, Layers } from 'lucide-react';
+import { Calendar, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { UserAvatar } from './UserAvatar';
 
 interface NavbarProps {
@@ -10,8 +9,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
-  const { user, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showBookingsDropdown, setShowBookingsDropdown] = useState(false);
