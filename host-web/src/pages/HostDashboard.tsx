@@ -22,6 +22,24 @@ export const HostDashboard: React.FC = () => {
   const [listingFilter, setListingFilter] = useState<'ALL' | 'ACTIVE' | 'PENDING'>('ALL');
   const { user } = useAuth();
 
+  // Space Reviews Modal State
+  const [viewReviewsListing, setViewReviewsListing] = useState<ParkingListing | null>(null);
+  const [spaceReviews, setSpaceReviews] = useState<any[]>([]);
+  const [loadingSpaceReviews, setLoadingSpaceReviews] = useState(false);
+
+  const handleOpenReviewsModal = async (listing: ParkingListing) => {
+    setViewReviewsListing(listing);
+    setLoadingSpaceReviews(true);
+    try {
+      const revs = await api.getReviewsByListing(listing.id);
+      setSpaceReviews(revs || []);
+    } catch {
+      setSpaceReviews([]);
+    } finally {
+      setLoadingSpaceReviews(false);
+    }
+  };
+
   const formatCleanAddress = (l: ParkingListing): string => {
     if (l.area && l.city) {
       return `${l.area}, ${l.city}`;
@@ -754,6 +772,26 @@ export const HostDashboard: React.FC = () => {
                                 EV
                               </span>
                             )}
+                            {l.average_rating > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenReviewsModal(l)}
+                                className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded-md flex items-center space-x-1 hover:bg-amber-100 cursor-pointer"
+                                title="View Driver Reviews"
+                              >
+                                <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                                <span>{l.average_rating.toFixed(1)} ★ ({l.total_reviews} reviews)</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenReviewsModal(l)}
+                                className="text-[10px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md hover:bg-slate-200 cursor-pointer flex items-center space-x-1"
+                                title="View Driver Reviews"
+                              >
+                                <span>★ 0 reviews</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -995,6 +1033,83 @@ export const HostDashboard: React.FC = () => {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Space Driver Reviews Modal */}
+      {viewReviewsListing && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 border border-gray-200 dark:border-slate-800 shadow-2xl space-y-4 max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2">
+                <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+                <div>
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white">
+                    Driver Reviews & Feedback
+                  </h3>
+                  <p className="text-[11px] text-gray-500 truncate max-w-[240px]">
+                    {viewReviewsListing.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewReviewsListing(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-3 flex-1 pr-1">
+              {loadingSpaceReviews ? (
+                <p className="text-xs text-gray-400 text-center py-6">Loading reviews...</p>
+              ) : spaceReviews.length === 0 ? (
+                <div className="text-center py-8 space-y-1">
+                  <span className="text-2xl block">🅿️</span>
+                  <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No driver reviews yet</p>
+                  <p className="text-[11px] text-gray-400">Reviews left by drivers after ending their trips will appear here.</p>
+                </div>
+              ) : (
+                spaceReviews.map((r: any) => (
+                  <div
+                    key={`sr-${r.id}`}
+                    className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-2xl border border-gray-100 dark:border-slate-700 space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-gray-900 dark:text-white">
+                        {r.user_name || 'Verified Parker'}
+                      </span>
+                      <div className="flex items-center space-x-0.5">
+                        {[1, 2, 3, 4, 5].map((s: number) => (
+                          <Star
+                            key={s}
+                            className={`w-3 h-3 ${s <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    {r.comment && (
+                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                        {r.comment}
+                      </p>
+                    )}
+                    <span className="text-[10px] text-gray-400 block">
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setViewReviewsListing(null)}
+              className="w-full py-2.5 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 text-xs font-bold text-gray-700 dark:text-slate-200 transition cursor-pointer"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

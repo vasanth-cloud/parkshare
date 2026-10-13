@@ -11,10 +11,27 @@ import {
   X,
   CheckCircle,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  Star,
+  Check
 } from 'lucide-react';
 
-export const ActiveParkingCard: React.FC<{ booking: Booking; onRefresh: () => void }> = ({ booking, onRefresh }) => {
+const PRESET_REVIEW_TAGS = [
+  '🛡️ Safe & Secure',
+  '🚗 Easy Gate Access',
+  '🤝 Helpful Host',
+  '🅿️ Spacious Spot',
+  '💡 Well Lit & Clean',
+  '⚡ Smooth Checkout',
+  '📍 Accurate Location',
+  '🔒 24/7 Security'
+];
+
+export const ActiveParkingCard: React.FC<{
+  booking: Booking;
+  onRefresh: () => void;
+  onTripCompleted?: (booking: Booking) => void;
+}> = ({ booking, onRefresh, onTripCompleted }) => {
   const [showQrModal, setShowQrModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -22,6 +39,13 @@ export const ActiveParkingCard: React.FC<{ booking: Booking; onRefresh: () => vo
 
   const [loadingAction, setLoadingAction] = useState(false);
   const [actionError, setActionError] = useState('');
+
+  // Post-trip Review Modal state
+  const [showInternalReviewModal, setShowInternalReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [selectedTags, setSelectedTags] = useState<string[]>(['🛡️ Safe & Secure', '🚗 Easy Gate Access']);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   // Vehicle checkout OTP state
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
@@ -98,6 +122,12 @@ export const ActiveParkingCard: React.FC<{ booking: Booking; onRefresh: () => vo
     document.getElementById(`otp-input-${lastFilled >= 0 ? lastFilled : 0}`)?.focus();
   };
 
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
   const handleVerifyOtp = async () => {
     const fullOtp = otpDigits.join('');
     if (fullOtp.length !== 6) {
@@ -108,12 +138,44 @@ export const ActiveParkingCard: React.FC<{ booking: Booking; onRefresh: () => vo
     setLoadingAction(true);
     setActionError('');
     try {
-      await api.verifyReleaseOtp(booking.id, fullOtp);
+      const updatedBooking = await api.verifyReleaseOtp(booking.id, fullOtp);
+      if (onTripCompleted) {
+        onTripCompleted(updatedBooking || { ...booking, status: 'COMPLETED' });
+      } else {
+        setShowInternalReviewModal(true);
+      }
       onRefresh();
     } catch (err: any) {
       setActionError(err.message || 'Verification failed. Incorrect OTP.');
     } finally {
       setLoadingAction(false);
+    }
+  };
+
+  const handleSubmitInternalReview = async () => {
+    try {
+      setSubmittingReview(true);
+      let finalComment = '';
+      if (selectedTags.length > 0 && reviewComment.trim()) {
+        finalComment = `[${selectedTags.join(', ')}] — ${reviewComment.trim()}`;
+      } else if (selectedTags.length > 0) {
+        finalComment = selectedTags.join(', ');
+      } else if (reviewComment.trim()) {
+        finalComment = reviewComment.trim();
+      }
+
+      await api.createReview({
+        booking_id: booking.id,
+        rating: reviewRating,
+        comment: finalComment || undefined,
+      });
+      alert('🎉 Review submitted! Thank you for rating this space.');
+      setShowInternalReviewModal(false);
+      onRefresh();
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -601,6 +663,123 @@ export const ActiveParkingCard: React.FC<{ booking: Booking; onRefresh: () => vo
                 className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-sm cursor-pointer"
               >
                 {ending ? 'Requesting...' : 'Request Owner OTP & End Trip'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Post-Trip Rate & Review Modal (Prompted immediately upon ending trip) */}
+      {showInternalReviewModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative border border-slate-200 dark:border-slate-800 text-left">
+            <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">🏁</span>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">Trip Completed!</h3>
+                  <p className="text-[10px] text-slate-400">Rate & review {listingTitle}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInternalReviewModal(false);
+                  onRefresh();
+                }}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Star Rating */}
+            <div className="text-center py-1">
+              <div className="flex justify-center space-x-2 py-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    className="p-1 cursor-pointer transition transform hover:scale-110 active:scale-95"
+                  >
+                    <Star
+                      className={`w-7 h-7 ${
+                        star <= reviewRating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              <span className="text-[11px] font-extrabold text-amber-500">
+                {reviewRating === 5 && 'Outstanding Experience! 🌟'}
+                {reviewRating === 4 && 'Very Good Space 👍'}
+                {reviewRating === 3 && 'Good Parking 🙂'}
+                {reviewRating === 2 && 'Could Be Better 😐'}
+                {reviewRating === 1 && 'Poor Experience 😞'}
+              </span>
+            </div>
+
+            {/* Quick-tap Review Tags ("options they can add some of may not type") */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                Quick Options (Tap to add):
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_REVIEW_TAGS.map((tag) => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border transition flex items-center space-x-1 cursor-pointer active:scale-95 ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3 text-white inline flex-shrink-0" />}
+                      <span>{tag}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Optional text comments */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-extrabold text-slate-400 block">
+                Additional Comments (Optional):
+              </span>
+              <textarea
+                rows={2}
+                placeholder="Write any thoughts or leave blank..."
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex space-x-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInternalReviewModal(false);
+                  onRefresh();
+                }}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 cursor-pointer text-center"
+              >
+                Skip for Now
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitInternalReview}
+                disabled={submittingReview}
+                className="flex-1 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-xs transition cursor-pointer text-center"
+              >
+                {submittingReview ? 'Submitting...' : 'Submit Review'}
               </button>
             </div>
           </div>

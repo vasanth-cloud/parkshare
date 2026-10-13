@@ -178,6 +178,18 @@ export interface Booking {
   created_at: string;
 }
 
+export interface Review {
+  id: number;
+  booking_id: number;
+  user_id: number;
+  listing_id: number;
+  rating: number;
+  comment?: string;
+  created_at: string;
+  user_name?: string;
+  user_photo?: string;
+}
+
 export interface HostSummary {
   host_name: string;
   this_month_earnings: number;

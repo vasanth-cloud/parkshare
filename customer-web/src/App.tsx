@@ -64,9 +64,9 @@ export const AppContent: React.FC = () => {
       <Navbar onOpenChat={() => setIsChatOpen(true)} />
       <main className="flex-grow pb-16 md:pb-0">
         <Routes>
-          <Route path="/" element={<CustomerServicesHomePage />} />
-          <Route path="/dashboard" element={<CustomerServicesHomePage />} />
-          <Route path="/services" element={<CustomerServicesHomePage />} />
+          <Route path="/" element={<CustomerLandingPage onOpenChat={() => setIsChatOpen(true)} />} />
+          <Route path="/dashboard" element={<CustomerLandingPage onOpenChat={() => setIsChatOpen(true)} />} />
+          <Route path="/services" element={<CustomerLandingPage onOpenChat={() => setIsChatOpen(true)} />} />
           <Route path="/parking" element={<CustomerLandingPage onOpenChat={() => setIsChatOpen(true)} />} />
           <Route path="/auth" element={<CustomerAuthPage />} />
           <Route path="/search" element={<CustomerLandingPage onOpenChat={() => setIsChatOpen(true)} />} />

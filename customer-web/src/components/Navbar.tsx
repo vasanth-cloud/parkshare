@@ -12,21 +12,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showBookingsDropdown, setShowBookingsDropdown] = useState(false);
-
-  // If on parking page, bookings defaults to parking bookings
-  const getBookingsLink = () => {
-    if (location.pathname === '/parking' || location.pathname.startsWith('/listing') || location.pathname === '/search') {
-      return '/bookings?service=parking';
-    }
-    if (location.pathname.startsWith('/services/drivers') || location.pathname === '/drivers') {
-      return '/bookings?service=drivers';
-    }
-    if (location.pathname.startsWith('/services/car-spa') || location.pathname === '/car-spa') {
-      return '/bookings?service=car_spa';
-    }
-    return '/bookings';
-  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs dark:shadow-md border-b border-slate-200/90 dark:border-slate-800 transition-colors duration-200">
@@ -51,67 +36,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
           </Link>
         </div>
 
-        {/* Desktop Navigation Links (Services, Bookings with Classification, Profile) */}
+        {/* Desktop Navigation Links */}
         <div className="hidden md:flex items-center space-x-8 text-xs font-bold tracking-wide">
           <Link to="/" className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-            <span>🏠 Services</span>
+            <span>🅿️ Find Parking</span>
           </Link>
 
-          {/* Bookings with Classification Dropdown */}
-          <div
-            className="relative"
-            onMouseEnter={() => setShowBookingsDropdown(true)}
-            onMouseLeave={() => setShowBookingsDropdown(false)}
+          <Link
+            to="/bookings"
+            className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-2"
           >
-            <Link
-              to={getBookingsLink()}
-              className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-2"
-            >
-              <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>📋 Bookings</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
-            </Link>
-
-            {showBookingsDropdown && (
-              <div className="absolute top-full left-0 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150 z-50">
-                <div className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                  Classification
-                </div>
-                <Link
-                  to="/bookings"
-                  onClick={() => setShowBookingsDropdown(false)}
-                  className="flex items-center space-x-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <span>🌟</span>
-                  <span>All Bookings</span>
-                </Link>
-                <Link
-                  to="/bookings?category=parking"
-                  onClick={() => setShowBookingsDropdown(false)}
-                  className="flex items-center space-x-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <span>🅿️</span>
-                  <span>Parking Passes</span>
-                </Link>
-                <Link
-                  to="/bookings?category=drivers"
-                  onClick={() => setShowBookingsDropdown(false)}
-                  className="flex items-center space-x-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <span>🧑‍✈️</span>
-                  <span>Acting Drivers</span>
-                </Link>
-                <Link
-                  to="/bookings?category=car_spa"
-                  onClick={() => setShowBookingsDropdown(false)}
-                  className="flex items-center space-x-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <span>✨</span>
-                  <span>Car Spa & Detailing</span>
-                </Link>
-              </div>
-            )}
-          </div>
+            <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>📋 Bookings</span>
+          </Link>
 
           <Link to="/profile" className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
             <span>👤 Profile</span>

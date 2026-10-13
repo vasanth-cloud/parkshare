@@ -36,22 +36,33 @@ def create_review(
         comment=data.comment
     )
     db.add(review)
+    db.flush()
 
     # Recalculate listing average rating
     listing = db.query(ParkingListing).filter(ParkingListing.id == booking.listing_id).first()
     if listing:
         all_reviews = db.query(Review).filter(Review.listing_id == listing.id).all()
-        ratings = [r.rating for r in all_reviews] + [data.rating]
-        listing.total_reviews = len(ratings)
-        listing.average_rating = round(sum(ratings) / float(len(ratings)), 1)
+        if all_reviews:
+            listing.total_reviews = len(all_reviews)
+            listing.average_rating = round(sum(r.rating for r in all_reviews) / float(len(all_reviews)), 1)
 
     db.commit()
     db.refresh(review)
-    return review
+    out = ReviewOut.model_validate(review)
+    out.user_name = current_user.full_name
+    out.user_photo = current_user.profile_photo_url
+    return out
 
 @router.get("/listing/{listing_id}", response_model=List[ReviewOut])
 def get_listing_reviews(listing_id: int, db: Session = Depends(get_db)):
-    return db.query(Review).filter(Review.listing_id == listing_id).order_by(Review.created_at.desc()).all()
+    reviews = db.query(Review).filter(Review.listing_id == listing_id).order_by(Review.created_at.desc()).all()
+    results = []
+    for r in reviews:
+        item = ReviewOut.model_validate(r)
+        item.user_name = r.user.full_name if r.user else "Verified Driver"
+        item.user_photo = r.user.profile_photo_url if r.user else None
+        results.append(item)
+    return results
 
 @router.post("/favorites/{listing_id}", status_code=status.HTTP_201_CREATED)
 def toggle_favorite(listing_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

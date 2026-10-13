@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Booking, CancellationPreview } from '../types';
 import { QRCodeSVG } from 'qrcode.react';
@@ -7,92 +7,36 @@ import {
   ArrowLeft,
   Calendar,
   MapPin,
-  Clock,
   Key,
   CheckCircle,
   Car,
-  AlertCircle,
+  CreditCard,
   XCircle,
   Star,
-  CreditCard,
-  QrCode,
-  Navigation,
   X,
-  ChevronRight,
-  ShieldCheck,
-  Phone,
-  Sparkles,
-  Layers,
-  UserCheck,
+  Navigation,
   Check,
-  ExternalLink,
-  MessageSquare
+  ShieldCheck
 } from 'lucide-react';
 import { ActiveParkingCard } from '../components/ActiveParkingCard';
 
-interface DriverBookingItem {
-  bookingId: string;
-  driver: {
-    name: string;
-    rating: number;
-    trips: number;
-    phone: string;
-    photo?: string;
-    carTypes?: string[];
-  };
-  tripType: string;
-  pickupLocation: string;
-  durationHours: number;
-  totalFare: number;
-  otp: number;
-  status: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
-  createdAt: string;
-}
-
-interface SpaBookingItem {
-  id: string;
-  packageName: string;
-  price: number;
-  date: string;
-  timeSlot: string;
-  address: string;
-  vehicleCategory: string;
-  otp: number;
-  status: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
-  createdAt: string;
-}
+const PRESET_REVIEW_TAGS = [
+  '🛡️ Safe & Secure',
+  '🚗 Easy Gate Access',
+  '🤝 Helpful Host',
+  '🅿️ Spacious Spot',
+  '💡 Well Lit & Clean',
+  '⚡ Smooth Checkout',
+  '📍 Accurate Location',
+  '🔒 24/7 Security'
+];
 
 export const CustomerBookingsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Detect if user came from a specific service page (e.g. ?service=parking or ?category=parking)
-  const serviceParam = (searchParams.get('service') || searchParams.get('category') || '').toLowerCase();
-  const isParkingOnly = serviceParam === 'parking';
-  const isDriversOnly = serviceParam === 'drivers';
-  const isSpaOnly = serviceParam === 'car_spa' || serviceParam === 'spa';
-  const isServiceLocked = isParkingOnly || isDriversOnly || isSpaOnly;
-
-  // Active Classification Filter:
-  // If service is locked (e.g. from parking service page), lock to that service.
-  // Otherwise, default to ALL or user selection.
-  const [serviceClassification, setServiceClassification] = useState<'ALL' | 'PARKING' | 'DRIVERS' | 'CAR_SPA'>(
-    isParkingOnly ? 'PARKING' : isDriversOnly ? 'DRIVERS' : isSpaOnly ? 'CAR_SPA' : 'ALL'
-  );
-
-  useEffect(() => {
-    if (isParkingOnly) setServiceClassification('PARKING');
-    else if (isDriversOnly) setServiceClassification('DRIVERS');
-    else if (isSpaOnly) setServiceClassification('CAR_SPA');
-  }, [serviceParam]);
 
   const [parkingBookings, setParkingBookings] = useState<Booking[]>([]);
-  const [driverBookings, setDriverBookings] = useState<DriverBookingItem[]>([]);
-  const [spaBookings, setSpaBookings] = useState<SpaBookingItem[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
-  const [nowTime, setNowTime] = useState<number>(Date.now());
 
   // Modal States
   const [accessPassBooking, setAccessPassBooking] = useState<Booking | null>(null);
@@ -102,112 +46,37 @@ export const CustomerBookingsPage: React.FC = () => {
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
 
-  // Review Modal
+  // Post-Trip Rate & Review Modal State
   const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
   const [reviewRating, setReviewRating] = useState<number>(5);
+  const [selectedTags, setSelectedTags] = useState<string[]>(['🛡️ Safe & Secure', '🚗 Easy Gate Access']);
   const [reviewComment, setReviewComment] = useState<string>('');
   const [submittingReview, setSubmittingReview] = useState<boolean>(false);
 
   const [payingBookingId, setPayingBookingId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const timer = setInterval(() => setNowTime(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const loadLocalBookings = () => {
-    // Only load drivers if not locked to another service
-    if (!isParkingOnly && !isSpaOnly) {
-      try {
-        const storedDrivers = JSON.parse(localStorage.getItem('parkshare_driver_bookings') || '[]');
-        setDriverBookings(storedDrivers);
-      } catch {
-        setDriverBookings([]);
-      }
-    } else {
-      setDriverBookings([]);
-    }
-
-    // Only load spa if not locked to another service
-    if (!isParkingOnly && !isDriversOnly) {
-      try {
-        const storedSpa = JSON.parse(localStorage.getItem('parkshare_spa_bookings') || '[]');
-        setSpaBookings(storedSpa);
-      } catch {
-        setSpaBookings([]);
-      }
-    } else {
-      setSpaBookings([]);
-    }
-  };
-
   const fetchBookings = () => {
     setLoading(true);
-    // If not locked to driver or spa, fetch parking
-    if (!isDriversOnly && !isSpaOnly) {
-      api.getMyBookings()
-        .then((data) => {
-          setParkingBookings(data || []);
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    } else {
-      setParkingBookings([]);
-      setLoading(false);
-    }
-
-    loadLocalBookings();
+    api.getMyBookings()
+      .then((data) => {
+        setParkingBookings(data || []);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchBookings();
-  }, [serviceParam]);
-
-  const handleClassificationChange = (cls: 'ALL' | 'PARKING' | 'DRIVERS' | 'CAR_SPA') => {
-    setServiceClassification(cls);
-    if (cls === 'ALL') {
-      searchParams.delete('category');
-      searchParams.delete('service');
-      setSearchParams(searchParams);
-    } else {
-      setSearchParams({ category: cls.toLowerCase() });
-    }
-  };
+  }, []);
 
   // Filter Parking Active vs History
   const activeParking = parkingBookings.filter((b) =>
     ['CONFIRMED', 'PENDING_PAYMENT', 'ACTIVE', 'PARKING_ACTIVE', 'KEY_RECEIVED', 'KEY_HANDOVER_PENDING', 'DRIVER_ARRIVED', 'ODOMETER_PHOTO_SUBMITTED', 'VEHICLE_COLLECTION_REQUESTED', 'BOOKING_CREATED'].includes(b.status)
   );
+
   const historyParking = parkingBookings.filter((b) =>
     ['COMPLETED', 'CANCELLED', 'EXPIRED', 'VEHICLE_RELEASED', 'REJECTED'].includes(b.status)
   );
-
-  // Filter Driver Active vs History
-  const activeDrivers = driverBookings.filter((d) => d.status === 'CONFIRMED');
-  const historyDrivers = driverBookings.filter((d) => ['COMPLETED', 'CANCELLED'].includes(d.status));
-
-  // Filter Spa Active vs History
-  const activeSpa = spaBookings.filter((s) => s.status === 'CONFIRMED');
-  const historySpa = spaBookings.filter((s) => ['COMPLETED', 'CANCELLED'].includes(s.status));
-
-  // Compute counts
-  const totalActive = isParkingOnly
-    ? activeParking.length
-    : isDriversOnly
-    ? activeDrivers.length
-    : isSpaOnly
-    ? activeSpa.length
-    : (activeParking.length + activeDrivers.length + activeSpa.length);
-
-  const totalHistory = isParkingOnly
-    ? historyParking.length
-    : isDriversOnly
-    ? historyDrivers.length
-    : isSpaOnly
-    ? historySpa.length
-    : (historyParking.length + historyDrivers.length + historySpa.length);
-
-  const currentTotal = activeTab === 'ACTIVE' ? totalActive : totalHistory;
 
   const handlePayPendingBooking = async (b: Booking) => {
     try {
@@ -221,12 +90,15 @@ export const CustomerBookingsPage: React.FC = () => {
       }
 
       const options = {
-        key: orderData.key_id || 'rzp_test_TjLLsOAid1sNkb',
-        amount: orderData.amount_in_paise || Math.round((orderData.amount || b.total_amount) * 100),
+        key: orderData.key_id,
+        amount: orderData.amount,
         currency: orderData.currency || 'INR',
         name: 'ParkShare Parking',
-        description: `Booking #${b.booking_reference}`,
+        description: `Reserve spot at ${b.listing?.title || 'Parking Space'}`,
         order_id: orderData.order_id,
+        prefill: {
+          name: 'Parker Guest',
+        },
         theme: { color: '#0f172a' },
         modal: { ondismiss: () => setPayingBookingId(null) },
         handler: async (response: any) => {
@@ -281,30 +153,31 @@ export const CustomerBookingsPage: React.FC = () => {
     }
   };
 
-  const handleCancelDriverBooking = (bookingId: string) => {
-    if (!confirm('Are you sure you want to cancel this acting driver booking?')) return;
-    const updated = driverBookings.map((d) => d.bookingId === bookingId ? { ...d, status: 'CANCELLED' as const } : d);
-    setDriverBookings(updated);
-    localStorage.setItem('parkshare_driver_bookings', JSON.stringify(updated));
-  };
-
-  const handleCancelSpaBooking = (id: string) => {
-    if (!confirm('Are you sure you want to cancel this car spa booking?')) return;
-    const updated = spaBookings.map((s) => s.id === id ? { ...s, status: 'CANCELLED' as const } : s);
-    setSpaBookings(updated);
-    localStorage.setItem('parkshare_spa_bookings', JSON.stringify(updated));
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
   };
 
   const handleConfirmReview = async () => {
     if (!reviewBooking) return;
     try {
       setSubmittingReview(true);
+      let finalComment = '';
+      if (selectedTags.length > 0 && reviewComment.trim()) {
+        finalComment = `[${selectedTags.join(', ')}] — ${reviewComment.trim()}`;
+      } else if (selectedTags.length > 0) {
+        finalComment = selectedTags.join(', ');
+      } else if (reviewComment.trim()) {
+        finalComment = reviewComment.trim();
+      }
+
       await api.createReview({
         booking_id: reviewBooking.id,
         rating: reviewRating,
-        comment: reviewComment.trim() || undefined,
+        comment: finalComment || undefined,
       });
-      alert('Review submitted! Thank you.');
+      alert('🎉 Review submitted successfully! It is now visible on the parking space page.');
       setReviewBooking(null);
       fetchBookings();
     } catch (err: any) {
@@ -332,11 +205,6 @@ export const CustomerBookingsPage: React.FC = () => {
     }
   };
 
-  // Back button handler: Go back to previous page
-  const handleBack = () => {
-    navigate(-1);
-  };
-
   return (
     <div className="min-h-screen bg-[#F6F8FA] dark:bg-slate-950 text-slate-900 dark:text-slate-100 py-6 px-4 max-w-md mx-auto space-y-4 font-sans transition-colors duration-200 pb-24">
       
@@ -345,7 +213,7 @@ export const CustomerBookingsPage: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             type="button"
-            onClick={handleBack}
+            onClick={() => navigate(-1)}
             className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shadow-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer flex-shrink-0"
             title="Go Back"
           >
@@ -353,121 +221,24 @@ export const CustomerBookingsPage: React.FC = () => {
           </button>
           <div>
             <h1 className="text-xl font-black text-slate-900 dark:text-white">
-              {isParkingOnly
-                ? 'Parking Passes & History'
-                : isDriversOnly
-                ? 'Acting Driver Rides'
-                : isSpaOnly
-                ? 'Car Spa Bookings'
-                : 'Bookings & Passes'}
+              Bookings & Passes
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {isParkingOnly
-                ? 'Active gate entry passes & parking history'
-                : isDriversOnly
-                ? 'Active chauffeurs & trip receipts'
-                : isSpaOnly
-                ? 'Scheduled wash appointments & receipts'
-                : 'Classified by service category'}
+              Your active parking passes and reservation history
             </p>
           </div>
         </div>
 
         {/* Action Link on Top Right */}
-        {isParkingOnly ? (
-          <Link
-            to="/parking"
-            className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-0.5"
-          >
-            <span>+ Find Spots</span>
-          </Link>
-        ) : (
-          <Link
-            to="/"
-            className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-0.5"
-          >
-            <span>+ New Booking</span>
-          </Link>
-        )}
+        <Link
+          to="/"
+          className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-0.5"
+        >
+          <span>+ Find Spots</span>
+        </Link>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 2. SERVICE CLASSIFICATION PILLS (ONLY SHOWN BEFORE SELECTING A SERVICE)    */}
-      {/* If accessed from parking page, this whole block is hidden!               */}
-      {/* ========================================================================= */}
-      {!isServiceLocked && (
-        <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1.5">
-          <div className="flex items-center justify-between px-1 text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
-            <span className="flex items-center space-x-1">
-              <Layers className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Service Classification</span>
-            </span>
-            <span className="text-[10px] text-slate-400">Filter your reservations</span>
-          </div>
-
-          <div className="grid grid-cols-4 gap-1.5 pt-1">
-            <button
-              type="button"
-              onClick={() => handleClassificationChange('ALL')}
-              className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
-                serviceClassification === 'ALL'
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                  : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
-              }`}
-            >
-              <span>All</span>
-              <span className="text-[9px] opacity-75 mt-0.5">({currentTotal})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleClassificationChange('PARKING')}
-              className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
-                serviceClassification === 'PARKING'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
-              }`}
-            >
-              <span>🅿️ Parking</span>
-              <span className="text-[9px] opacity-75 mt-0.5">
-                ({activeTab === 'ACTIVE' ? activeParking.length : historyParking.length})
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleClassificationChange('DRIVERS')}
-              className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
-                serviceClassification === 'DRIVERS'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
-              }`}
-            >
-              <span>🧑‍✈️ Drivers</span>
-              <span className="text-[9px] opacity-75 mt-0.5">
-                ({activeTab === 'ACTIVE' ? activeDrivers.length : historyDrivers.length})
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleClassificationChange('CAR_SPA')}
-              className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition flex flex-col items-center justify-center cursor-pointer ${
-                serviceClassification === 'CAR_SPA'
-                  ? 'bg-cyan-600 text-white shadow-xs'
-                  : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
-              }`}
-            >
-              <span>✨ Car Spa</span>
-              <span className="text-[9px] opacity-75 mt-0.5">
-                ({activeTab === 'ACTIVE' ? activeSpa.length : historySpa.length})
-              </span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Active vs History Switcher */}
+      {/* 2. Active vs History Switcher */}
       <div className="flex bg-white dark:bg-slate-900 p-1 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
         <button
           type="button"
@@ -478,9 +249,9 @@ export const CustomerBookingsPage: React.FC = () => {
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
           }`}
         >
-          <span>{isParkingOnly ? 'Active Passes' : 'Active Passes & Trips'}</span>
+          <span>Active Passes</span>
           <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500 text-white rounded-full font-bold">
-            {totalActive}
+            {activeParking.length}
           </span>
         </button>
 
@@ -493,14 +264,14 @@ export const CustomerBookingsPage: React.FC = () => {
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
           }`}
         >
-          <span>{isParkingOnly ? 'Past Parking' : 'History & Receipts'}</span>
+          <span>History & Receipts</span>
           <span className="text-[10px] px-1.5 py-0.2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white rounded-full font-bold">
-            {totalHistory}
+            {historyParking.length}
           </span>
         </button>
       </div>
 
-      {/* 4. Bookings Content */}
+      {/* 3. Bookings Content */}
       {loading ? (
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-200/90 dark:border-slate-800">
           <div className="w-6 h-6 border-2 border-slate-900 dark:border-white border-t-transparent rounded-full animate-spin mx-auto mb-2" />
@@ -509,24 +280,11 @@ export const CustomerBookingsPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           
-          {/* ========================================================= */}
-          {/* A. PARKING BOOKINGS (ONLY IF IN PARKING OR ALL)          */}
-          {/* ========================================================= */}
-          {(serviceClassification === 'ALL' || serviceClassification === 'PARKING') && (
+          {/* A. ACTIVE PARKING PASSES */}
+          {activeTab === 'ACTIVE' && (
             <>
-              {activeTab === 'ACTIVE' && activeParking.length > 0 && (
+              {activeParking.length > 0 ? (
                 <div className="space-y-3">
-                  {!isParkingOnly && serviceClassification === 'ALL' && (
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center space-x-1">
-                        <span>🅿️ Parking Passes</span>
-                        <span className="text-[10px] text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-full font-bold">
-                          {activeParking.length}
-                        </span>
-                      </span>
-                    </div>
-                  )}
-
                   {activeParking.map((b) => {
                     if (b.status === 'PENDING_PAYMENT') {
                       return (
@@ -576,25 +334,46 @@ export const CustomerBookingsPage: React.FC = () => {
                         key={`pkg-${b.id}`}
                         booking={b}
                         onRefresh={fetchBookings}
+                        onTripCompleted={(completedBooking) => {
+                          setReviewBooking(completedBooking);
+                          setReviewRating(5);
+                          setSelectedTags(['🛡️ Safe & Secure', '🚗 Easy Gate Access']);
+                          setReviewComment('');
+                          fetchBookings();
+                        }}
                       />
                     );
                   })}
                 </div>
+              ) : (
+                <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-200/90 dark:border-slate-800 space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto text-2xl">
+                    🅿️
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    No Active Parking Passes
+                  </h3>
+                  <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                    Search driveway spots near your destination with live GPS radar to reserve your space.
+                  </p>
+                  <div className="pt-2">
+                    <Link
+                      to="/"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-2xl text-xs transition shadow-xs inline-block"
+                    >
+                      Find Parking Spots
+                    </Link>
+                  </div>
+                </div>
               )}
+            </>
+          )}
 
-              {activeTab === 'HISTORY' && historyParking.length > 0 && (
+          {/* B. HISTORY & RECEIPTS */}
+          {activeTab === 'HISTORY' && (
+            <>
+              {historyParking.length > 0 ? (
                 <div className="space-y-3">
-                  {!isParkingOnly && serviceClassification === 'ALL' && (
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center space-x-1">
-                        <span>🅿️ Past Parking</span>
-                        <span className="text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full font-bold">
-                          {historyParking.length}
-                        </span>
-                      </span>
-                    </div>
-                  )}
-
                   {historyParking.map((b) => (
                     <div
                       key={`hist-pkg-${b.id}`}
@@ -650,6 +429,7 @@ export const CustomerBookingsPage: React.FC = () => {
                             onClick={() => {
                               setReviewBooking(b);
                               setReviewRating(5);
+                              setSelectedTags(['🛡️ Safe & Secure', '🚗 Easy Gate Access']);
                               setReviewComment('');
                             }}
                             className="w-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
@@ -662,344 +442,22 @@ export const CustomerBookingsPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              )}
-            </>
-          )}
-
-          {/* ========================================================= */}
-          {/* B. ACTING DRIVERS (ONLY IF NOT IN PARKING SERVICE)        */}
-          {/* ========================================================= */}
-          {!isParkingOnly && (serviceClassification === 'ALL' || serviceClassification === 'DRIVERS') && (
-            <>
-              {activeTab === 'ACTIVE' && activeDrivers.length > 0 && (
-                <div className="space-y-3">
-                  {serviceClassification === 'ALL' && (
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center space-x-1">
-                        <span>🧑‍✈️ Acting Drivers</span>
-                        <span className="text-[10px] text-indigo-600 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded-full font-bold">
-                          {activeDrivers.length}
-                        </span>
-                      </span>
-                    </div>
-                  )}
-
-                  {activeDrivers.map((d) => (
-                    <div
-                      key={d.bookingId}
-                      className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-indigo-200/80 dark:border-indigo-900/50 shadow-xs space-y-3.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-extrabold text-indigo-600 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded-full">
-                          #{d.bookingId}
-                        </span>
-                        <span className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-extrabold px-2.5 py-0.5 rounded-full text-[10px] border border-emerald-200 dark:border-emerald-800">
-                          Chauffeur Confirmed
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-11 h-11 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-black text-lg border border-indigo-200 dark:border-indigo-800">
-                            {d.driver?.name?.charAt(0) || 'D'}
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center space-x-1">
-                              <span>{d.driver?.name}</span>
-                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                            </h3>
-                            <div className="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                              <span className="flex items-center text-amber-500 font-bold">
-                                ★ {d.driver?.rating}
-                              </span>
-                              <span>• {d.driver?.trips} trips completed</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="text-[10px] text-slate-400 block">Total Fare</span>
-                          <span className="text-base font-black text-slate-900 dark:text-white">
-                            ₹{d.totalFare}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3 space-y-2 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500 text-[11px] font-semibold">Trip Type</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 capitalize">
-                            {d.tripType} Ride ({d.durationHours} hrs)
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500 text-[11px] font-semibold">Pickup Spot</span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
-                            {d.pickupLocation}
-                          </span>
-                        </div>
-                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                          <span className="text-[11px] text-slate-500 font-bold">Driver Start OTP:</span>
-                          <span className="text-sm font-mono font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                            {d.otp}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2 pt-1">
-                        <a
-                          href={`tel:${d.driver?.phone || '+919876543210'}`}
-                          className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-xs"
-                        >
-                          <Phone className="w-3.5 h-3.5" />
-                          <span>Call Chauffeur</span>
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleCancelDriverBooking(d.bookingId)}
-                          className="py-2 px-3 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900 transition"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'HISTORY' && historyDrivers.length > 0 && (
-                <div className="space-y-3">
-                  {serviceClassification === 'ALL' && (
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center space-x-1">
-                        <span>🧑‍✈️ Past Driver Trips</span>
-                        <span className="text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full font-bold">
-                          {historyDrivers.length}
-                        </span>
-                      </span>
-                    </div>
-                  )}
-
-                  {historyDrivers.map((d) => (
-                    <div
-                      key={d.bookingId}
-                      className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-2.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-slate-500">#{d.bookingId}</span>
-                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
-                          {d.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-xs font-extrabold text-slate-900 dark:text-white">
-                            {d.driver?.name} • {d.tripType}
-                          </h4>
-                          <span className="text-[10px] text-slate-400 block mt-0.5">
-                            {d.pickupLocation}
-                          </span>
-                        </div>
-                        <span className="text-xs font-black text-slate-900 dark:text-white">₹{d.totalFare}</span>
-                      </div>
-                    </div>
-                  ))}
+              ) : (
+                <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-200/90 dark:border-slate-800 space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto text-2xl">
+                    📜
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    No Past Bookings
+                  </h3>
+                  <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                    Your completed parking sessions and receipts will appear here once finished.
+                  </p>
                 </div>
               )}
             </>
           )}
 
-          {/* ========================================================= */}
-          {/* C. CAR SPA (ONLY IF NOT IN PARKING SERVICE)               */}
-          {/* ========================================================= */}
-          {!isParkingOnly && (serviceClassification === 'ALL' || serviceClassification === 'CAR_SPA') && (
-            <>
-              {activeTab === 'ACTIVE' && activeSpa.length > 0 && (
-                <div className="space-y-3">
-                  {serviceClassification === 'ALL' && (
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center space-x-1">
-                        <span>✨ Car Spa Sessions</span>
-                        <span className="text-[10px] text-cyan-600 bg-cyan-50 dark:bg-cyan-950 px-2 py-0.5 rounded-full font-bold">
-                          {activeSpa.length}
-                        </span>
-                      </span>
-                    </div>
-                  )}
-
-                  {activeSpa.map((s) => (
-                    <div
-                      key={s.id}
-                      className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-cyan-200/80 dark:border-cyan-900/50 shadow-xs space-y-3.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-extrabold text-cyan-600 bg-cyan-50 dark:bg-cyan-950 px-2 py-0.5 rounded-full">
-                          #{s.id}
-                        </span>
-                        <span className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-extrabold px-2.5 py-0.5 rounded-full text-[10px] border border-emerald-200 dark:border-emerald-800">
-                          Spa Slot Confirmed
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                            {s.packageName}
-                          </h3>
-                          <span className="text-[11px] text-cyan-600 dark:text-cyan-400 font-bold block mt-0.5">
-                            {s.vehicleCategory} Treatment
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[10px] text-slate-400 block">Total</span>
-                          <span className="text-base font-black text-slate-900 dark:text-white">
-                            ₹{s.price}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3 space-y-2 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500 text-[11px] font-semibold">Scheduled Date & Time</span>
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200">
-                            {s.date} • {s.timeSlot}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500 text-[11px] font-semibold">Service Location</span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
-                            {s.address}
-                          </span>
-                        </div>
-                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                          <span className="text-[11px] text-slate-500 font-bold">Service Start PIN:</span>
-                          <span className="text-sm font-mono font-black text-cyan-600 bg-cyan-50 dark:bg-cyan-950 px-2.5 py-0.5 rounded-lg border border-cyan-200">
-                            {s.otp}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => alert(`Spa crew will arrive at: ${s.address} during ${s.timeSlot}. Support line: 1800-419-7275`)}
-                          className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
-                        >
-                          <Navigation className="w-3.5 h-3.5" />
-                          <span>View Location & Crew</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCancelSpaBooking(s.id)}
-                          className="py-2 px-3 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900 transition cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'HISTORY' && historySpa.length > 0 && (
-                <div className="space-y-3">
-                  {serviceClassification === 'ALL' && (
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center space-x-1">
-                        <span>✨ Past Spa Treatments</span>
-                        <span className="text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full font-bold">
-                          {historySpa.length}
-                        </span>
-                      </span>
-                    </div>
-                  )}
-
-                  {historySpa.map((s) => (
-                    <div
-                      key={s.id}
-                      className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-2.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-slate-500">#{s.id}</span>
-                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
-                          {s.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-xs font-extrabold text-slate-900 dark:text-white">
-                            {s.packageName}
-                          </h4>
-                          <span className="text-[10px] text-slate-400 block mt-0.5">
-                            {s.date} • {s.vehicleCategory}
-                          </span>
-                        </div>
-                        <span className="text-xs font-black text-slate-900 dark:text-white">₹{s.price}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* EMPTY STATE */}
-          {((activeTab === 'ACTIVE' && (
-            (isParkingOnly && activeParking.length === 0) ||
-            (!isParkingOnly && serviceClassification === 'ALL' && totalActive === 0) ||
-            (!isParkingOnly && serviceClassification === 'PARKING' && activeParking.length === 0) ||
-            (!isParkingOnly && serviceClassification === 'DRIVERS' && activeDrivers.length === 0) ||
-            (!isParkingOnly && serviceClassification === 'CAR_SPA' && activeSpa.length === 0)
-          )) ||
-          (activeTab === 'HISTORY' && (
-            (isParkingOnly && historyParking.length === 0) ||
-            (!isParkingOnly && serviceClassification === 'ALL' && totalHistory === 0) ||
-            (!isParkingOnly && serviceClassification === 'PARKING' && historyParking.length === 0) ||
-            (!isParkingOnly && serviceClassification === 'DRIVERS' && historyDrivers.length === 0) ||
-            (!isParkingOnly && serviceClassification === 'CAR_SPA' && historySpa.length === 0)
-          ))) && (
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-200/90 dark:border-slate-800 space-y-3">
-              <Calendar className="w-8 h-8 text-slate-400 mx-auto" />
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                {activeTab === 'ACTIVE' ? 'No Active Parking Passes' : 'No Past Parking Sessions'}
-              </h3>
-              <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                {activeTab === 'ACTIVE'
-                  ? 'Book a spot on the parking radar to receive your instant digital gate pass & PIN.'
-                  : 'Completed parking sessions and receipts will appear here.'}
-              </p>
-              
-              <div className="pt-2 flex flex-wrap gap-2 justify-center">
-                <Link
-                  to="/parking"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-2xl text-xs transition shadow-xs"
-                >
-                  Find Parking Spots
-                </Link>
-                {isParkingOnly && (
-                  <Link
-                    to="/bookings"
-                    className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold px-4 py-2.5 rounded-2xl text-xs transition"
-                  >
-                    View All Services Bookings
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
-
-        </div>
-      )}
-
-      {/* Helper Link when locked to parking: Option to view all classified bookings */}
-      {isParkingOnly && (
-        <div className="pt-2 text-center">
-          <Link
-            to="/bookings"
-            className="text-[11px] font-bold text-slate-400 hover:text-emerald-600 transition"
-          >
-            Switch to All Services Classified Bookings →
-          </Link>
         </div>
       )}
 
@@ -1131,48 +589,111 @@ export const CustomerBookingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: Review Dialog */}
+      {/* ========================================================================= */}
+      {/* MODAL: POST-TRIP RATE & REVIEW DIALOG                                      */}
+      {/* Allows quick-tap tags without having to type                               */}
+      {/* ========================================================================= */}
       {reviewBooking && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
-            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Rate Your Experience</h3>
-            
-            <div className="flex justify-center space-x-2 py-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setReviewRating(star)}
-                  className="p-1 cursor-pointer"
-                >
-                  <Star className={`w-6 h-6 ${star <= reviewRating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
-                </button>
-              ))}
-            </div>
-
-            <textarea
-              rows={3}
-              placeholder="How was the space access, lighting, or host?"
-              value={reviewComment}
-              onChange={(e) => setReviewComment(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none"
-            />
-
-            <div className="flex space-x-2">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 text-left">
+            <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">⭐</span>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">Rate Your Experience</h3>
+                  <p className="text-[10px] text-slate-400">
+                    {reviewBooking.listing?.title || 'Parking Space'}
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setReviewBooking(null)}
-                className="flex-1 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                Cancel
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {/* Interactive Star Rating */}
+            <div className="text-center py-1">
+              <div className="flex justify-center space-x-2 py-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    className="p-1 cursor-pointer transition transform hover:scale-110 active:scale-95"
+                  >
+                    <Star className={`w-7 h-7 ${star <= reviewRating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'}`} />
+                  </button>
+                ))}
+              </div>
+              <span className="text-[11px] font-extrabold text-amber-500">
+                {reviewRating === 5 && 'Outstanding Experience! 🌟'}
+                {reviewRating === 4 && 'Very Good Space 👍'}
+                {reviewRating === 3 && 'Good Parking 🙂'}
+                {reviewRating === 2 && 'Could Be Better 😐'}
+                {reviewRating === 1 && 'Poor Experience 😞'}
+              </span>
+            </div>
+
+            {/* Quick-tap Tag Badges */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                Quick Options (Tap to add):
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_REVIEW_TAGS.map((tag) => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border transition flex items-center space-x-1 cursor-pointer active:scale-95 ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3 text-white inline flex-shrink-0" />}
+                      <span>{tag}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Optional Additional Comments */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-extrabold text-slate-400 block">
+                Additional Comments (Optional):
+              </span>
+              <textarea
+                rows={2}
+                placeholder="Write any thoughts or leave blank..."
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div className="flex space-x-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setReviewBooking(null)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 cursor-pointer"
+              >
+                Skip for Now
               </button>
               <button
                 type="button"
                 onClick={handleConfirmReview}
                 disabled={submittingReview}
-                className="flex-1 py-2 rounded-xl text-xs font-bold text-white bg-slate-900 dark:bg-white dark:text-slate-900 cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-xs transition cursor-pointer"
               >
-                {submittingReview ? 'Submitting...' : 'Submit Rating'}
+                {submittingReview ? 'Submitting...' : 'Submit Review'}
               </button>
             </div>
           </div>

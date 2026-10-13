@@ -1,4 +1,4 @@
-import { User, Vehicle, ParkingListing, Booking } from '../types';
+import { User, Vehicle, ParkingListing, Booking, Review } from '../types';
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
 
@@ -254,6 +254,12 @@ export const api = {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error((await res.json()).detail || 'Failed to submit review');
+    return res.json();
+  },
+
+  getReviewsByListing: async (listing_id: number): Promise<Review[]> => {
+    const res = await fetch(`${API_BASE}/reviews/listing/${listing_id}`);
+    if (!res.ok) return [];
     return res.json();
   },
 

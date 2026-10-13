@@ -15,6 +15,8 @@ class ReviewOut(BaseModel):
     rating: int
     comment: Optional[str] = None
     created_at: datetime
+    user_name: Optional[str] = None
+    user_photo: Optional[str] = None
 
     class Config:
         from_attributes = True

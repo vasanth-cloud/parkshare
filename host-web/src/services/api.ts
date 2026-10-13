@@ -1,4 +1,4 @@
-import { User, ParkingListing, Booking, HostSummary, VerificationStatus, DriverProfile, CarSpaCenter } from '../types';
+import { User, ParkingListing, Booking, HostSummary, VerificationStatus, DriverProfile, CarSpaCenter, Review } from '../types';
 
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
@@ -260,6 +260,12 @@ export const api = {
   getMyDisputes: async () => {
     const res = await fetch(`${API_BASE}/disputes/my`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch disputes');
+    return res.json();
+  },
+
+  getReviewsByListing: async (listing_id: number): Promise<Review[]> => {
+    const res = await fetch(`${API_BASE}/reviews/listing/${listing_id}`);
+    if (!res.ok) return [];
     return res.json();
   },
 

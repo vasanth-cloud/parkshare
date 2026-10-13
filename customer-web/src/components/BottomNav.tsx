@@ -1,31 +1,15 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Layers, Calendar, User } from 'lucide-react';
+import { MapPin, Calendar, User } from 'lucide-react';
 
 interface BottomNavProps {
   onOpenChat?: () => void;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = () => {
-  const location = useLocation();
-
-  // If user is currently in a specific service page, make Bookings point directly to that service's bookings
-  const getBookingsLink = () => {
-    if (location.pathname === '/parking' || location.pathname.startsWith('/listing') || location.pathname === '/search') {
-      return '/bookings?service=parking';
-    }
-    if (location.pathname.startsWith('/services/drivers') || location.pathname === '/drivers') {
-      return '/bookings?service=drivers';
-    }
-    if (location.pathname.startsWith('/services/car-spa') || location.pathname === '/car-spa') {
-      return '/bookings?service=car_spa';
-    }
-    return '/bookings';
-  };
-
   const navItems = [
-    { to: '/', label: 'Services', icon: Layers },
-    { to: getBookingsLink(), label: 'Bookings', icon: Calendar },
+    { to: '/', label: 'Find Parking', icon: MapPin },
+    { to: '/bookings', label: 'Bookings', icon: Calendar },
     { to: '/profile', label: 'Profile', icon: User },
   ];
 

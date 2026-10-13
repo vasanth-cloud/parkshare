@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ParkingListing, Vehicle, Booking } from '../types';
+import { ParkingListing, Vehicle, Booking, Review } from '../types';
 import {
   ArrowLeft,
   MapPin,
@@ -24,7 +24,8 @@ import {
   ZoomIn,
   X,
   Phone,
-  Navigation
+  Navigation,
+  MessageSquare
 } from 'lucide-react';
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80';
@@ -40,6 +41,10 @@ export const CustomerListingDetail: React.FC = () => {
   const [activePhotoIdx, setActivePhotoIdx] = useState<number>(0);
   const [inspectImage, setInspectImage] = useState<string | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState<boolean>(false);
+
+  // Reviews from verified drivers
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState<boolean>(true);
 
   // Plan selection: HOURLY, DAILY, MONTHLY_FULL
   const [selectedPlan, setSelectedPlan] = useState<'HOURLY' | 'DAILY' | 'MONTHLY_FULL'>('HOURLY');
@@ -75,10 +80,15 @@ export const CustomerListingDetail: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch listing and vehicles on mount
+  // Fetch listing, reviews, and vehicles on mount
   useEffect(() => {
     if (id) {
-      api.getListingDetail(parseInt(id)).then(setListing).catch(console.error);
+      const listingId = parseInt(id);
+      api.getListingDetail(listingId).then(setListing).catch(console.error);
+      api.getReviewsByListing(listingId)
+        .then((rList) => setReviews(rList || []))
+        .catch(() => setReviews([]))
+        .finally(() => setLoadingReviews(false));
     }
     if (user) {
       api.getVehicles().then((vList) => {
@@ -787,42 +797,6 @@ export const CustomerListingDetail: React.FC = () => {
             )}
           </div>
 
-          {/* Multi-Service Companion Add-Ons */}
-          <div className="bg-gradient-to-r from-cyan-500/5 via-indigo-500/5 to-transparent rounded-2xl p-3 border border-slate-200/80 dark:border-slate-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center space-x-1">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-500" />
-                <span>Combine with Other Services</span>
-              </span>
-              <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-extrabold px-1.5 py-0.5 rounded-full border border-emerald-500/20">
-                Multi-Service
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 pt-0.5">
-              <button
-                type="button"
-                onClick={() => navigate(`/services/car-spa?parkingId=${listing.id}&address=${encodeURIComponent(listing.approximate_address || listing.area || '')}`)}
-                className="p-2.5 rounded-xl bg-white dark:bg-slate-800/90 border border-cyan-500/30 text-left hover:border-cyan-500 transition shadow-2xs active:scale-95 cursor-pointer"
-              >
-                <div className="flex items-center space-x-1 text-xs font-black text-cyan-600 dark:text-cyan-400">
-                  <span>✨ Car Spa</span>
-                  <span className="text-[9px] text-slate-400 font-normal">from ₹199</span>
-                </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">Wash car at this bay</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(`/services/drivers?pickup=${encodeURIComponent(listing.approximate_address || listing.area || '')}`)}
-                className="p-2.5 rounded-xl bg-white dark:bg-slate-800/90 border border-indigo-500/30 text-left hover:border-indigo-500 transition shadow-2xs active:scale-95 cursor-pointer"
-              >
-                <div className="flex items-center space-x-1 text-xs font-black text-indigo-600 dark:text-indigo-400">
-                  <span>🧑‍✈️ Acting Driver</span>
-                  <span className="text-[9px] text-slate-400 font-normal">from ₹299</span>
-                </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">Hire chauffeur here</p>
-              </button>
-            </div>
-          </div>
 
           {/* Simple Price Summary */}
           {priceBreakdown && (
@@ -906,6 +880,106 @@ export const CustomerListingDetail: React.FC = () => {
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line line-clamp-3">
                 {listing.parking_rules}
               </p>
+            </div>
+          )}
+        </div>
+
+        {/* ========================================================================= */}
+        {/* DRIVER RATINGS & REVIEWS (Visible to space owner & prospective drivers)  */}
+        {/* ========================================================================= */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center space-x-1.5">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span>Driver Reviews & Ratings</span>
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Verified feedback from drivers who completed parking sessions here
+              </p>
+            </div>
+            {listing.average_rating > 0 ? (
+              <div className="text-right">
+                <div className="flex items-center space-x-1 justify-end">
+                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  <span className="text-base font-black text-slate-900 dark:text-white">
+                    {listing.average_rating.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-slate-400">/ 5.0</span>
+                </div>
+                <span className="text-[10px] text-slate-500 font-bold block">
+                  {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                </span>
+              </div>
+            ) : (
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                ★ New Space
+              </span>
+            )}
+          </div>
+
+          {loadingReviews ? (
+            <div className="py-6 text-center text-xs text-slate-400">Loading driver reviews...</div>
+          ) : reviews.length === 0 ? (
+            <div className="py-6 px-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center space-y-1.5">
+              <span className="text-2xl block">🅿️</span>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-200">No driver reviews yet</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
+                Be the first driver to book this driveway space and share your verified experience!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reviews.map((r) => {
+                return (
+                  <div
+                    key={`review-${r.id}`}
+                    className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-2 hover:border-slate-300 transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-black text-xs flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
+                          {r.user_name ? r.user_name.charAt(0).toUpperCase() : 'P'}
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="text-xs font-extrabold text-slate-900 dark:text-white">
+                              {r.user_name || 'Verified Driver'}
+                            </span>
+                            <span className="inline-flex items-center space-x-0.5 text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded-md">
+                              <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
+                              <span>Verified Parker</span>
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block font-medium">
+                            {new Date(r.created_at).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Stars */}
+                      <div className="flex items-center space-x-0.5 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`w-3 h-3 ${star <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {r.comment && (
+                      <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed pl-1 pt-0.5">
+                        {r.comment}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
