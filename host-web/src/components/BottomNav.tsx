@@ -5,7 +5,6 @@ import {
   KeyRound, 
   Plus, 
   ShieldCheck, 
-  Layers,
   User as UserIcon, 
   X, 
   DollarSign, 
@@ -124,22 +123,7 @@ export const BottomNav: React.FC = () => {
       <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-emerald-100/80 dark:border-slate-800 shadow-[0_-4px_25px_rgba(0,0,0,0.06)] transition-colors duration-200">
         <div className="max-w-md mx-auto px-3 py-1.5 flex items-center justify-between">
           
-          {/* 1. Services Overview */}
-          <NavLink
-            to="/"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-                location.pathname === '/' || location.pathname === '/services' ? 'text-[#0f8b5f] dark:text-emerald-400' : 'text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200'
-              }`
-            }
-          >
-            <div className={`p-1 rounded-xl transition ${location.pathname === '/' || location.pathname === '/services' ? 'bg-emerald-50 dark:bg-emerald-950/60' : ''}`}>
-              <Layers className="w-5 h-5" />
-            </div>
-            <span className="text-[10px] font-bold mt-0.5 tracking-tight">Services</span>
-          </NavLink>
-
-          {/* 2. Host Dashboard */}
+          {/* 1. Host Dashboard */}
           <NavLink
             to="/dashboard"
             className={({ isActive }) =>
@@ -152,6 +136,23 @@ export const BottomNav: React.FC = () => {
               <LayoutDashboard className="w-5 h-5" />
             </div>
             <span className="text-[10px] font-bold mt-0.5 tracking-tight">Dashboard</span>
+          </NavLink>
+
+          {/* 2. KYC Verification */}
+          <NavLink
+            to="/verification"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+                location.pathname === '/verification' || location.pathname === '/kyc'
+                  ? 'text-[#0f8b5f] dark:text-emerald-400'
+                  : 'text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200'
+              }`
+            }
+          >
+            <div className={`p-1 rounded-xl transition ${location.pathname === '/verification' || location.pathname === '/kyc' ? 'bg-emerald-50 dark:bg-emerald-950/60' : ''}`}>
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-bold mt-0.5 tracking-tight">KYC</span>
           </NavLink>
 
           {/* 3. List Space Action FAB */}
