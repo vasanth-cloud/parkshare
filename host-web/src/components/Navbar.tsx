@@ -4,7 +4,6 @@ import {
   PlusCircle, 
   LayoutDashboard, 
   KeyRound, 
-  ShieldCheck, 
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -147,18 +146,6 @@ export const Navbar: React.FC = () => {
                     )}
                   </div>
 
-                  {/* KYC Status */}
-                  <Link 
-                    to="/verification" 
-                    className={`flex items-center space-x-1 sm:space-x-1.5 py-1.5 px-1.5 sm:px-2 rounded-xl transition-colors ${
-                      location.pathname === '/verification' || location.pathname === '/kyc'
-                        ? 'text-emerald-600 dark:text-emerald-400 font-extrabold bg-emerald-50/80 dark:bg-emerald-950/50'
-                        : 'text-gray-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400'
-                    }`}
-                  >
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>KYC</span>
-                  </Link>
                 </>
               )}
             </div>
