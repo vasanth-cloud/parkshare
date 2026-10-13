@@ -105,7 +105,7 @@ export const CreateListingPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Multi-provider reverse geocoding: BigDataCloud + Komoot Photon + Nominatim
+  // Multi-provider reverse geocoding: Komoot Photon + BigDataCloud + Nominatim
   const fetchAddressFromCoords = async (latitude: number, longitude: number) => {
     setLat(latitude);
     setLng(longitude);
@@ -116,27 +116,10 @@ export const CreateListingPage: React.FC = () => {
     let detectedState = '';
     let detectedPostcode = '';
     let detectedStreet = '';
+    let detectedLandmark = '';
     let fullDisplayName = '';
 
-    // Provider 1: BigDataCloud client reverse geocode (Ultra-fast, CORS-friendly)
-    try {
-      const bdcRes = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-      );
-      if (bdcRes.ok) {
-        const bdc = await bdcRes.json();
-        if (bdc) {
-          detectedCity = bdc.city || bdc.locality || '';
-          detectedArea = bdc.locality || '';
-          detectedState = bdc.principalSubdivision || '';
-          detectedPostcode = bdc.postcode || '';
-        }
-      }
-    } catch (e) {
-      console.warn('BigDataCloud reverse geocode error:', e);
-    }
-
-    // Provider 2: Komoot Photon reverse geocode (Detailed street/district OSM data)
+    // Provider 1: Komoot Photon reverse geocode (CORS-friendly, rich street/landmark & locality OSM data)
     try {
       const photonRes = await fetch(
         `https://photon.komoot.io/reverse?lat=${latitude}&lon=${longitude}`
@@ -145,19 +128,48 @@ export const CreateListingPage: React.FC = () => {
         const photon = await photonRes.json();
         const feat = photon?.features?.[0]?.properties;
         if (feat) {
-          if (!detectedCity) detectedCity = feat.city || feat.county || '';
-          if (!detectedArea) detectedArea = feat.locality || feat.district || feat.name || '';
-          if (!detectedState) detectedState = feat.state || '';
-          if (!detectedPostcode) detectedPostcode = feat.postcode || '';
-          detectedStreet = feat.street || feat.name || '';
+          detectedCity = feat.city || '';
+          detectedArea = feat.locality || feat.district || '';
+          detectedState = feat.state || '';
+          detectedPostcode = feat.postcode || '';
+
+          if (feat.street) {
+            detectedStreet = feat.street;
+            if (feat.name && feat.name !== feat.street) {
+              detectedLandmark = feat.name;
+            }
+          } else if (feat.name) {
+            detectedStreet = feat.name;
+          }
         }
       }
     } catch (e) {
       console.warn('Photon reverse geocode error:', e);
     }
 
-    // Provider 3: OpenStreetMap Nominatim fallback
-    if (!detectedCity || !detectedArea) {
+    // Provider 2: BigDataCloud client reverse geocode (Fast & reliable city/state/postcode)
+    try {
+      const bdcRes = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+      );
+      if (bdcRes.ok) {
+        const bdc = await bdcRes.json();
+        if (bdc) {
+          if (!detectedCity) detectedCity = bdc.city || '';
+          // If BDC locality is distinct from city and area is not yet set
+          if (!detectedArea && bdc.locality && bdc.locality.toLowerCase() !== (bdc.city || '').toLowerCase()) {
+            detectedArea = bdc.locality;
+          }
+          if (!detectedState) detectedState = bdc.principalSubdivision || '';
+          if (!detectedPostcode) detectedPostcode = bdc.postcode || '';
+        }
+      }
+    } catch (e) {
+      console.warn('BigDataCloud reverse geocode error:', e);
+    }
+
+    // Provider 3: OpenStreetMap Nominatim fallback if missing street or area
+    if (!detectedStreet || !detectedArea) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3500);
@@ -172,6 +184,10 @@ export const CreateListingPage: React.FC = () => {
             if (!detectedCity) detectedCity = data.address.city || data.address.town || data.address.state_district || '';
             if (!detectedArea) detectedArea = data.address.suburb || data.address.neighbourhood || data.address.residential || '';
             if (!detectedPostcode) detectedPostcode = data.address.postcode || '';
+            if (!detectedStreet) detectedStreet = data.address.road || '';
+            if (!detectedLandmark && data.name && data.name !== data.address.road) {
+              detectedLandmark = data.name;
+            }
             fullDisplayName = data.display_name || '';
           }
         }
@@ -180,9 +196,12 @@ export const CreateListingPage: React.FC = () => {
       }
     }
 
-    // Apply detected details without forcing hardcoded city/area/state
+    // Determine the most specific area / locality
     const finalCity = detectedCity || '';
-    const finalArea = detectedArea || '';
+    let finalArea = detectedArea || '';
+    if (!finalArea || (finalCity && finalArea.toLowerCase() === finalCity.toLowerCase())) {
+      finalArea = detectedStreet || detectedLandmark || finalCity;
+    }
     const finalState = detectedState || '';
 
     if (finalCity) setCity(finalCity);
@@ -190,16 +209,49 @@ export const CreateListingPage: React.FC = () => {
     if (finalState) setState(finalState);
     if (detectedPostcode) setPincode(detectedPostcode);
 
-    const publicAddr = [finalArea, finalCity].filter(Boolean).join(', ');
+    // Auto-fetch and fill the search bar: Area, Street, Landmark
+    const searchAreaStreetLandmark = [
+      detectedLandmark,
+      detectedStreet,
+      finalArea !== detectedStreet ? finalArea : '',
+      finalCity
+    ]
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .join(', ');
+
+    if (searchAreaStreetLandmark) {
+      setAddressSearchQuery(searchAreaStreetLandmark);
+    }
+
+    const publicAddr = [finalArea, finalCity]
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .join(', ');
     if (publicAddr) setApproxAddress(publicAddr);
 
-    const exactAddr = fullDisplayName 
-      ? fullDisplayName 
-      : [detectedStreet, finalArea, finalCity, detectedPostcode].filter(Boolean).join(', ');
+    const exactAddr = fullDisplayName
+      ? fullDisplayName
+      : [
+          detectedLandmark,
+          detectedStreet,
+          finalArea !== detectedStreet ? finalArea : '',
+          finalCity,
+          detectedPostcode
+        ]
+          .filter(Boolean)
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .join(', ');
+
     if (exactAddr || publicAddr) setExactAddress(exactAddr || publicAddr);
 
-    if (finalArea || finalCity) {
-      setGeoStatusMsg(`✓ Address detected: ${[finalArea, finalCity].filter(Boolean).join(', ')} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+    const statusLabel = [detectedStreet || detectedLandmark || finalArea, finalCity]
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .join(', ');
+
+    if (statusLabel) {
+      setGeoStatusMsg(`✓ Address detected: ${statusLabel} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
     } else {
       setGeoStatusMsg(`✓ GPS coordinates locked (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
     }
@@ -321,12 +373,11 @@ export const CreateListingPage: React.FC = () => {
     if (item.state) setState(item.state);
     if (item.postcode) setPincode(item.postcode);
 
-    const publicAddr = `${item.area || item.title}, ${item.city || ''}`.replace(/,\s*$/, '');
-    setApproxAddress(publicAddr);
-    setExactAddress(item.subtitle ? `${item.title}, ${item.subtitle}` : item.title);
-
+    const selectedFull = item.subtitle ? `${item.title}, ${item.subtitle}` : item.title;
+    setExactAddress(selectedFull);
+    setApproxAddress(selectedFull);
     setAddressSearchResults([]);
-    setAddressSearchQuery('');
+    setAddressSearchQuery(selectedFull);
     setGeoStatusMsg(`✓ Address selected: ${item.title}`);
   };
 
