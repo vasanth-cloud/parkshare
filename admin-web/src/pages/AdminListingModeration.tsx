@@ -23,7 +23,8 @@ import {
   AlertOctagon, 
   Info,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  ShieldAlert
 } from 'lucide-react';
 
 export const AdminListingModeration: React.FC = () => {
@@ -141,6 +142,13 @@ export const AdminListingModeration: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
+          <Link
+            to="/disputes?service=parking"
+            className="text-xs font-bold bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 px-3.5 py-1.5 rounded-xl text-slate-300 hover:text-white transition flex items-center space-x-1.5 shadow-xs"
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+            <span>Parking Disputes</span>
+          </Link>
           <span className="text-xs font-mono bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-300">
             Pending Queue: <strong className="text-amber-400">{listings.length}</strong>
           </span>

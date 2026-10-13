@@ -19,7 +19,8 @@ import {
   X,
   AlertTriangle,
   Award,
-  ArrowLeft
+  ArrowLeft,
+  ShieldAlert
 } from 'lucide-react';
 
 export const AdminDriversPage: React.FC = () => {
@@ -148,6 +149,15 @@ export const AdminDriversPage: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2.5">
+          <Link
+            to="/disputes?service=drivers"
+            className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition text-xs font-bold flex items-center space-x-1.5 shadow-xs"
+            title="Driver Disputes"
+          >
+            <ShieldAlert className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Driver Disputes</span>
+          </Link>
+
           <button
             onClick={() => fetchDrivers()}
             className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition text-xs font-bold flex items-center space-x-1"

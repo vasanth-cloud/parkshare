@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { Dispute } from '../types';
 import { AlertTriangle, CheckCircle2, Clock, XCircle, ShieldAlert, User, MessageSquare, Send, ArrowLeft } from 'lucide-react';
 
 export const AdminDisputesPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const service = searchParams.get('service'); // 'parking' | 'drivers' | 'car-spa' | null
+
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -88,26 +91,117 @@ export const AdminDisputesPage: React.FC = () => {
     }
   };
 
+  // Filter disputes strictly according to the active service scope
+  const filteredDisputes = disputes.filter((d) => {
+    const cat = (d.category || '').toUpperCase();
+    const desc = (d.description || '').toLowerCase();
+
+    if (service === 'parking') {
+      // ONLY show Parking Space disputes
+      return (
+        !cat.includes('DRIVER') &&
+        !cat.includes('SPA') &&
+        !desc.includes('acting driver') &&
+        !desc.includes('car wash')
+      );
+    } else if (service === 'drivers') {
+      // ONLY show Acting Driver disputes
+      return cat.includes('DRIVER') || desc.includes('driver') || desc.includes('chauffeur');
+    } else if (service === 'car-spa') {
+      // ONLY show Car Spa disputes
+      return cat.includes('SPA') || cat.includes('WASH') || desc.includes('spa') || desc.includes('wash') || desc.includes('detail');
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-6">
-      {/* Back to Services Navigation */}
+      
+      {/* Back to Service Navigation */}
       <div>
         <Link
-          to="/"
+          to={
+            service === 'parking'
+              ? '/approvals'
+              : service === 'drivers'
+              ? '/drivers'
+              : service === 'car-spa'
+              ? '/car-spas'
+              : '/'
+          }
           className="inline-flex items-center space-x-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl transition shadow-xs"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>← Back to Services</span>
+          <span>
+            {service === 'parking'
+              ? '← Back to Space Approvals'
+              : service === 'drivers'
+              ? '← Back to Acting Drivers'
+              : service === 'car-spa'
+              ? '← Back to Car Spas'
+              : '← Back to Services'}
+          </span>
         </Link>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-white flex items-center space-x-2">
-            <ShieldAlert className="w-7 h-7 text-emerald-500" />
-            <span>Disputes & Reports Moderation</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">Review marketplace complaints filed by customers and hosts, investigate, and enforce resolutions.</p>
+          {service === 'parking' && (
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">🅿️</span>
+                <h1 className="text-2xl font-extrabold text-white flex items-center space-x-2">
+                  <ShieldAlert className="w-6 h-6 text-emerald-500" />
+                  <span>Parking Space Disputes & Reports</span>
+                </h1>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Review complaints filed for parking spot reservations, blocked driveway access, and space inaccuracies
+              </p>
+            </div>
+          )}
+
+          {service === 'drivers' && (
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">🧑‍✈️</span>
+                <h1 className="text-2xl font-extrabold text-white flex items-center space-x-2">
+                  <ShieldAlert className="w-6 h-6 text-indigo-500" />
+                  <span>Acting Driver Disputes & Reports</span>
+                </h1>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Review chauffeur no-show reports, trip delay complaints, and passenger grievances
+              </p>
+            </div>
+          )}
+
+          {service === 'car-spa' && (
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">✨</span>
+                <h1 className="text-2xl font-extrabold text-white flex items-center space-x-2">
+                  <ShieldAlert className="w-6 h-6 text-cyan-500" />
+                  <span>Car Spa & Detailing Disputes & Reports</span>
+                </h1>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Review detailing service quality complaints, doorstep water wash delays, and workshop bay issues
+              </p>
+            </div>
+          )}
+
+          {!service && (
+            <div>
+              <h1 className="text-2xl font-extrabold text-white flex items-center space-x-2">
+                <ShieldAlert className="w-7 h-7 text-emerald-500" />
+                <span>Disputes & Reports Moderation</span>
+              </h1>
+              <p className="text-xs text-slate-400 mt-1">
+                Review marketplace complaints filed by customers and hosts, investigate, and enforce resolutions.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Filter buttons */}
@@ -130,15 +224,25 @@ export const AdminDisputesPage: React.FC = () => {
 
       {loading ? (
         <div className="text-center py-16 text-slate-500 text-sm">Loading complaints & reports...</div>
-      ) : disputes.length === 0 ? (
+      ) : filteredDisputes.length === 0 ? (
         <div className="bg-slate-900 rounded-3xl p-12 text-center border border-slate-800 space-y-3">
           <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-          <h3 className="text-lg font-bold text-white">No Disputes Found</h3>
-          <p className="text-sm text-slate-400">There are currently no reported issues matching this filter criteria.</p>
+          <h3 className="text-lg font-bold text-white">
+            {service === 'parking'
+              ? 'No Parking Disputes Found'
+              : service === 'drivers'
+              ? 'No Acting Driver Disputes Found'
+              : service === 'car-spa'
+              ? 'No Car Spa Disputes Found'
+              : 'No Disputes Found'}
+          </h3>
+          <p className="text-sm text-slate-400">
+            There are currently no reported complaints matching this criteria for this service.
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {disputes.map((dispute) => (
+          {filteredDisputes.map((dispute) => (
             <div key={dispute.id} className="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-4 shadow-lg">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
                 <div className="space-y-1">
@@ -220,72 +324,63 @@ export const AdminDisputesPage: React.FC = () => {
               </h3>
               <button
                 onClick={() => setSelectedDispute(null)}
-                className="text-slate-400 hover:text-white text-lg font-bold"
+                className="text-slate-400 hover:text-white text-xs font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSubmitResolution} className="space-y-4 text-xs">
+            <form onSubmit={handleSubmitResolution} className="space-y-4">
               <div>
-                <label className="block text-slate-300 font-semibold mb-2">Set Status</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['UNDER_INVESTIGATION', 'RESOLVED', 'REJECTED'] as const).map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => setResolveStatus(st)}
-                      className={`p-2.5 rounded-xl border font-bold text-[11px] transition text-center ${
-                        resolveStatus === st
-                          ? st === 'RESOLVED'
-                            ? 'bg-emerald-950 border-emerald-500 text-emerald-300'
-                            : st === 'REJECTED'
-                            ? 'bg-red-950 border-red-500 text-red-300'
-                            : 'bg-blue-950 border-blue-500 text-blue-300'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                      }`}
-                    >
-                      {st.replace('_', ' ')}
-                    </button>
-                  ))}
-                </div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
+                  Dispute Action
+                </label>
+                <select
+                  value={resolveStatus}
+                  onChange={(e) => setResolveStatus(e.target.value as any)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="UNDER_INVESTIGATION">Keep Under Investigation</option>
+                  <option value="RESOLVED">Resolve & Settle (Action Enforced)</option>
+                  <option value="REJECTED">Reject Complaint (Invalid / Dismissed)</option>
+                </select>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Resolution / Investigation Notes <span className="text-red-400">*</span>
+                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
+                  Resolution Explanation & Notes
                 </label>
                 <textarea
-                  required
                   rows={4}
+                  required
                   value={resolutionNotes}
                   onChange={(e) => setResolutionNotes(e.target.value)}
-                  placeholder="Detail the outcome (e.g. Full refund issued to customer. Host issued penalty warning for space unavailability.)..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500"
+                  placeholder="Detail the outcome of the investigation, refund actions, penalties or dismissals..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-2 border-t border-slate-800">
+              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setSelectedDispute(null)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold transition"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition flex items-center space-x-1 shadow-sm disabled:opacity-50"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>{isSubmitting ? 'Saving...' : 'Submit Resolution'}</span>
+                  {isSubmitting ? 'Saving...' : 'Submit Resolution'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
     </div>
   );
 };
