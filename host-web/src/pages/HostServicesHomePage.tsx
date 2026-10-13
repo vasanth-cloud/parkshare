@@ -13,9 +13,14 @@ import {
   Building,
   CheckCircle2,
   Clock,
-  Compass
+  Compass,
+  Sun,
+  Moon,
+  LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { HostAvatar } from '../components/HostAvatar';
 import { api } from '../services/api';
 
 export const HostServicesHomePage: React.FC = () => {
@@ -23,7 +28,8 @@ export const HostServicesHomePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const isNewUser = searchParams.get('new_user') === 'true';
 
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [spacesCount, setSpacesCount] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -113,6 +119,65 @@ export const HostServicesHomePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-20 select-none">
       
+      {/* Standalone Brand Header on Home Page (Global Navbar is hidden before choosing service) */}
+      <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 py-3 sticky top-0 z-20 transition-colors">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-2 sm:space-x-2.5">
+            <img 
+              src="/logo.png" 
+              alt="ParkShare Logo" 
+              className="h-8 w-8 object-contain rounded-xl bg-emerald-50 dark:bg-slate-800 p-1 border border-emerald-100 dark:border-slate-700 shadow-2xs" 
+            />
+            <div className="flex items-baseline">
+              <span className="font-black text-lg tracking-tight text-gray-900 dark:text-white">ParkShare</span>
+              <span className="font-extrabold text-lg tracking-tight text-[#0f8b5f] dark:text-emerald-400 ml-1">Host</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              Partner
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-1.5 rounded-xl text-gray-500 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            </button>
+
+            {user ? (
+              <div className="flex items-center space-x-2 pl-1.5 border-l border-slate-200 dark:border-slate-800">
+                <HostAvatar 
+                  url={user.profile_photo_url} 
+                  name={user.full_name} 
+                  size="sm" 
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    navigate('/auth');
+                  }}
+                  className="p-1.5 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/auth"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition"
+              >
+                Sign In
+              </Link>
+            )}
+          </div>
+        </div>
+      </header>
+
       {/* New User Welcome Toast */}
       {isNewUser && (
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-3 shadow-md flex items-center justify-between animate-in fade-in slide-in-from-top duration-300">

@@ -26,12 +26,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 export const AppContent: React.FC = () => {
   const location = useLocation();
   const isAuthPage = location.pathname === '/auth';
+  const isHomePage = location.pathname === '/' || location.pathname === '/services';
+  const showNav = !isAuthPage && !isHomePage;
   const { user } = useAuth();
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors duration-200">
-      {!isAuthPage && <Navbar />}
-      <main className={`flex-grow ${user && !isAuthPage ? 'pb-24' : ''}`}>
+      {showNav && <Navbar />}
+      <main className={`flex-grow ${user && showNav ? 'pb-24' : ''}`}>
         <Routes>
           <Route path="/" element={<HostServicesHomePage />} />
           <Route path="/services" element={<HostServicesHomePage />} />
@@ -100,8 +102,8 @@ export const AppContent: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      {!isAuthPage && user && <BottomNav />}
-      {!isAuthPage && !user && <Footer />}
+      {showNav && user && <BottomNav />}
+      {showNav && !user && <Footer />}
     </div>
   );
 };
