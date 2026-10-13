@@ -4,14 +4,11 @@ import {
   PlusCircle, 
   LayoutDashboard, 
   KeyRound, 
-  DollarSign, 
   LogOut, 
   ShieldCheck, 
   Sun, 
   Moon,
-  ChevronDown,
-  Layers,
-  Sparkles
+  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -53,21 +50,9 @@ export const Navbar: React.FC = () => {
             
             {/* Desktop Navigation Links */}
             <div className="hidden md:flex items-center space-x-6 text-xs font-bold tracking-wide">
-              {/* 1. Services */}
-              <Link 
-                to="/" 
-                className={`flex items-center space-x-1.5 transition-colors ${
-                  location.pathname === '/' || location.pathname === '/services'
-                    ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
-                    : 'text-gray-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400'
-                }`}
-              >
-                <span>🏠 Services</span>
-              </Link>
-
               {user && (
                 <>
-                  {/* 2. Manage Dropdown with Classification */}
+                  {/* Manage Dropdown with Classification */}
                   <div
                     className="relative"
                     onMouseEnter={() => setShowManageDropdown(true)}
@@ -146,20 +131,7 @@ export const Navbar: React.FC = () => {
                     )}
                   </div>
 
-                  {/* 3. Earnings */}
-                  <Link 
-                    to="/earnings" 
-                    className={`flex items-center space-x-1.5 transition-colors ${
-                      location.pathname === '/earnings'
-                        ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
-                        : 'text-gray-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400'
-                    }`}
-                  >
-                    <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>Earnings</span>
-                  </Link>
-
-                  {/* 4. KYC Status */}
+                  {/* KYC Status */}
                   <Link 
                     to="/verification" 
                     className={`flex items-center space-x-1.5 transition-colors ${
@@ -191,13 +163,6 @@ export const Navbar: React.FC = () => {
 
             {user ? (
               <div className="flex items-center space-x-1.5 sm:space-x-2 md:border-l md:border-gray-200 dark:md:border-slate-800 md:pl-3">
-                <Link 
-                  to="/earnings"
-                  className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/80 hover:bg-emerald-100/80 border border-emerald-200 dark:border-emerald-800 text-[#0f8b5f] dark:text-emerald-400 text-xs font-black shadow-2xs transition"
-                >
-                  <DollarSign className="w-3.5 h-3.5 text-[#0f8b5f] dark:text-emerald-400" />
-                  <span className="hidden min-[480px]:inline">Payouts</span>
-                </Link>
 
                 <div className="flex items-center space-x-1.5">
                   <HostAvatar 

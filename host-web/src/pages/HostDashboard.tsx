@@ -6,7 +6,7 @@ import { HostIdentityVerificationModal } from '../components/HostIdentityVerific
 import { RectifyListingModal } from '../components/RectifyListingModal';
 import { useAuth } from '../context/AuthContext';
 import { HostAvatar } from '../components/HostAvatar';
-import { PlusCircle, KeyRound, MapPin, Star, Power, CheckCircle, CheckCircle2, ArrowRight, ArrowLeft, DollarSign, Calendar, Car, AlertCircle, X, ShieldCheck, ShieldAlert, RotateCcw, XCircle, Clock, Camera, Eye, Lock, Trash2 } from 'lucide-react';
+import { PlusCircle, KeyRound, MapPin, Star, Power, CheckCircle, CheckCircle2, ArrowRight, DollarSign, Calendar, Car, AlertCircle, X, ShieldCheck, ShieldAlert, RotateCcw, XCircle, Clock, Camera, Eye, Lock, Trash2 } from 'lucide-react';
 
 export const HostDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -229,22 +229,6 @@ export const HostDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-slate-50 to-gray-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-gray-900 dark:text-slate-100 py-4 sm:py-6 px-3.5 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-5 pb-28 transition-colors duration-200">
-      {/* Back to All Services Nav Bar */}
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="inline-flex items-center space-x-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 py-2 px-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xs hover:shadow-xs transition cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>← Back to Services</span>
-        </button>
-        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full flex items-center space-x-1.5">
-          <span>🅿️</span>
-          <span>Parking Space Host</span>
-        </span>
-      </div>
-
       {/* Sleek Greeting Header */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-gray-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3 transition-colors duration-200">
         <div className="flex items-center space-x-3.5 min-w-0">
@@ -273,13 +257,6 @@ export const HostDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2 flex-shrink-0">
-          <Link
-            to="/"
-            className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800/80 px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-2xs cursor-pointer"
-            title="All Services"
-          >
-            <span>🏠 Services</span>
-          </Link>
           <button
             onClick={() => fetchData()}
             className="text-xs font-bold text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-2xs border border-transparent dark:border-slate-700 cursor-pointer"
