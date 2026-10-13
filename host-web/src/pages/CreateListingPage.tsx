@@ -95,7 +95,6 @@ export const CreateListingPage: React.FC = () => {
   // Step 4: Pricing Plans
   const [hourlyPrice, setHourlyPrice] = useState<number>(40);
   const [dailyPrice, setDailyPrice] = useState<number>(250);
-  const [multiDayDiscountPercent, setMultiDayDiscountPercent] = useState<number>(15);
   const [monthlyPrice, setMonthlyPrice] = useState<number>(3500);
   const [monthlyCommuterPrice, setMonthlyCommuterPrice] = useState<number>(2200);
 
@@ -649,7 +648,7 @@ export const CreateListingPage: React.FC = () => {
         pricing_rule: {
           hourly_price: hourlyPrice,
           daily_price: dailyPrice,
-          multi_day_discount_percent: multiDayDiscountPercent,
+          multi_day_discount_percent: 0,
           monthly_price: monthlyPrice,
           monthly_commuter_price: monthlyCommuterPrice,
           minimum_duration_hours: 1,
@@ -1213,27 +1212,17 @@ export const CreateListingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Monthly & Discounts */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Monthly (₹)</label>
+            {/* Monthly */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Monthly Pass (₹)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-sm font-bold text-gray-400">₹</span>
                 <input
                   type="number"
                   value={monthlyPrice}
                   onChange={(e) => setMonthlyPrice(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Multi-day Discount %</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={50}
-                  value={multiDayDiscountPercent}
-                  onChange={(e) => setMultiDayDiscountPercent(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  placeholder="3500"
+                  className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
             </div>

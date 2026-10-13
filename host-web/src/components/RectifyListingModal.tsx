@@ -51,7 +51,6 @@ export const RectifyListingModal: React.FC<Props> = ({
   const [hourlyPrice, setHourlyPrice] = useState<number>(listing.pricing_rule?.hourly_price || 40);
   const [dailyPrice, setDailyPrice] = useState<number>(listing.pricing_rule?.daily_price || 250);
   const [monthlyPrice, setMonthlyPrice] = useState<number>(listing.pricing_rule?.monthly_price || 3500);
-  const [multiDayDiscountPercent, setMultiDayDiscountPercent] = useState<number>(listing.pricing_rule?.multi_day_discount_percent || 10);
   
   // Features
   const [isCovered, setIsCovered] = useState(listing.is_covered || false);
@@ -105,7 +104,6 @@ export const RectifyListingModal: React.FC<Props> = ({
       setHourlyPrice(listing.pricing_rule?.hourly_price || 40);
       setDailyPrice(listing.pricing_rule?.daily_price || 250);
       setMonthlyPrice(listing.pricing_rule?.monthly_price || 3500);
-      setMultiDayDiscountPercent(listing.pricing_rule?.multi_day_discount_percent || 10);
       setIsCovered(listing.is_covered || false);
       setIsIndoor(listing.is_indoor || false);
       setHasCctv(listing.has_cctv || false);
@@ -254,7 +252,7 @@ export const RectifyListingModal: React.FC<Props> = ({
           hourly_price: hourlyPrice,
           daily_price: dailyPrice,
           monthly_price: monthlyPrice,
-          multi_day_discount_percent: multiDayDiscountPercent,
+          multi_day_discount_percent: 0,
         },
         images: imagesPayload,
         location_verification: locationProof,
@@ -534,33 +532,18 @@ export const RectifyListingModal: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Monthly Subscription & Multi-day Discount */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Monthly Pass (₹)</label>
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-2.5 text-xs font-bold text-gray-400">₹</span>
-                    <input
-                      type="number"
-                      min={100}
-                      value={monthlyPrice}
-                      onChange={(e) => setMonthlyPrice(Number(e.target.value))}
-                      placeholder="3500"
-                      className="w-full pl-6 pr-3 py-2 border border-gray-300 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Multi-day Discount %</label>
+              {/* Monthly Subscription */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Monthly Pass (₹)</label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-2.5 text-xs font-bold text-gray-400">₹</span>
                   <input
                     type="number"
-                    min={0}
-                    max={50}
-                    value={multiDayDiscountPercent}
-                    onChange={(e) => setMultiDayDiscountPercent(Number(e.target.value))}
-                    placeholder="10"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
+                    min={100}
+                    value={monthlyPrice}
+                    onChange={(e) => setMonthlyPrice(Number(e.target.value))}
+                    placeholder="3500"
+                    className="w-full pl-6 pr-3 py-2 border border-gray-300 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
                   />
                 </div>
               </div>
