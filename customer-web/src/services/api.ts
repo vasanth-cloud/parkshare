@@ -391,7 +391,7 @@ export const api = {
         "I am going to Whitefield and need parking space",
         "Show spots with EV charging",
         "Find parking near BTM Layout",
-        "How does key handover work?"
+        "How do I check in with QR pass?"
       ];
     }
   },

@@ -6,7 +6,7 @@ import { HostIdentityVerificationModal } from '../components/HostIdentityVerific
 import { RectifyListingModal } from '../components/RectifyListingModal';
 import { useAuth } from '../context/AuthContext';
 import { HostAvatar } from '../components/HostAvatar';
-import { PlusCircle, KeyRound, MapPin, Star, Power, CheckCircle, CheckCircle2, ArrowRight, DollarSign, Calendar, Car, AlertCircle, X, ShieldCheck, ShieldAlert, RotateCcw, XCircle, Clock, Camera, Eye, Lock, Trash2 } from 'lucide-react';
+import { PlusCircle, MapPin, Star, Power, CheckCircle, CheckCircle2, ArrowRight, DollarSign, Calendar, Car, AlertCircle, X, ShieldCheck, ShieldAlert, RotateCcw, XCircle, Clock, Trash2 } from 'lucide-react';
 
 export const HostDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -14,9 +14,6 @@ export const HostDashboard: React.FC = () => {
   const [summary, setSummary] = useState<HostSummary | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
   const [hostBookings, setHostBookings] = useState<Booking[]>([]);
-  const [generatedOtps, setGeneratedOtps] = useState<Record<number, { otp: string; expires_at: string }>>({});
-  const [selectedPhotoModal, setSelectedPhotoModal] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [selectedListingForRectify, setSelectedListingForRectify] = useState<ParkingListing | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,33 +96,7 @@ export const HostDashboard: React.FC = () => {
     }
   };
 
-  const handleConfirmKeyReceived = async (bookingId: number) => {
-    try {
-      setActionLoading(bookingId);
-      await api.confirmKeyReceived(bookingId);
-      await fetchData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to confirm key handover');
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
-  const handleGenerateReleaseOtp = async (bookingId: number) => {
-    try {
-      setActionLoading(bookingId);
-      const res = await api.generateReleaseOtp(bookingId);
-      setGeneratedOtps((prev) => ({
-        ...prev,
-        [bookingId]: { otp: res.release_otp, expires_at: res.expires_at },
-      }));
-      await fetchData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to generate release OTP');
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   const fetchData = async () => {
     try {
@@ -350,231 +321,7 @@ export const HostDashboard: React.FC = () => {
       </div>
 
 
-      {/* Active Vehicle Handovers & Key Custody Section */}
-      {hostBookings.some((b) =>
-        [
-          'CONFIRMED',
-          'DRIVER_ARRIVED',
-          'ODOMETER_PHOTO_SUBMITTED',
-          'KEY_HANDOVER_PENDING',
-          'KEY_RECEIVED',
-          'PARKING_ACTIVE',
-          'ACTIVE',
-          'VEHICLE_COLLECTION_REQUESTED',
-        ].includes(b.status)
-      ) && (
-        <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 rounded-3xl p-6 shadow-xl border border-emerald-500/40 text-white space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-800/60 pb-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-400/30">
-                <KeyRound className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-black text-white flex items-center space-x-2">
-                  <span>Active Vehicle Handovers & Key Custody</span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                </h2>
-                <p className="text-xs text-emerald-200/80">
-                  Manage incoming driver arrivals, verify mileage inspection photos, and confirm key receipt & release.
-                </p>
-              </div>
-            </div>
 
-            <button
-              onClick={() => fetchData()}
-              className="text-xs font-bold text-emerald-300 hover:text-white bg-emerald-900/60 hover:bg-emerald-900 px-3.5 py-1.5 rounded-xl border border-emerald-700/60 transition flex items-center space-x-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Refresh Handovers</span>
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {hostBookings
-              .filter((b) =>
-                [
-                  'CONFIRMED',
-                  'DRIVER_ARRIVED',
-                  'ODOMETER_PHOTO_SUBMITTED',
-                  'KEY_HANDOVER_PENDING',
-                  'KEY_RECEIVED',
-                  'PARKING_ACTIVE',
-                  'ACTIVE',
-                  'VEHICLE_COLLECTION_REQUESTED',
-                ].includes(b.status)
-              )
-              .map((b) => {
-                const isArrivedOrPendingKey =
-                  b.status === 'DRIVER_ARRIVED' ||
-                  b.status === 'ODOMETER_PHOTO_SUBMITTED' ||
-                  b.status === 'KEY_HANDOVER_PENDING';
-                const isCollectionStage = b.status === 'VEHICLE_COLLECTION_REQUESTED';
-                const isParkingActive =
-                  b.status === 'PARKING_ACTIVE' || b.status === 'KEY_RECEIVED' || b.status === 'ACTIVE';
-
-                let exteriorParsed: Record<string, string> = {};
-                try {
-                  if (b.exterior_photos) exteriorParsed = JSON.parse(b.exterior_photos);
-                } catch {}
-
-                const activeOtp = generatedOtps[b.id];
-
-                return (
-                  <div
-                    key={b.id}
-                    className={`rounded-2xl p-5 border transition ${
-                      isCollectionStage
-                        ? 'bg-amber-950/40 border-amber-500/80 shadow-lg'
-                        : isArrivedOrPendingKey
-                        ? 'bg-slate-900/90 border-emerald-500/80 shadow-lg'
-                        : 'bg-slate-900/60 border-slate-700/80'
-                    }`}
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      {/* Left: Booking & Vehicle Info */}
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-xs font-mono font-bold bg-slate-800 text-emerald-400 border border-slate-700 px-3 py-1 rounded-full">
-                            Ref: #{b.booking_reference}
-                          </span>
-                          <span className="text-xs font-bold text-slate-300">
-                            Slot {b.space_number || 'A01'} • {b.listing?.title}
-                          </span>
-                          {isCollectionStage && (
-                            <span className="bg-amber-500 text-slate-950 font-black text-xs px-3 py-1 rounded-full animate-pulse">
-                              🚨 Collection Requested
-                            </span>
-                          )}
-                          {isArrivedOrPendingKey && (
-                            <span className="bg-purple-600 text-white font-bold text-xs px-3 py-1 rounded-full animate-pulse">
-                              Driver Arrived • Key Pending
-                            </span>
-                          )}
-                          {isParkingActive && (
-                            <span className="bg-emerald-600 text-white font-bold text-xs px-3 py-1 rounded-full">
-                              Key Received ✅ Parking Active
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-4 text-xs">
-                          <span className="text-white font-extrabold flex items-center space-x-1.5">
-                            <Car className="w-4 h-4 text-emerald-400" />
-                            <span>Plate: {b.vehicle?.registration_number || 'KA 01 AB 1234'}</span>
-                          </span>
-
-                          {b.odometer_reading && (
-                            <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 px-3 py-1 rounded-xl font-mono font-extrabold flex items-center space-x-1.5">
-                              <span>Odometer: {b.odometer_reading.toLocaleString()} KM</span>
-                              {b.odometer_photo_url && (
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedPhotoModal(b.odometer_photo_url!)}
-                                  className="text-emerald-400 hover:text-white underline text-[11px] ml-1 flex items-center space-x-0.5"
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
-                                  <span>View Photo</span>
-                                </button>
-                              )}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Exterior Photos thumbnails if any */}
-                        {Object.keys(exteriorParsed).length > 0 && (
-                          <div className="flex items-center space-x-2 pt-1">
-                            <span className="text-[11px] text-slate-400 font-bold uppercase">Exterior Photos:</span>
-                            <div className="flex space-x-2">
-                              {Object.entries(exteriorParsed).map(([side, url]) => (
-                                <button
-                                  key={side}
-                                  type="button"
-                                  onClick={() => setSelectedPhotoModal(url)}
-                                  className="group relative rounded-lg overflow-hidden border border-slate-700 hover:border-emerald-400 w-10 h-10 bg-black flex items-center justify-center"
-                                  title={`View ${side} photo`}
-                                >
-                                  <img src={url} alt={side} className="w-full h-full object-cover" />
-                                  <span className="absolute bottom-0 inset-x-0 bg-black/70 text-[8px] font-bold text-white text-center capitalize">
-                                    {side}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {b.damage_notes && (
-                          <p className="text-[11px] text-amber-300/90 bg-amber-950/30 p-2 rounded-xl border border-amber-900/50">
-                            <strong>Driver Inspection Notes:</strong> "{b.damage_notes}"
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Right: Actions */}
-                      <div className="flex flex-col sm:flex-row items-center gap-3">
-                        {isArrivedOrPendingKey && (
-                          <div className="space-y-1 text-center sm:text-right">
-                            <button
-                              onClick={() => handleConfirmKeyReceived(b.id)}
-                              disabled={actionLoading === b.id}
-                              className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-5 py-3 rounded-2xl text-xs transition shadow-lg flex items-center justify-center space-x-2 hover:scale-[1.02]"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                              <span>{actionLoading === b.id ? 'Confirming...' : '🔑 Confirm Key Received'}</span>
-                            </button>
-                            <span className="text-[10px] text-slate-400 block">
-                              🔒 Release OTP locked until collection
-                            </span>
-                          </div>
-                        )}
-
-                        {isParkingActive && (
-                          <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-xs text-center space-y-1">
-                            <span className="text-emerald-400 font-extrabold block">Key in Safe Custody</span>
-                            <span className="text-[10px] text-slate-400">
-                              Release OTP will activate when driver clicks "Collect My Vehicle".
-                            </span>
-                          </div>
-                        )}
-
-                        {isCollectionStage && (
-                          <div className="space-y-2 text-center sm:text-right">
-                            {activeOtp ? (
-                              <div className="bg-amber-950/80 border-2 border-amber-400 p-3.5 rounded-2xl space-y-1 text-center shadow-lg">
-                                <span className="text-[10px] text-amber-300 font-extrabold uppercase tracking-wider block">
-                                  Provide Release OTP to Driver
-                                </span>
-                                <span className="text-2xl font-black font-mono text-white tracking-widest block bg-black/60 px-4 py-1.5 rounded-xl border border-amber-500/60">
-                                  {activeOtp.otp}
-                                </span>
-                                <span className="text-[10px] text-amber-200/80 block">
-                                  Valid for 10 min • Driver verifies on their phone
-                                </span>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleGenerateReleaseOtp(b.id)}
-                                disabled={actionLoading === b.id}
-                                className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black px-6 py-3.5 rounded-2xl text-xs transition shadow-xl flex items-center justify-center space-x-2 hover:scale-[1.02]"
-                              >
-                                <Lock className="w-4 h-4" />
-                                <span>
-                                  {actionLoading === b.id
-                                    ? 'Generating...'
-                                    : '🔐 Generate Vehicle Release OTP'}
-                                </span>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-      )}
 
       {/* Compact & Attractive Host Identity Verification Card */}
       {verificationStatus?.is_identity_verified ? (
@@ -1041,32 +788,7 @@ export const HostDashboard: React.FC = () => {
         }}
       />
 
-      {/* Odometer / Inspection Photo Full Zoom Modal */}
-      {selectedPhotoModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-5 max-w-lg w-full space-y-4 text-center shadow-2xl relative">
-            <button
-              onClick={() => setSelectedPhotoModal(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 text-lg font-bold"
-            >
-              ✕
-            </button>
-            <h3 className="text-base font-extrabold text-white flex items-center justify-center space-x-2">
-              <Camera className="w-5 h-5 text-emerald-400" />
-              <span>Inspection Photo Record</span>
-            </h3>
-            <div className="rounded-2xl overflow-hidden border border-slate-700 bg-black max-h-96 flex items-center justify-center">
-              <img src={selectedPhotoModal} alt="Inspection" className="max-h-96 w-auto object-contain" />
-            </div>
-            <button
-              onClick={() => setSelectedPhotoModal(null)}
-              className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* Space Listing Delete Confirmation Modal */}
       {deleteConfirmListing && (
