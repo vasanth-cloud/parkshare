@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
-  PlusCircle, 
   LayoutDashboard, 
-  KeyRound, 
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -95,28 +93,20 @@ export const Navbar: React.FC = () => {
                         <Link
                           to="/dashboard"
                           onClick={() => setShowManageDropdown(false)}
-                          className="flex items-center space-x-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
+                          className="flex items-center space-x-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
                         >
-                          <span>🅿️</span>
+                          <span className="text-base">🅿️</span>
                           <div className="flex flex-col">
                             <span className="font-bold">Parking Bays</span>
                             <span className="text-[10px] text-gray-400">View & edit listings</span>
                           </div>
                         </Link>
                         <Link
-                          to="/create-listing"
-                          onClick={() => setShowManageDropdown(false)}
-                          className="flex items-center space-x-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
-                        >
-                          <PlusCircle className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="font-bold">Add Parking Space</span>
-                        </Link>
-                        <Link
                           to="/register/driver"
                           onClick={() => setShowManageDropdown(false)}
-                          className="flex items-center space-x-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
+                          className="flex items-center space-x-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
                         >
-                          <span>🧑‍✈️</span>
+                          <span className="text-base">🧑‍✈️</span>
                           <div className="flex flex-col">
                             <span className="font-bold">Acting Driver</span>
                             <span className="text-[10px] text-gray-400">Manage chauffeur gig</span>
@@ -125,22 +115,13 @@ export const Navbar: React.FC = () => {
                         <Link
                           to="/register/car-spa"
                           onClick={() => setShowManageDropdown(false)}
-                          className="flex items-center space-x-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
+                          className="flex items-center space-x-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
                         >
-                          <span>✨</span>
+                          <span className="text-base">✨</span>
                           <div className="flex flex-col">
                             <span className="font-bold">Car Spa Partner</span>
                             <span className="text-[10px] text-gray-400">Mobile & bay wash</span>
                           </div>
-                        </Link>
-                        <div className="border-t border-gray-100 dark:border-slate-800 my-1"></div>
-                        <Link
-                          to="/pin-verify"
-                          onClick={() => setShowManageDropdown(false)}
-                          className="flex items-center space-x-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
-                        >
-                          <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="font-bold">Check-in PIN</span>
                         </Link>
                       </div>
                     )}
