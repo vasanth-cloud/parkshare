@@ -8,6 +8,13 @@ function resolveBackendBase(): string {
     return rawApiUrl.replace(/\/+$/, '');
   }
   if (typeof window !== 'undefined') {
+    const port = window.location.port;
+    // When served via Vite dev server (port 5174 on localhost or phone 192.168.1.17:5174)
+    // Always use relative '' so requests go through Vite's local proxy to localhost:8000.
+    // This avoids cross-origin blocks and uvicorn IP binding issues on mobile phones!
+    if (port === '5174' || port === '5173') {
+      return '';
+    }
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
       return 'http://localhost:8000';
@@ -34,6 +41,10 @@ export function getFullImageUrl(url?: string): string {
   if (uploadsIdx !== -1) {
     const uploadPath = url.substring(uploadsIdx);
     if (typeof window !== 'undefined') {
+      const port = window.location.port;
+      if (port === '5174' || port === '5173') {
+        return uploadPath;
+      }
       const host = window.location.hostname;
       if (host === 'localhost' || host === '127.0.0.1') {
         return uploadPath;

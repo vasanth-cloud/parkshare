@@ -8,14 +8,12 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api': {
-        target: 'https://parkshare-backend-9anh.onrender.com',
+        target: 'http://localhost:8000',
         changeOrigin: true,
-        secure: false,
       },
       '/uploads': {
-        target: 'https://parkshare-backend-9anh.onrender.com',
+        target: 'http://localhost:8000',
         changeOrigin: true,
-        secure: false,
       },
     },
   },

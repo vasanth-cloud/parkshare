@@ -7,6 +7,10 @@ function resolveBackendBase(): string {
     return rawApiUrl.replace(/\/+$/, '');
   }
   if (typeof window !== 'undefined') {
+    const port = window.location.port;
+    if (port === '5173' || port === '5174') {
+      return '';
+    }
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
       return 'http://localhost:8000';
