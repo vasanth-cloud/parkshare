@@ -3,6 +3,12 @@ import { User, Vehicle, ParkingListing, Booking, Review } from '../types';
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
 
 function resolveBackendBase(): string {
+  // If running inside Capacitor Native Android/iOS App
+  const isCapacitor = typeof window !== 'undefined' && Boolean((window as any).Capacitor?.isNativePlatform?.() || (window as any).Capacitor?.platform === 'android' || (window as any).Capacitor?.platform === 'ios');
+  if (isCapacitor) {
+    return 'https://parkshare-backend-9anh.onrender.com';
+  }
+
   if (rawApiUrl) {
     return rawApiUrl.replace(/\/+$/, '');
   }
@@ -13,7 +19,7 @@ function resolveBackendBase(): string {
     }
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
-      return 'http://localhost:8000';
+      return 'https://parkshare-backend-9anh.onrender.com';
     }
     if (host === '10.0.2.2') {
       return 'http://10.0.2.2:8000';
@@ -22,7 +28,7 @@ function resolveBackendBase(): string {
       return `http://${host}:8000`;
     }
   }
-  return 'http://192.168.1.17:8000';
+  return 'https://parkshare-backend-9anh.onrender.com';
 }
 
 export const BACKEND_BASE = resolveBackendBase();

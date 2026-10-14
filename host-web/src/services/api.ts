@@ -4,20 +4,23 @@ import { User, ParkingListing, Booking, HostSummary, VerificationStatus, DriverP
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
 
 function resolveBackendBase(): string {
+  // If running inside Capacitor Native Android/iOS App
+  const isCapacitor = typeof window !== 'undefined' && Boolean((window as any).Capacitor?.isNativePlatform?.() || (window as any).Capacitor?.platform === 'android' || (window as any).Capacitor?.platform === 'ios');
+  if (isCapacitor) {
+    return 'https://parkshare-backend-9anh.onrender.com';
+  }
+
   if (rawApiUrl) {
     return rawApiUrl.replace(/\/+$/, '');
   }
   if (typeof window !== 'undefined') {
     const port = window.location.port;
-    // When served via Vite dev server (port 5174 on localhost or phone 192.168.1.17:5174)
-    // Always use relative '' so requests go through Vite's local proxy to localhost:8000.
-    // This avoids cross-origin blocks and uvicorn IP binding issues on mobile phones!
     if (port === '5174' || port === '5173') {
       return '';
     }
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
-      return 'http://localhost:8000';
+      return 'https://parkshare-backend-9anh.onrender.com';
     }
     if (host === '10.0.2.2') {
       return 'http://10.0.2.2:8000';
@@ -26,7 +29,7 @@ function resolveBackendBase(): string {
       return `http://${host}:8000`;
     }
   }
-  return 'http://192.168.1.17:8000';
+  return 'https://parkshare-backend-9anh.onrender.com';
 }
 
 export const BACKEND_BASE = resolveBackendBase();
