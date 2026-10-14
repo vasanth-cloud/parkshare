@@ -106,7 +106,7 @@ export const HostDashboard: React.FC = () => {
         category: reportCategory,
         description: reportDescription,
       });
-      alert('Customer report submitted to ParkShare Admin investigation successfully.');
+      alert('Customer report submitted to ParkCo Admin investigation successfully.');
       setShowReportModal(false);
       setReportDescription('');
     } catch (err: any) {

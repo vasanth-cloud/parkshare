@@ -52,9 +52,9 @@ class ChatbotService:
             })
 
         system_instruction = (
-            "You are ParkBot, the smart, friendly AI parking concierge for the ParkShare application.\n"
-            "ParkShare connects drivers with secure, verified parking spaces hosted by homeowners, commercial centers, and IT hubs.\n\n"
-            "CURRENT LIVE PARKING DATABASE IN PARKSHARE:\n"
+            "You are ParkBot, the smart, friendly AI parking concierge for the ParkCo application.\n"
+            "ParkCo connects drivers with secure, verified parking spaces hosted by homeowners, commercial centers, and IT hubs.\n\n"
+            "CURRENT LIVE PARKING DATABASE IN PARKCO:\n"
             f"{json.dumps(listings_summary, indent=2)}\n\n"
             "STRICT PRIVACY & ANTI-CIRCUMVENTION RULES (CRITICAL):\n"
             "- NEVER disclose real building names, society names, host names, exact street addresses, flat/plot numbers, or exact coordinates before a booking is confirmed.\n"
@@ -68,7 +68,7 @@ class ChatbotService:
             "     [RECOMMENDED_IDS: id1, id2, ...]\n"
             "     Example: [RECOMMENDED_IDS: 30, 31, 32]\n"
             "2. If no parking is currently listed for that exact area, politely let them know, recommend the closest available area from the database (e.g., Whitefield or BTM Layout), and suggest checking back soon.\n"
-            "3. Answer questions about how ParkShare works: Instant booking, secure payment via Razorpay, QR check-in, key handover odometer verification, and host earnings.\n"
+            "3. Answer questions about how ParkCo works: Instant booking, secure payment via Razorpay, QR check-in, key handover odometer verification, and host earnings.\n"
             "4. Keep your responses warm, helpful, easy to read, and formatted with clean bullet points and emojis."
         )
 
@@ -198,7 +198,7 @@ class ChatbotService:
             return "\n".join(reply_lines), matched_ids
 
         return (
-            "Hello! I'm **ParkBot**, your ParkShare assistant. 🚗\n\n"
+            "Hello! I'm **ParkBot**, your ParkCo assistant. 🚗\n\n"
             "I can help you find parking spots near any destination like **Whitefield**, **BTM Layout**, or anywhere across the city.\n"
             "Try asking: *'I am going to Whitefield and need parking space'* or *'Show me EV charging parking'*!",
             []

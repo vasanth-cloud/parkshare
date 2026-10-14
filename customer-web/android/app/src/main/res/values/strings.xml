@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">ParkShare</string>
-    <string name="title_activity_main">ParkShare</string>
+    <string name="app_name">ParkCo</string>
+    <string name="title_activity_main">ParkCo</string>
     <string name="package_name">com.parkshare.customer</string>
     <string name="custom_url_scheme">com.parkshare.customer</string>
 </resources>

@@ -161,7 +161,7 @@ export const CarSpaPage: React.FC = () => {
           <div className="flex items-center space-x-2">
             <span className="text-xs font-black bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-cyan-500" />
-              ParkShare Auto Spa
+              ParkCo Auto Spa
             </span>
           </div>
         </div>
@@ -182,7 +182,7 @@ export const CarSpaPage: React.FC = () => {
               Premium <span className="bg-gradient-to-r from-cyan-400 to-emerald-300 bg-clip-text text-transparent">Car Spa & Detailing</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
-              Get showroom shine while your car is parked at home, office, or inside your reserved ParkShare parking spot. We bring our own high-tech water & power units!
+              Get showroom shine while your car is parked at home, office, or inside your reserved ParkCo parking spot. We bring our own high-tech water & power units!
             </p>
           </div>
 
@@ -323,7 +323,7 @@ export const CarSpaPage: React.FC = () => {
                 >
                   <Sparkles className="w-4 h-4 text-emerald-600 mb-1" />
                   <div className="text-xs font-black">At Parking Bay</div>
-                  <div className="text-[10px] text-slate-500">Wash while parked in ParkShare</div>
+                  <div className="text-[10px] text-slate-500">Wash while parked in ParkCo</div>
                 </button>
               </div>
 

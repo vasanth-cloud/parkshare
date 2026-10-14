@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { MapPin, Calendar, User } from 'lucide-react';
+import { MapPin, Calendar, User, LayoutGrid } from 'lucide-react';
 
 interface BottomNavProps {
   onOpenChat?: () => void;
@@ -8,7 +8,8 @@ interface BottomNavProps {
 
 export const BottomNav: React.FC<BottomNavProps> = () => {
   const navItems = [
-    { to: '/', label: 'Find Parking', icon: MapPin },
+    { to: '/', label: 'Parking', icon: MapPin },
+    { to: '/services', label: 'Services', icon: LayoutGrid },
     { to: '/bookings', label: 'Bookings', icon: Calendar },
     { to: '/profile', label: 'Profile', icon: User },
   ];

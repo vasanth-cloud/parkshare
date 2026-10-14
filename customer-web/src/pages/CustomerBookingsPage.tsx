@@ -19,6 +19,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { ActiveParkingCard } from '../components/ActiveParkingCard';
+import { GooglePaySuccessCelebration, CelebrationData } from '../components/GooglePaySuccessCelebration';
 
 const PRESET_REVIEW_TAGS = [
   '🛡️ Safe & Secure',
@@ -55,18 +56,50 @@ export const CustomerBookingsPage: React.FC = () => {
 
   const [payingBookingId, setPayingBookingId] = useState<number | null>(null);
 
-  const fetchBookings = () => {
-    setLoading(true);
+  // Google Pay Style Finished Celebration State
+  const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
+
+  const fetchBookings = (silent = false) => {
+    if (!silent) setLoading(true);
     api.getMyBookings()
       .then((data) => {
-        setParkingBookings(data || []);
+        const freshList = data || [];
+        setParkingBookings((prev) => {
+          // Detect if any booking transitioned from pending arrival to PARKING_ACTIVE!
+          freshList.forEach((newB) => {
+            const oldB = prev.find((o) => o.id === newB.id);
+            if (oldB) {
+              const justBecameActive =
+                (oldB.status === 'CONFIRMED' || oldB.status === 'DRIVER_ARRIVED' || oldB.status === 'BOOKING_CREATED') &&
+                (newB.status === 'PARKING_ACTIVE' || newB.status === 'ACTIVE');
+
+              if (justBecameActive) {
+                setCelebrationData({
+                  title: 'Gate Access Verified!',
+                  subtitle: 'Vehicle safely checked in. Enjoy your parking session!',
+                  reference: newB.booking_reference,
+                  spot: newB.listing?.title,
+                  bay: newB.space_number || 'A01',
+                });
+              }
+            }
+          });
+          return freshList;
+        });
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   };
 
   useEffect(() => {
-    fetchBookings();
+    fetchBookings(false);
+    // Silent auto-refresh polling every 2.5s so driver screen updates live without manual reload
+    const interval = setInterval(() => {
+      fetchBookings(true);
+    }, 2500);
+    return () => clearInterval(interval);
   }, []);
 
   // Filter Parking Active vs History
@@ -93,7 +126,7 @@ export const CustomerBookingsPage: React.FC = () => {
         key: orderData.key_id,
         amount: orderData.amount,
         currency: orderData.currency || 'INR',
-        name: 'ParkShare Parking',
+        name: 'ParkCo Parking',
         description: `Reserve spot at ${b.listing?.title || 'Parking Space'}`,
         order_id: orderData.order_id,
         prefill: {
@@ -333,13 +366,20 @@ export const CustomerBookingsPage: React.FC = () => {
                       <ActiveParkingCard
                         key={`pkg-${b.id}`}
                         booking={b}
-                        onRefresh={fetchBookings}
+                        onRefresh={() => fetchBookings(false)}
                         onTripCompleted={(completedBooking) => {
+                          setCelebrationData({
+                            title: 'Trip Completed Successfully!',
+                            subtitle: 'Checkout verified. Thank you for parking with ParkCo!',
+                            reference: completedBooking.booking_reference,
+                            spot: completedBooking.listing?.title,
+                            bay: completedBooking.space_number || 'A01',
+                          });
                           setReviewBooking(completedBooking);
                           setReviewRating(5);
                           setSelectedTags(['🛡️ Safe & Secure', '🚗 Easy Gate Access']);
                           setReviewComment('');
-                          fetchBookings();
+                          fetchBookings(false);
                         }}
                       />
                     );
@@ -700,6 +740,13 @@ export const CustomerBookingsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Google Pay Style Success Celebration Modal */}
+      {celebrationData && (
+        <GooglePaySuccessCelebration
+          data={celebrationData}
+          onDismiss={() => setCelebrationData(null)}
+        />
+      )}
     </div>
   );
 };

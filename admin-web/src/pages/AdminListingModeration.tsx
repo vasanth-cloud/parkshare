@@ -752,7 +752,7 @@ export const AdminListingModeration: React.FC = () => {
                         Listing Under Moderation
                       </div>
                       <h2 className="text-xl font-black text-white flex items-center space-x-2">
-                        <span>ParkShare #PS-{10000 + l.id}</span>
+                        <span>ParkCo #PS-{10000 + l.id}</span>
                         <span className="text-slate-500 font-normal">—</span>
                         <span className="text-emerald-300 text-lg font-semibold">{l.title}</span>
                       </h2>

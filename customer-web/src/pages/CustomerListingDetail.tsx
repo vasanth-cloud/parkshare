@@ -30,6 +30,29 @@ import {
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80';
 
+// Helper to parse tags and text from driver reviews
+const parseReviewComment = (raw?: string) => {
+  if (!raw) return { tags: [] as string[], text: '' };
+
+  // Format 1: "[Tag 1, Tag 2] — Comment text" or "[Tag 1, Tag 2]"
+  const matchBracket = raw.match(/^\[(.*?)\](?:\s*—\s*(.*))?$/s);
+  if (matchBracket) {
+    const tagPart = matchBracket[1];
+    const textPart = matchBracket[2] || '';
+    const tags = tagPart.split(',').map((t) => t.trim()).filter(Boolean);
+    return { tags, text: textPart.trim() };
+  }
+
+  // Format 2: Comma-separated list with emojis or short tokens
+  const commaParts = raw.split(',').map((s) => s.trim());
+  const looksLikeTags = commaParts.length > 1 && commaParts.every((p) => /[\u{1F300}-\u{1F9FF}]/u.test(p) || p.length < 35);
+  if (looksLikeTags) {
+    return { tags: commaParts, text: '' };
+  }
+
+  return { tags: [] as string[], text: raw };
+};
+
 export const CustomerListingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -45,6 +68,8 @@ export const CustomerListingDetail: React.FC = () => {
   // Reviews from verified drivers
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loadingReviews, setLoadingReviews] = useState<boolean>(true);
+  const [showReviewsOverview, setShowReviewsOverview] = useState<boolean>(false);
+  const [reviewRatingFilter, setReviewRatingFilter] = useState<number | 'ALL'>('ALL');
 
   // Plan selection: HOURLY, DAILY, MONTHLY_FULL
   const [selectedPlan, setSelectedPlan] = useState<'HOURLY' | 'DAILY' | 'MONTHLY_FULL'>('HOURLY');
@@ -205,7 +230,7 @@ export const CustomerListingDetail: React.FC = () => {
         key: orderData.key_id || 'rzp_test_TjLLsOAid1sNkb',
         amount: orderData.amount_in_paise || Math.round((orderData.amount || existingBooking.total_amount) * 100),
         currency: orderData.currency || 'INR',
-        name: 'ParkShare Parking',
+        name: 'ParkCo Parking',
         description: `Booking #${existingBooking.booking_reference} - ${listing!.title}`,
         order_id: orderData.order_id,
         prefill: {
@@ -293,7 +318,7 @@ export const CustomerListingDetail: React.FC = () => {
         key: orderData.key_id || 'rzp_test_TjLLsOAid1sNkb',
         amount: orderData.amount_in_paise || Math.round((orderData.amount || newBooking.total_amount) * 100),
         currency: orderData.currency || 'INR',
-        name: 'ParkShare Parking',
+        name: 'ParkCo Parking',
         description: `Booking #${newBooking.booking_reference} - ${listing!.title}`,
         order_id: orderData.order_id,
         prefill: {
@@ -366,6 +391,40 @@ export const CustomerListingDetail: React.FC = () => {
 
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
 
+  // Reviews overview calculations
+  const totalReviewsCount = reviews.length;
+  const computedAvgRating = listing.average_rating > 0
+    ? listing.average_rating
+    : totalReviewsCount > 0
+    ? reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviewsCount
+    : 0;
+
+  const ratingCounts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  const tagFrequency: Record<string, number> = {};
+  let firstSnippet = '';
+
+  reviews.forEach((r) => {
+    if (r.rating >= 1 && r.rating <= 5) {
+      ratingCounts[r.rating] = (ratingCounts[r.rating] || 0) + 1;
+    }
+    const { tags, text } = parseReviewComment(r.comment);
+    tags.forEach((t) => {
+      tagFrequency[t] = (tagFrequency[t] || 0) + 1;
+    });
+    if (!firstSnippet && text) {
+      firstSnippet = text;
+    }
+  });
+
+  const topTags = Object.entries(tagFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .map(([tag, count]) => ({ tag, count }));
+
+  const filteredReviews = reviews.filter((r) => {
+    if (reviewRatingFilter === 'ALL') return true;
+    return r.rating === reviewRatingFilter;
+  });
+
   return (
     <div className="min-h-screen bg-[#F6F8FA] dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-28">
       {/* Top Navigation Bar */}
@@ -388,10 +447,15 @@ export const CustomerListingDetail: React.FC = () => {
             Verified Parking Bay
           </p>
         </div>
-        <div className="flex items-center space-x-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full text-xs font-bold shadow-xs">
+        <button
+          type="button"
+          onClick={() => setShowReviewsOverview(true)}
+          className="flex items-center space-x-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full text-xs font-bold shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+          title="View reviews and ratings overview"
+        >
           <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-          <span>{listing.average_rating || '4.9'}</span>
-        </div>
+          <span>{computedAvgRating > 0 ? computedAvgRating.toFixed(1) : (totalReviewsCount > 0 ? computedAvgRating.toFixed(1) : '4.9')}</span>
+        </button>
       </div>
 
       <div className="max-w-lg mx-auto px-4 pt-3 space-y-4">
@@ -841,7 +905,7 @@ export const CustomerListingDetail: React.FC = () => {
                     </span>
                   </div>
                   <span className="text-[10px] text-slate-400 block font-medium">
-                    Host on ParkShare • {listing.host_type || 'INDIVIDUAL'}
+                    Host on ParkCo • {listing.host_type || 'INDIVIDUAL'}
                   </span>
                 </div>
               </div>
@@ -885,101 +949,66 @@ export const CustomerListingDetail: React.FC = () => {
         </div>
 
         {/* ========================================================================= */}
-        {/* DRIVER RATINGS & REVIEWS (Visible to space owner & prospective drivers)  */}
+        {/* DRIVER RATINGS & REVIEWS (Simple / Compact Card with Overview Modal)      */}
         {/* ========================================================================= */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div>
-              <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center space-x-1.5">
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <span>Driver Reviews & Ratings</span>
-              </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Verified feedback from drivers who completed parking sessions here
-              </p>
-            </div>
-            {listing.average_rating > 0 ? (
-              <div className="text-right">
-                <div className="flex items-center space-x-1 justify-end">
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <span className="text-base font-black text-slate-900 dark:text-white">
-                    {listing.average_rating.toFixed(1)}
-                  </span>
-                  <span className="text-xs text-slate-400">/ 5.0</span>
-                </div>
-                <span className="text-[10px] text-slate-500 font-bold block">
-                  {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
-                </span>
+        <div
+          onClick={() => setShowReviewsOverview(true)}
+          className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-blue-400 dark:hover:border-blue-500/80 hover:shadow-md transition-all cursor-pointer group space-y-3"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800 flex items-center justify-center text-amber-500 shadow-xs group-hover:scale-105 transition transform">
+                <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
               </div>
-            ) : (
-              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
-                ★ New Space
-              </span>
-            )}
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-black text-slate-900 dark:text-white">
+                    {computedAvgRating > 0 ? `${computedAvgRating.toFixed(1)} / 5.0` : 'New Space'}
+                  </span>
+                  <span className="text-xs text-slate-400 font-bold">
+                    • {totalReviewsCount} {totalReviewsCount === 1 ? 'review' : 'reviews'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Verified driver feedback & ratings overview
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-1.5 text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 group-hover:bg-blue-600 group-hover:text-white transition">
+              <span>View Overview</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition transform" />
+            </div>
           </div>
 
-          {loadingReviews ? (
-            <div className="py-6 text-center text-xs text-slate-400">Loading driver reviews...</div>
-          ) : reviews.length === 0 ? (
-            <div className="py-6 px-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center space-y-1.5">
-              <span className="text-2xl block">🅿️</span>
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-200">No driver reviews yet</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-                Be the first driver to book this driveway space and share your verified experience!
+          {/* Quick Preview of Top Praise Tags & Latest Review Snippet */}
+          {topTags.length > 0 ? (
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {topTags.slice(0, 3).map(({ tag, count }) => (
+                  <span
+                    key={tag}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50"
+                  >
+                    {tag} {count > 1 ? `(${count})` : ''}
+                  </span>
+                ))}
+              </div>
+              {firstSnippet && (
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 italic line-clamp-1">
+                  “{firstSnippet}”
+                </p>
+              )}
+            </div>
+          ) : totalReviewsCount > 0 && firstSnippet ? (
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 italic line-clamp-1">
+                “{firstSnippet}”
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {reviews.map((r) => {
-                return (
-                  <div
-                    key={`review-${r.id}`}
-                    className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-2 hover:border-slate-300 transition"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2.5">
-                        <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-black text-xs flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
-                          {r.user_name ? r.user_name.charAt(0).toUpperCase() : 'P'}
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-1.5">
-                            <span className="text-xs font-extrabold text-slate-900 dark:text-white">
-                              {r.user_name || 'Verified Driver'}
-                            </span>
-                            <span className="inline-flex items-center space-x-0.5 text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded-md">
-                              <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
-                              <span>Verified Parker</span>
-                            </span>
-                          </div>
-                          <span className="text-[10px] text-slate-400 block font-medium">
-                            {new Date(r.created_at).toLocaleDateString(undefined, {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Stars */}
-                      <div className="flex items-center space-x-0.5 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`w-3 h-3 ${star <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'}`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {r.comment && (
-                      <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed pl-1 pt-0.5">
-                        {r.comment}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 dark:text-slate-500">
+              {totalReviewsCount === 0 ? 'No driver reviews yet. Click to view overview.' : 'Tap to view the complete rating breakdown and reviews.'}
             </div>
           )}
         </div>
@@ -1032,6 +1061,255 @@ export const CustomerListingDetail: React.FC = () => {
             </div>
             <div className="rounded-2xl overflow-hidden bg-black flex items-center justify-center max-h-[70vh]">
               <img src={inspectImage} alt="Parking space" className="w-full h-auto object-contain max-h-[70vh]" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DRIVER RATINGS & REVIEWS OVERVIEW MODAL                                   */}
+      {/* ========================================================================= */}
+      {showReviewsOverview && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
+          onClick={() => setShowReviewsOverview(false)}
+        >
+          <div
+            className="relative max-w-lg w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[88vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800 flex items-center justify-center text-amber-500">
+                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                    Reviews & Ratings Overview
+                  </h3>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Verified driver feedback for this parking bay
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReviewsOverview(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-5 overflow-y-auto space-y-5">
+              {/* Score & Rating Breakdown Section */}
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200/60 dark:border-slate-700/60">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                  {/* Left: Overall Score */}
+                  <div className="sm:col-span-5 text-center sm:text-left sm:border-r sm:border-slate-200 dark:sm:border-slate-700 sm:pr-4">
+                    <div className="text-3xl font-black text-slate-900 dark:text-white leading-none">
+                      {computedAvgRating > 0 ? computedAvgRating.toFixed(1) : '—'}
+                    </div>
+                    <div className="flex items-center justify-center sm:justify-start space-x-1 my-1.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`w-3.5 h-3.5 ${
+                            star <= Math.round(computedAvgRating)
+                              ? 'fill-amber-400 text-amber-400'
+                              : 'text-slate-300 dark:text-slate-600'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {totalReviewsCount} {totalReviewsCount === 1 ? 'verified review' : 'verified reviews'}
+                    </div>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center justify-center sm:justify-start gap-1 mt-0.5">
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>100% Verified Parkers</span>
+                    </span>
+                  </div>
+
+                  {/* Right: Star Distribution Bars */}
+                  <div className="sm:col-span-7 space-y-1.5">
+                    {[5, 4, 3, 2, 1].map((stars) => {
+                      const count = ratingCounts[stars] || 0;
+                      const pct = totalReviewsCount > 0 ? Math.round((count / totalReviewsCount) * 100) : 0;
+                      return (
+                        <div key={stars} className="flex items-center space-x-2 text-[11px]">
+                          <span className="w-5 font-bold text-slate-600 dark:text-slate-400 text-right">{stars}★</span>
+                          <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-amber-400 rounded-full transition-all duration-300"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="w-8 font-mono text-[10px] text-slate-400 text-right">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Verified Driver Praise Highlights */}
+              {topTags.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
+                    Driver Highlights
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {topTags.map(({ tag, count }) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center space-x-1.5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 px-2.5 py-1 rounded-xl text-xs font-bold"
+                      >
+                        <span>{tag}</span>
+                        <span className="bg-emerald-200/60 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 text-[10px] px-1.5 py-0.2 rounded-full font-extrabold">
+                          {count}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Review Filter Pills */}
+              {totalReviewsCount > 0 && (
+                <div className="flex items-center space-x-1.5 overflow-x-auto pb-1">
+                  <button
+                    type="button"
+                    onClick={() => setReviewRatingFilter('ALL')}
+                    className={`text-[11px] font-bold px-3 py-1 rounded-full transition cursor-pointer ${
+                      reviewRatingFilter === 'ALL'
+                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                    }`}
+                  >
+                    All ({totalReviewsCount})
+                  </button>
+                  {[5, 4, 3, 2, 1].map((st) => {
+                    const count = ratingCounts[st] || 0;
+                    if (count === 0) return null;
+                    return (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setReviewRatingFilter(st)}
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center space-x-1 transition cursor-pointer ${
+                          reviewRatingFilter === st
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                        }`}
+                      >
+                        <span>{st} ★</span>
+                        <span className="opacity-80 font-normal">({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Detailed Reviews List */}
+              <div className="space-y-3">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
+                  Verified Reviews ({filteredReviews.length})
+                </span>
+
+                {loadingReviews ? (
+                  <div className="py-8 text-center text-xs text-slate-400">Loading reviews...</div>
+                ) : filteredReviews.length === 0 ? (
+                  <div className="py-8 px-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center space-y-1.5">
+                    <span className="text-2xl block">🅿️</span>
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      {totalReviewsCount === 0 ? 'No driver reviews yet' : 'No reviews match this rating filter'}
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
+                      {totalReviewsCount === 0
+                        ? 'Be the first driver to book this driveway space and share your verified experience!'
+                        : 'Try selecting All or a different star rating filter.'}
+                    </p>
+                  </div>
+                ) : (
+                  filteredReviews.map((r) => {
+                    const { tags, text } = parseReviewComment(r.comment);
+                    return (
+                      <div
+                        key={`modal-review-${r.id}`}
+                        className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-2 hover:border-slate-300 transition"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2.5">
+                            <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-black text-xs flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
+                              {r.user_name ? r.user_name.charAt(0).toUpperCase() : 'P'}
+                            </div>
+                            <div>
+                              <div className="flex items-center space-x-1.5">
+                                <span className="text-xs font-extrabold text-slate-900 dark:text-white">
+                                  {r.user_name || 'Verified Driver'}
+                                </span>
+                                <span className="inline-flex items-center space-x-0.5 text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded-md">
+                                  <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
+                                  <span>Verified Parker</span>
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 block font-medium">
+                                {new Date(r.created_at).toLocaleDateString(undefined, {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-0.5 bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-3 h-3 ${star <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-0.5">
+                            {tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {text && (
+                          <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed pt-0.5">
+                            {text}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-center">
+              <button
+                type="button"
+                onClick={() => setShowReviewsOverview(false)}
+                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                Close Overview
+              </button>
             </div>
           </div>
         </div>

@@ -14,7 +14,7 @@ def send_mobile_sms_otp(phone_number: str, otp: str) -> tuple[bool, str]:
     clean_phone = re.sub(r'[^0-9]', '', phone_number)
     # If starting with 91 and 12 digits, strip country code for Indian local gateways if needed
     local_10_digit = clean_phone[-10:] if len(clean_phone) >= 10 else clean_phone
-    sms_body = f"Your ParkShare Host Verification OTP is {otp}. Valid for 10 minutes. Do not share with anyone."
+    sms_body = f"Your ParkCo Host Verification OTP is {otp}. Valid for 10 minutes. Do not share with anyone."
 
     # Always log clearly in the backend console
     print(f"\n=======================================================")
@@ -48,7 +48,7 @@ def send_mobile_sms_otp(phone_number: str, otp: str) -> tuple[bool, str]:
                     data_q = {}
 
                 if resp_q.status_code == 200 and data_q.get("return") is True:
-                    msg = "ParkShare Custom SMS delivered successfully to mobile device"
+                    msg = "ParkCo Custom SMS delivered successfully to mobile device"
                     logger.info(msg)
                     return True, msg
 
@@ -103,5 +103,5 @@ def send_mobile_sms_otp(phone_number: str, otp: str) -> tuple[bool, str]:
             logger.error(f"Twilio delivery error to {phone_number}: {e}")
             return False, f"Twilio network error: {str(e)}"
 
-    logger.info(f"SMS API key not set in .env. Dispatched via ParkShare SMS Engine simulator for {phone_number}.")
+    logger.info(f"SMS API key not set in .env. Dispatched via ParkCo SMS Engine simulator for {phone_number}.")
     return False, "SMS Gateway not configured in .env"

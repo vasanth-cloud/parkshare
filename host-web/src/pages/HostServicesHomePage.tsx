@@ -121,11 +121,11 @@ export const HostServicesHomePage: React.FC = () => {
           <div className="flex items-center space-x-2 sm:space-x-2.5">
             <img 
               src="/logo.png" 
-              alt="ParkShare Logo" 
+              alt="ParkCo Logo" 
               className="h-8 w-8 object-contain rounded-xl bg-emerald-50 dark:bg-slate-800 p-1 border border-emerald-100 dark:border-slate-700 shadow-2xs" 
             />
             <div className="flex items-baseline">
-              <span className="font-black text-lg tracking-tight text-gray-900 dark:text-white">ParkShare</span>
+              <span className="font-black text-lg tracking-tight text-gray-900 dark:text-white">ParkCo</span>
               <span className="font-extrabold text-lg tracking-tight text-[#0f8b5f] dark:text-emerald-400 ml-1">Host</span>
             </div>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
@@ -181,7 +181,7 @@ export const HostServicesHomePage: React.FC = () => {
             <span className="text-xl">🎉</span>
             <div className="min-w-0">
               <span className="text-xs font-black block leading-tight">
-                Welcome to ParkShare Partner Network!
+                Welcome to ParkCo Partner Network!
               </span>
               <span className="text-[11px] text-emerald-100 block">
                 Select your partner service below to get started. You can manage your parking space first, and return anytime to register as an Acting Driver or Car Spa Partner.
@@ -198,7 +198,7 @@ export const HostServicesHomePage: React.FC = () => {
           {/* Greeting */}
           <div>
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-              <span>{user ? `Hello, ${user.full_name?.split(' ')[0]}` : 'Welcome to ParkShare'}</span>
+              <span>{user ? `Hello, ${user.full_name?.split(' ')[0]}` : 'Welcome to ParkCo'}</span>
               <span>👋</span>
             </div>
             <h1 className="text-xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">

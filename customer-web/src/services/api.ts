@@ -58,7 +58,7 @@ async function safeFetch(url: string, options?: RequestInit): Promise<Response> 
     return await fetch(url, options);
   } catch (err: any) {
     if (err.name === 'TypeError' || err.message?.toLowerCase().includes('fetch')) {
-      throw new Error(`Unable to reach ParkShare server at ${BACKEND_BASE}. Please verify that the backend is started.`);
+      throw new Error(`Unable to reach ParkCo server at ${BACKEND_BASE}. Please verify that the backend is started.`);
     }
     throw err;
   }

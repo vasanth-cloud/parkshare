@@ -585,7 +585,7 @@ export const BottomNav: React.FC = () => {
 
                 {/* Quick Info & Compliance */}
                 <div className="flex items-center justify-between px-2 text-[11px] text-gray-400 dark:text-slate-500">
-                  <span>ParkShare Partner v1.0</span>
+                  <span>ParkCo Partner v1.0</span>
                   <button
                     type="button"
                     onClick={() => {

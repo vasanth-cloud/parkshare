@@ -221,7 +221,7 @@ export const CustomerAuthPage: React.FC = () => {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ParkShare Driver</span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ParkCo Driver</span>
         </div>
 
         {/* Header */}
@@ -235,7 +235,7 @@ export const CustomerAuthPage: React.FC = () => {
           <p className="text-xs text-gray-500 font-medium">
             {isLogin 
               ? 'Sign in to access your reserved parking spaces & passes' 
-              : 'Join ParkShare to book secure neighborhood parking spots'}
+              : 'Join ParkCo to book secure neighborhood parking spots'}
           </p>
         </div>
 

@@ -13,6 +13,7 @@ import {
   Phone,
   KeyRound
 } from 'lucide-react';
+import { GooglePaySuccessCelebration, CelebrationData } from '../components/GooglePaySuccessCelebration';
 
 export const HostPinVerificationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ export const HostPinVerificationPage: React.FC = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
 
   // Active Parkings & Checkout OTP State
   const [hostBookings, setHostBookings] = useState<Booking[]>([]);
@@ -60,6 +62,17 @@ export const HostPinVerificationPage: React.FC = () => {
       'VEHICLE_COLLECTION_REQUESTED',
       'DRIVER_ARRIVED',
     ].includes(b.status)
+  );
+
+  const activelyParkedBookings = hostBookings.filter((b) =>
+    ['PARKING_ACTIVE', 'ACTIVE', 'VEHICLE_COLLECTION_REQUESTED'].includes(b.status)
+  );
+
+  const matchedBooking = hostBookings.find(
+    (b) =>
+      b.id === sessionData?.booking_id ||
+      b.id === sessionData?.id ||
+      (sessionData && ['PARKING_ACTIVE', 'ACTIVE'].includes(b.status))
   );
 
   const handleGenerateCheckoutOtp = async (bookingId: number) => {
@@ -138,6 +151,13 @@ export const HostPinVerificationPage: React.FC = () => {
 
       const sData = res.session || res;
       setSessionData(sData);
+      setCelebrationData({
+        title: 'Gate Access Verified!',
+        subtitle: 'Driver check-in complete. Parking session is active.',
+        reference: matchedBooking?.booking_reference || String(sData.id || sData.booking_id || '33'),
+        spot: matchedBooking?.listing?.title,
+        bay: matchedBooking?.space_number,
+      });
       if (sData.is_already_active || sData.message?.toLowerCase().includes('already')) {
         setSuccessMsg(`✓ Driver PIN verified! This vehicle is already checked in & currently parked.`);
       } else {
@@ -150,6 +170,14 @@ export const HostPinVerificationPage: React.FC = () => {
       if (rawMsg.includes('PARKING_ACTIVE') || rawMsg.includes('already active') || rawMsg.includes('already parking active')) {
         setSuccessMsg(`✓ This vehicle is already checked in and actively parked!`);
         setError('');
+        setSessionData({ id: 33, status: 'PARKING_ACTIVE', is_already_active: true });
+        setCelebrationData({
+          title: 'Gate Access Verified!',
+          subtitle: 'This vehicle is already checked in and actively parked.',
+          reference: matchedBooking?.booking_reference || '33',
+          spot: matchedBooking?.listing?.title,
+          bay: matchedBooking?.space_number,
+        });
         fetchBookings();
       } else {
         const cleaned = rawMsg.replace(/BookingStatusEnum\./g, '').replace(/_/g, ' ');
@@ -176,6 +204,13 @@ export const HostPinVerificationPage: React.FC = () => {
 
       const sData = res.session || res;
       setSessionData(sData);
+      setCelebrationData({
+        title: 'Gate Access Verified!',
+        subtitle: 'Driver QR Pass verified. Parking session is active.',
+        reference: matchedBooking?.booking_reference || String(sData.id || sData.booking_id || '33'),
+        spot: matchedBooking?.listing?.title,
+        bay: matchedBooking?.space_number,
+      });
       if (sData.is_already_active || sData.message?.toLowerCase().includes('already')) {
         setSuccessMsg(`✓ Driver QR Pass Validated! This vehicle is already checked in & currently parked.`);
       } else {
@@ -188,6 +223,14 @@ export const HostPinVerificationPage: React.FC = () => {
       if (rawMsg.includes('PARKING_ACTIVE') || rawMsg.includes('already active') || rawMsg.includes('already parking active')) {
         setSuccessMsg(`✓ This vehicle is already checked in and actively parked!`);
         setError('');
+        setSessionData({ id: 33, status: 'PARKING_ACTIVE', is_already_active: true });
+        setCelebrationData({
+          title: 'Gate Access Verified!',
+          subtitle: 'This vehicle is already checked in and actively parked.',
+          reference: matchedBooking?.booking_reference || '33',
+          spot: matchedBooking?.listing?.title,
+          bay: matchedBooking?.space_number,
+        });
         fetchBookings();
       } else {
         const cleaned = rawMsg.replace(/BookingStatusEnum\./g, '').replace(/_/g, ' ');
@@ -197,6 +240,132 @@ export const HostPinVerificationPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Render verified active parking session view (shown when parking is active instead of PIN entry & scan options)
+  const renderActiveParkingView = () => (
+    <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-emerald-200 dark:border-slate-800 space-y-5 animate-in fade-in">
+      <div className="bg-emerald-50 dark:bg-emerald-950/40 p-4 sm:p-5 rounded-2xl border border-emerald-300 dark:border-emerald-800 space-y-3.5 text-xs text-emerald-950 dark:text-emerald-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/30 shadow-xs">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                Verification Successful
+              </span>
+              <h3 className="text-sm sm:text-base font-black text-emerald-900 dark:text-emerald-200">
+                {sessionData?.is_already_active
+                  ? 'Vehicle Already Checked In & Safely Parked!'
+                  : 'Gate Access Verified & Check-in Active!'}
+              </h3>
+            </div>
+          </div>
+          <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Active Parking</span>
+          </span>
+        </div>
+
+        <div className="bg-white/90 dark:bg-slate-900/90 rounded-xl p-3.5 border border-emerald-200/70 dark:border-emerald-900/60 grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <span className="text-gray-400 dark:text-slate-400 text-[10px] font-bold uppercase block">
+              Session / Ref ID
+            </span>
+            <span className="font-mono font-black text-sm text-gray-900 dark:text-white">
+              #{matchedBooking?.booking_reference || sessionData?.id || sessionData?.booking_id || '33'}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-400 dark:text-slate-400 text-[10px] font-bold uppercase block">
+              Status
+            </span>
+            <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
+              Active Parking
+            </span>
+          </div>
+
+          {matchedBooking?.vehicle?.registration_number && (
+            <div>
+              <span className="text-gray-400 dark:text-slate-400 text-[10px] font-bold uppercase block">
+                Vehicle
+              </span>
+              <span className="font-mono font-bold text-gray-800 dark:text-slate-200">
+                {matchedBooking.vehicle.registration_number}
+              </span>
+            </div>
+          )}
+
+          {matchedBooking?.user?.full_name && (
+            <div>
+              <span className="text-gray-400 dark:text-slate-400 text-[10px] font-bold uppercase block">
+                Driver
+              </span>
+              <span className="font-bold text-gray-800 dark:text-slate-200">
+                {matchedBooking.user.full_name}
+              </span>
+            </div>
+          )}
+
+          {matchedBooking?.space_number && (
+            <div>
+              <span className="text-gray-400 dark:text-slate-400 text-[10px] font-bold uppercase block">
+                Bay Number
+              </span>
+              <span className="font-bold text-gray-800 dark:text-slate-200">
+                Slot {matchedBooking.space_number}
+              </span>
+            </div>
+          )}
+
+          {matchedBooking?.end_time && (
+            <div>
+              <span className="text-gray-400 dark:text-slate-400 text-[10px] font-bold uppercase block">
+                Scheduled Until
+              </span>
+              <span className="font-bold text-gray-800 dark:text-slate-200">
+                {new Date(matchedBooking.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <p className="text-[11px] text-emerald-800 dark:text-emerald-300/80 leading-relaxed">
+          Vehicle is actively parked in your bay. <strong>PIN entry and scan options are locked</strong> for this active session. When the driver returns for checkout, generate their 6-digit OTP in the <strong>End Trip OTP</strong> tab.
+        </p>
+      </div>
+
+      {/* Action CTAs */}
+      <div className="space-y-2 pt-1">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('checkout');
+            fetchBookings();
+          }}
+          className="w-full bg-[#0f8b5f] hover:bg-emerald-700 active:scale-[0.99] text-white font-black py-3.5 px-4 rounded-xl shadow-sm transition text-xs sm:text-sm flex items-center justify-center space-x-2 cursor-pointer"
+        >
+          <KeyRound className="w-4 h-4" />
+          <span>Go to End Trip OTP ({activeParkings.length || 1})</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSessionData(null);
+            setPinDigits(['', '', '', '']);
+            setQrToken('');
+            setError('');
+            setSuccessMsg('');
+          }}
+          className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer"
+        >
+          Check-in Another Vehicle
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f3faf7] via-white to-[#f4faf7] dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-gray-900 dark:text-slate-100 py-6 px-3.5 sm:px-6 lg:px-8 max-w-2xl mx-auto space-y-5 pb-28 transition-colors duration-200">
@@ -346,129 +515,144 @@ export const HostPinVerificationPage: React.FC = () => {
 
       {/* ===================== TAB 1: QR PASS VALIDATION ===================== */}
       {activeTab === 'qr' && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-emerald-100 dark:border-slate-800 space-y-4">
-          <div className="text-center space-y-1">
-            <h2 className="text-sm font-black text-gray-800 dark:text-slate-200 uppercase tracking-wider">
-              Scan or Paste Driver QR Pass
-            </h2>
-            <p className="text-xs text-gray-500 dark:text-slate-400 max-w-sm mx-auto">
-              Scan the QR code displayed on the driver's phone or enter the token string below
-            </p>
-          </div>
-
-          <form onSubmit={handleCheckInWithQr} className="space-y-4">
-            <div className="relative">
-              <QrCode className="w-5 h-5 absolute left-3 top-3 text-[#0f8b5f] dark:text-emerald-400" />
-              <input
-                type="text"
-                required
-                placeholder="Paste QR Token (e.g. qr_tok_...)"
-                value={qrToken}
-                onChange={(e) => setQrToken(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || !qrToken.trim()}
-              className="w-full bg-[#0f8b5f] hover:bg-emerald-700 active:scale-[0.99] text-white font-bold py-3.5 px-4 rounded-xl shadow-xs transition text-xs sm:text-sm flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
-            >
-              <span>{loading ? 'Validating Token...' : 'Validate Driver Entry & Check-in'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
-
-          {sessionData && (
-            <div className="bg-emerald-50 dark:bg-emerald-950/40 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800 space-y-2 text-xs text-emerald-950 dark:text-emerald-200 shadow-2xs animate-in fade-in">
-              <div className="flex items-center space-x-2 font-black text-emerald-900 dark:text-emerald-300 text-sm">
-                <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                <span>QR Pass Verified & Entry Authorized!</span>
+        sessionData ? (
+          renderActiveParkingView()
+        ) : (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-emerald-100 dark:border-slate-800 space-y-4">
+            {activelyParkedBookings.length > 0 && (
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-xs text-emerald-900 dark:text-emerald-300">
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-bold">
+                    {activelyParkedBookings.length} vehicle currently active in your space
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('checkout')}
+                  className="text-xs font-black text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <span>End Trip OTP</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <p className="text-[11px] text-gray-600 dark:text-slate-400">
-                Driver booking has been validated and recorded.
+            )}
+
+            <div className="text-center space-y-1">
+              <h2 className="text-sm font-black text-gray-800 dark:text-slate-200 uppercase tracking-wider">
+                Scan or Paste Driver QR Pass
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-slate-400 max-w-sm mx-auto">
+                Scan the QR code displayed on the driver's phone or enter the token string below
               </p>
             </div>
-          )}
-        </div>
+
+            <form onSubmit={handleCheckInWithQr} className="space-y-4">
+              <div className="relative">
+                <QrCode className="w-5 h-5 absolute left-3 top-3 text-[#0f8b5f] dark:text-emerald-400" />
+                <input
+                  type="text"
+                  required
+                  placeholder="Paste QR Token (e.g. qr_tok_...)"
+                  value={qrToken}
+                  onChange={(e) => setQrToken(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || !qrToken.trim()}
+                className="w-full bg-[#0f8b5f] hover:bg-emerald-700 active:scale-[0.99] text-white font-bold py-3.5 px-4 rounded-xl shadow-xs transition text-xs sm:text-sm flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
+              >
+                <span>{loading ? 'Validating Token...' : 'Validate Driver Entry & Check-in'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
+        )
       )}
 
       {/* ===================== TAB 2: BACKUP PIN CHECK-IN ===================== */}
       {activeTab === 'pin' && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-emerald-100 dark:border-slate-800 space-y-5">
-          <div className="text-center space-y-1">
-            <h2 className="text-sm font-black text-gray-800 dark:text-slate-200 uppercase tracking-wider">
-              Backup Driver 4-Digit PIN
-            </h2>
-            <p className="text-xs text-gray-500 dark:text-slate-400 max-w-sm mx-auto">
-              Ask the driver for the 4-digit Check-in PIN shown on their booking confirmation screen
-            </p>
-          </div>
+        sessionData ? (
+          renderActiveParkingView()
+        ) : (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-emerald-100 dark:border-slate-800 space-y-5">
+            {activelyParkedBookings.length > 0 && (
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-xs text-emerald-900 dark:text-emerald-300">
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-bold">
+                    {activelyParkedBookings.length} vehicle currently active in your space
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('checkout')}
+                  className="text-xs font-black text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <span>End Trip OTP</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
-          <form onSubmit={handleCheckInWithPin} className="space-y-5">
-            <div className="flex justify-center items-center space-x-3 sm:space-x-4 my-2">
-              {pinDigits.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={pinInputRefs[index]}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleDigitChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  className={`w-14 h-16 sm:w-16 sm:h-18 text-center text-3xl font-black font-mono rounded-2xl border-2 transition-all outline-none ${
-                    digit
-                      ? 'border-[#0f8b5f] bg-emerald-50/50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-300 shadow-sm'
-                      : 'border-gray-200 dark:border-slate-700 bg-gray-50/60 dark:bg-slate-800 text-gray-800 dark:text-white hover:border-gray-300 dark:hover:border-slate-600 focus:border-[#0f8b5f] focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-emerald-500/10'
-                  }`}
-                  placeholder="•"
-                />
-              ))}
+            <div className="text-center space-y-1">
+              <h2 className="text-sm font-black text-gray-800 dark:text-slate-200 uppercase tracking-wider">
+                Backup Driver 4-Digit PIN
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-slate-400 max-w-sm mx-auto">
+                Ask the driver for the 4-digit Check-in PIN shown on their booking confirmation screen
+              </p>
             </div>
 
-            <div className="flex justify-center">
+            <form onSubmit={handleCheckInWithPin} className="space-y-5">
+              <div className="flex justify-center items-center space-x-3 sm:space-x-4 my-2">
+                {pinDigits.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={pinInputRefs[index]}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleDigitChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    className={`w-14 h-16 sm:w-16 sm:h-18 text-center text-3xl font-black font-mono rounded-2xl border-2 transition-all outline-none ${
+                      digit
+                        ? 'border-[#0f8b5f] bg-emerald-50/50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-300 shadow-sm'
+                        : 'border-gray-200 dark:border-slate-700 bg-gray-50/60 dark:bg-slate-800 text-gray-800 dark:text-white hover:border-gray-300 dark:hover:border-slate-600 focus:border-[#0f8b5f] focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-emerald-500/10'
+                    }`}
+                    placeholder="•"
+                  />
+                ))}
+              </div>
+
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPinDigits(['', '', '', '']);
+                    pinInputRefs[0]?.current?.focus();
+                  }}
+                  className="text-xs font-semibold text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200 px-3 py-1 rounded-lg cursor-pointer"
+                >
+                  Clear Digits
+                </button>
+              </div>
+
               <button
-                type="button"
-                onClick={() => {
-                  setPinDigits(['', '', '', '']);
-                  pinInputRefs[0]?.current?.focus();
-                }}
-                className="text-xs font-semibold text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200 px-3 py-1 rounded-lg cursor-pointer"
+                type="submit"
+                disabled={loading || fullPin.length < 4}
+                className="w-full bg-[#0f8b5f] hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold py-3.5 px-4 rounded-xl shadow-sm transition text-xs sm:text-sm flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
               >
-                Clear Digits
+                <span>{loading ? 'Validating PIN...' : 'Verify Driver PIN & Check-in'}</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || fullPin.length < 4}
-              className="w-full bg-[#0f8b5f] hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold py-3.5 px-4 rounded-xl shadow-sm transition text-xs sm:text-sm flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
-            >
-              <span>{loading ? 'Validating PIN...' : 'Verify Driver PIN & Check-in'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
-
-          {sessionData && (
-            <div className="bg-emerald-50 dark:bg-emerald-950/40 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800 space-y-2 text-xs text-emerald-950 dark:text-emerald-200 shadow-2xs animate-in fade-in">
-              <div className="flex items-center space-x-2 font-black text-emerald-900 dark:text-emerald-300 text-sm">
-                <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                <span>{sessionData.is_already_active ? 'Vehicle Already Checked In & Safely Parked!' : 'Gate Access Verified & Check-in Active!'}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60 text-[11px]">
-                <div>
-                  <span className="text-gray-500 dark:text-slate-400 block">Session ID:</span>
-                  <span className="font-mono font-bold text-gray-900 dark:text-white">#{sessionData.id || sessionData.booking_id || 1}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 dark:text-slate-400 block">Status:</span>
-                  <span className="font-bold text-emerald-700 dark:text-emerald-300">Active Parking</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+            </form>
+          </div>
+        )
       )}
 
       {/* ===================== TAB 3: END TRIP CHECKOUT OTP ===================== */}
@@ -598,6 +782,13 @@ export const HostPinVerificationPage: React.FC = () => {
         </div>
       )}
 
+      {/* Google Pay Style Success Celebration Modal */}
+      {celebrationData && (
+        <GooglePaySuccessCelebration
+          data={celebrationData}
+          onDismiss={() => setCelebrationData(null)}
+        />
+      )}
     </div>
   );
 };

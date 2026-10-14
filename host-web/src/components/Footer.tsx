@@ -7,8 +7,8 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="flex items-center space-x-3">
-            <img src="/logo.png" alt="ParkShare" className="h-8 w-8 object-contain bg-white rounded p-0.5" />
-            <span className="font-bold text-white tracking-tight">ParkShare Host Web</span>
+            <img src="/logo.png" alt="ParkCo" className="h-8 w-8 object-contain bg-white rounded p-0.5" />
+            <span className="font-bold text-white tracking-tight">ParkCo Host Web</span>
             <span className="text-xs bg-emerald-900 text-emerald-200 px-2 py-0.5 rounded border border-emerald-800">Captain Portal</span>
           </div>
 
@@ -24,7 +24,7 @@ export const Footer: React.FC = () => {
           </div>
 
           <div className="text-xs text-emerald-400">
-            © {new Date().getFullYear()} ParkShare Host Network. All rights reserved.
+            © {new Date().getFullYear()} ParkCo Host Network. All rights reserved.
           </div>
         </div>
       </div>

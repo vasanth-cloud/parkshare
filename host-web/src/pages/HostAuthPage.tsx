@@ -458,7 +458,7 @@ export const HostAuthPage: React.FC = () => {
               </div>
             </div>
             <div>
-              <div className="font-black text-lg text-emerald-950 leading-tight">ParkShare</div>
+              <div className="font-black text-lg text-emerald-950 leading-tight">ParkCo</div>
               <div className="text-[9px] font-bold text-gray-500 tracking-widest uppercase">HOST PORTAL</div>
             </div>
           </div>

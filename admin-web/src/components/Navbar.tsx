@@ -34,8 +34,8 @@ export const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center space-x-3">
             <Link to="/" className="flex items-center space-x-2">
-              <img src="/logo.png" alt="ParkShare Logo" className="h-9 w-9 object-contain rounded-lg bg-white p-1" />
-              <span className="font-bold text-lg tracking-tight text-white">ParkShare Console</span>
+              <img src="/logo.png" alt="ParkCo Logo" className="h-9 w-9 object-contain rounded-lg bg-white p-1" />
+              <span className="font-bold text-lg tracking-tight text-white">ParkCo Console</span>
             </Link>
 
             {/* Dynamic Service Scope Badge */}

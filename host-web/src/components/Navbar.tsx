@@ -41,11 +41,11 @@ export const Navbar: React.FC = () => {
             <Link to="/" className="flex items-center space-x-2 sm:space-x-2.5">
               <img 
                 src="/logo.png" 
-                alt="ParkShare Logo" 
+                alt="ParkCo Logo" 
                 className="h-8 w-8 sm:h-9 sm:w-9 object-contain rounded-xl bg-emerald-50 dark:bg-slate-800 p-1 border border-emerald-100 dark:border-slate-700 shadow-2xs" 
               />
               <div className="flex items-baseline">
-                <span className="font-black text-lg sm:text-xl tracking-tight text-gray-900 dark:text-white">ParkShare</span>
+                <span className="font-black text-lg sm:text-xl tracking-tight text-gray-900 dark:text-white">ParkCo</span>
                 <span className="font-extrabold text-lg sm:text-xl tracking-tight text-[#0f8b5f] dark:text-emerald-400 ml-1">Host</span>
               </div>
             </Link>

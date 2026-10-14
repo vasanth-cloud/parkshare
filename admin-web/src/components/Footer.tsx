@@ -7,8 +7,8 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="flex items-center space-x-3">
-            <img src="/logo.png" alt="ParkShare" className="h-8 w-8 object-contain bg-white rounded p-0.5" />
-            <span className="font-bold text-white tracking-tight">ParkShare Superadmin Console</span>
+            <img src="/logo.png" alt="ParkCo" className="h-8 w-8 object-contain bg-white rounded p-0.5" />
+            <span className="font-bold text-white tracking-tight">ParkCo Superadmin Console</span>
           </div>
 
           <div className="flex items-center space-x-2 text-xs text-slate-400">
@@ -17,7 +17,7 @@ export const Footer: React.FC = () => {
           </div>
 
           <div className="text-xs text-slate-500">
-            © {new Date().getFullYear()} ParkShare Infrastructure Platform.
+            © {new Date().getFullYear()} ParkCo Infrastructure Platform.
           </div>
         </div>
       </div>

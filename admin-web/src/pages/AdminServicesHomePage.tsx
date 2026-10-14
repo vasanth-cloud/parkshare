@@ -121,11 +121,11 @@ export const AdminServicesHomePage: React.FC = () => {
           <div className="flex items-center space-x-2.5">
             <img 
               src="/logo.png" 
-              alt="ParkShare Logo" 
+              alt="ParkCo Logo" 
               className="h-8 w-8 object-contain rounded-xl bg-slate-800 p-1 border border-slate-700 shadow-xs" 
             />
             <div className="flex items-baseline">
-              <span className="font-black text-lg tracking-tight text-white">ParkShare</span>
+              <span className="font-black text-lg tracking-tight text-white">ParkCo</span>
               <span className="font-extrabold text-lg tracking-tight text-emerald-400 ml-1">Console</span>
             </div>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">

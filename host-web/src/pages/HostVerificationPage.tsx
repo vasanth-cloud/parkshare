@@ -494,7 +494,7 @@ export const HostVerificationPage: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">ParkShare Official</span>
+                  <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">ParkCo Official</span>
                   <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
                     e-KYC PASSED
                   </span>

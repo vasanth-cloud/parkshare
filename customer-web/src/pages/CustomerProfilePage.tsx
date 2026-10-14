@@ -298,7 +298,7 @@ export const CustomerProfilePage: React.FC = () => {
     },
     {
       q: 'Are acting chauffeurs background-verified & trained?',
-      a: 'All ParkShare acting drivers undergo RTO commercial driving license checks, government criminal background checks, and manual & automatic transmission road tests.'
+      a: 'All ParkCo acting drivers undergo RTO commercial driving license checks, government criminal background checks, and manual & automatic transmission road tests.'
     },
     {
       q: 'What is the cancellation and refund policy?',
@@ -978,7 +978,7 @@ export const CustomerProfilePage: React.FC = () => {
                 </a>
 
                 <a
-                  href="https://wa.me/919876543210?text=Hi%20ParkShare%20Support"
+                  href="https://wa.me/919876543210?text=Hi%20ParkCo%20Support"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center space-y-1 hover:border-slate-400 transition"
@@ -1068,7 +1068,7 @@ export const CustomerProfilePage: React.FC = () => {
       </button>
 
       <p className="text-center text-[10px] text-slate-400 pt-1">
-        ParkShare • v1.2.0 • 24/7 Driver Concierge
+        ParkCo • v1.2.0 • 24/7 Driver Concierge
       </p>
 
       {/* Modal: Report Problem */}

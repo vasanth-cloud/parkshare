@@ -7,7 +7,7 @@ BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__
 ENV_FILE_PATH = os.path.join(BACKEND_DIR, ".env")
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "ParkShare API"
+    PROJECT_NAME: str = "ParkCo API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     SMTP_USER: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
     EMAILS_FROM_EMAIL: str = "noreply@parkshare.in"
-    EMAILS_FROM_NAME: str = "ParkShare Identity Verification"
+    EMAILS_FROM_NAME: str = "ParkCo Identity Verification"
 
     # SMS Gateway (Fast2SMS / Twilio / MSG91)
     FAST2SMS_API_KEY: Optional[str] = None

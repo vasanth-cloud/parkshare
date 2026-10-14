@@ -95,7 +95,7 @@ export const ActingDriversPage: React.FC = () => {
     CITY: 299, // 2 hours included
     NIGHT: 399, // safe night party drop
     OUTSTATION: 1199, // full day
-    VALET: 199, // drop & park in ParkShare space
+    VALET: 199, // drop & park in ParkCo space
   };
 
   const calculateTotal = () => {
@@ -145,7 +145,7 @@ export const ActingDriversPage: React.FC = () => {
           <div className="flex items-center space-x-2">
             <span className="text-xs font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-indigo-500" />
-              ParkShare Mobility
+              ParkCo Mobility
             </span>
           </div>
         </div>
@@ -400,7 +400,7 @@ export const ActingDriversPage: React.FC = () => {
               </div>
               <h4 className="text-xs font-black text-slate-900 dark:text-white">No Acting Drivers Registered Yet</h4>
               <p className="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
-                As drivers register through the ParkShare Partner Portal or Host Dashboard, verified chauffeurs will appear here.
+                As drivers register through the ParkCo Partner Portal or Host Dashboard, verified chauffeurs will appear here.
               </p>
               <div className="pt-1">
                 <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1 rounded-full">
@@ -469,14 +469,14 @@ export const ActingDriversPage: React.FC = () => {
             </div>
           )}
 
-          {/* ParkShare Synergy Card */}
+          {/* ParkCo Synergy Card */}
           <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-3xl p-4 shadow-md space-y-2">
             <div className="flex items-center space-x-2">
               <MapPin className="w-4 h-4 text-emerald-200" />
-              <h4 className="text-xs font-black">ParkShare Seamless Handover</h4>
+              <h4 className="text-xs font-black">ParkCo Seamless Handover</h4>
             </div>
             <p className="text-[11px] text-emerald-50 leading-relaxed">
-              Have your driver drop you off and park your car safely inside any reserved ParkShare spot with digital OTP handover!
+              Have your driver drop you off and park your car safely inside any reserved ParkCo spot with digital OTP handover!
             </p>
           </div>
         </div>

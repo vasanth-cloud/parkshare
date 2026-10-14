@@ -12,7 +12,7 @@ def send_email_otp(to_email: str, otp: str) -> tuple[bool, str]:
     Uses SMTP configuration from settings (.env).
     Returns (success: bool, detail_message: str)
     """
-    subject = f"Your ParkShare Host Verification Code: {otp}"
+    subject = f"Your ParkCo Host Verification Code: {otp}"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -33,18 +33,18 @@ def send_email_otp(to_email: str, otp: str) -> tuple[bool, str]:
     <body>
       <div class="card">
         <div class="header">
-          <h1>ParkShare Host Verification</h1>
+          <h1>ParkCo Host Verification</h1>
         </div>
         <div class="content">
           <p>Hello,</p>
-          <p>Please use the following One-Time Password (OTP) to verify your email address for your ParkShare host account.</p>
+          <p>Please use the following One-Time Password (OTP) to verify your email address for your ParkCo host account.</p>
           <div class="otp-box">
             <div class="otp-code">{otp}</div>
           </div>
           <p style="font-size: 13px; color: #64748b;">This OTP is valid for 10 minutes. For security reasons, please do not share this code with anyone.</p>
         </div>
         <div class="footer">
-          &copy; 2026 ParkShare India. All rights reserved. Peer-to-peer parking network.
+          &copy; 2026 ParkCo India. All rights reserved. Peer-to-peer parking network.
         </div>
       </div>
     </body>
@@ -67,7 +67,7 @@ def send_email_otp(to_email: str, otp: str) -> tuple[bool, str]:
         msg["From"] = f"{settings.EMAILS_FROM_NAME} <{settings.EMAILS_FROM_EMAIL or settings.SMTP_USER}>"
         msg["To"] = to_email
 
-        part_text = MIMEText(f"Your ParkShare verification OTP code is: {otp}. Valid for 10 minutes.", "plain")
+        part_text = MIMEText(f"Your ParkCo verification OTP code is: {otp}. Valid for 10 minutes.", "plain")
         part_html = MIMEText(html_content, "html")
         msg.attach(part_text)
         msg.attach(part_html)

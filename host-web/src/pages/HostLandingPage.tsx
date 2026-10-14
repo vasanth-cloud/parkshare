@@ -61,11 +61,11 @@ export const HostLandingPage: React.FC = () => {
       <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center mb-10">
           <span className="text-xs font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300">
-            ParkShare Partner Network
+            ParkCo Partner Network
           </span>
           <h2 className="text-3xl font-black text-gray-900 mt-2">Choose How You Want to Partner & Earn</h2>
           <p className="text-gray-600 text-sm mt-1 max-w-xl mx-auto">
-            Whether you own parking bays, drive professionally, or run an auto wash workshop, start earning with ParkShare today.
+            Whether you own parking bays, drive professionally, or run an auto wash workshop, start earning with ParkCo today.
           </p>
         </div>
 
@@ -149,12 +149,12 @@ export const HostLandingPage: React.FC = () => {
               </div>
               <h3 className="text-lg font-black text-gray-900">Car Spa & Wash Partner</h3>
               <p className="text-gray-600 text-xs leading-relaxed">
-                Connect your mobile doorstep detailing van or car wash workshop to ParkShare's thousands of parked vehicle owners.
+                Connect your mobile doorstep detailing van or car wash workshop to ParkCo's thousands of parked vehicle owners.
               </p>
               <ul className="text-xs text-gray-600 space-y-1.5 pt-2 border-t border-gray-100">
                 <li className="flex items-center space-x-2">
                   <span className="text-cyan-600 font-bold">✓</span>
-                  <span>Wash cars parked in ParkShare bays</span>
+                  <span>Wash cars parked in ParkCo bays</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <span className="text-cyan-600 font-bold">✓</span>

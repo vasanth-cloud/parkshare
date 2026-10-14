@@ -90,7 +90,7 @@ class PaymentService:
             "key_id": settings.RAZORPAY_KEY_ID,
             "mock_mode": settings.RAZORPAY_MOCK_MODE,
             "booking_reference": booking.booking_reference,
-            "space_title": booking.listing.title if (booking.listing and booking.listing.title) else "ParkShare Space"
+            "space_title": booking.listing.title if (booking.listing and booking.listing.title) else "ParkCo Space"
         }
 
     @staticmethod

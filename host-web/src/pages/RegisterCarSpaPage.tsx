@@ -114,7 +114,7 @@ export const RegisterCarSpaPage: React.FC = () => {
           </h1>
 
           <p className="text-xs sm:text-sm text-cyan-100 max-w-2xl">
-            Get instant booking appointments from ParkShare vehicle owners. Whether you operate a mobile detailing van or a physical workshop station, accept doorstep and in-bay wash orders effortlessly.
+            Get instant booking appointments from ParkCo vehicle owners. Whether you operate a mobile detailing van or a physical workshop station, accept doorstep and in-bay wash orders effortlessly.
           </p>
 
           {/* Key Partner Benefits */}
@@ -156,7 +156,7 @@ export const RegisterCarSpaPage: React.FC = () => {
                 Welcome to the Car Spa Network!
               </h2>
               <p className="text-xs text-gray-500 dark:text-slate-400 max-w-md mx-auto">
-                Your detailing center has been officially enrolled and verified on the ParkShare partner ecosystem.
+                Your detailing center has been officially enrolled and verified on the ParkCo partner ecosystem.
               </p>
             </div>
 
@@ -166,7 +166,7 @@ export const RegisterCarSpaPage: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <span className="text-xl">✨</span>
                   <div>
-                    <h4 className="text-xs font-black text-white">ParkShare Auto Spa Hub</h4>
+                    <h4 className="text-xs font-black text-white">ParkCo Auto Spa Hub</h4>
                     <span className="font-mono text-[10px] text-cyan-300 font-bold">
                       HUB: #{registeredSpa.id}
                     </span>

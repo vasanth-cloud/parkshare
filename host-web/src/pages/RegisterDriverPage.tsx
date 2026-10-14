@@ -104,7 +104,7 @@ export const RegisterDriverPage: React.FC = () => {
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
             Earn On Your Terms as a <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-indigo-400 to-cyan-300 bg-clip-text text-transparent">
-              ParkShare Certified Chauffeur
+              ParkCo Certified Chauffeur
             </span>
           </h1>
 
@@ -151,7 +151,7 @@ export const RegisterDriverPage: React.FC = () => {
                 Welcome to the Chauffeur Network!
               </h2>
               <p className="text-xs text-gray-500 dark:text-slate-400 max-w-md mx-auto">
-                Your driver partner profile has been registered and verified on the ParkShare ecosystem.
+                Your driver partner profile has been registered and verified on the ParkCo ecosystem.
               </p>
             </div>
 
@@ -161,7 +161,7 @@ export const RegisterDriverPage: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <span className="text-xl">🧑‍✈️</span>
                   <div>
-                    <h4 className="text-xs font-black text-white">ParkShare Driver Partner ID</h4>
+                    <h4 className="text-xs font-black text-white">ParkCo Driver Partner ID</h4>
                     <span className="font-mono text-[10px] text-indigo-300 font-bold">
                       REF: #{registeredDriver.id}
                     </span>
@@ -474,7 +474,7 @@ export const RegisterDriverPage: React.FC = () => {
                   )}
                 </button>
                 <p className="text-center text-[10px] text-gray-400 mt-2">
-                  By registering, you confirm holding a valid Indian driving license and agree to ParkShare partner terms.
+                  By registering, you confirm holding a valid Indian driving license and agree to ParkCo partner terms.
                 </p>
               </div>
             </form>

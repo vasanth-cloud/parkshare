@@ -422,7 +422,7 @@ export const CustomerVehiclesPage: React.FC = () => {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <span className="font-extrabold text-slate-900 dark:text-white block">ParkShare Verified Plates</span>
+            <span className="font-extrabold text-slate-900 dark:text-white block">ParkCo Verified Plates</span>
             <span className="text-[11px] text-slate-500 dark:text-slate-400">Encrypted credentials & secure parking</span>
           </div>
         </div>

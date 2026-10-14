@@ -963,7 +963,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-                  <span>ParkShare Multi-Service Operations Hub</span>
+                  <span>ParkCo Multi-Service Operations Hub</span>
                 </h2>
                 <p className="text-xs text-slate-400">Direct operational management across parking, chauffeurs, and car wash</p>
               </div>

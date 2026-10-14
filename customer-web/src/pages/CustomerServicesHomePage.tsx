@@ -139,7 +139,7 @@ export const CustomerServicesHomePage: React.FC = () => {
             <span className="text-xl">🎉</span>
             <div className="min-w-0">
               <span className="text-xs font-black block leading-tight">
-                Welcome to ParkShare!
+                Welcome to ParkCo!
               </span>
               <span className="text-[11px] text-emerald-100 block">
                 Select your service below to get started. You can book parking first and return anytime to add other services.
@@ -157,7 +157,7 @@ export const CustomerServicesHomePage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-                <span>{user ? `Hello, ${user.full_name?.split(' ')[0]}` : 'Welcome to ParkShare'}</span>
+                <span>{user ? `Hello, ${user.full_name?.split(' ')[0]}` : 'Welcome to ParkCo'}</span>
                 <span>👋</span>
               </div>
               <h1 className="text-xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">

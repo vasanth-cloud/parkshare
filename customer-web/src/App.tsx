@@ -66,7 +66,7 @@ export const AppContent: React.FC = () => {
         <Routes>
           <Route path="/" element={<CustomerLandingPage onOpenChat={() => setIsChatOpen(true)} />} />
           <Route path="/dashboard" element={<CustomerLandingPage onOpenChat={() => setIsChatOpen(true)} />} />
-          <Route path="/services" element={<CustomerLandingPage onOpenChat={() => setIsChatOpen(true)} />} />
+          <Route path="/services" element={<CustomerServicesHomePage />} />
           <Route path="/parking" element={<CustomerLandingPage onOpenChat={() => setIsChatOpen(true)} />} />
           <Route path="/auth" element={<CustomerAuthPage />} />
           <Route path="/search" element={<CustomerLandingPage onOpenChat={() => setIsChatOpen(true)} />} />
