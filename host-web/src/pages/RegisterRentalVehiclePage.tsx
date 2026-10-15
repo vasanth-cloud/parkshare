@@ -795,7 +795,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                   {/* Quick Demo Plates */}
                   <div className="flex items-center space-x-1.5 pt-0.5 text-[10px] text-slate-400 flex-wrap gap-y-1">
                     <span className="font-bold">Test Presets:</span>
-                    {(['KA03MG2041', 'KA05NB7788', 'AP09CU7296', 'KA01AB1234'] as const).map((plate) => (
+                    {(['KA03AB1234', 'KA05NB7788', 'AP09CU7296', 'KA01AB1234'] as const).map((plate) => (
                       <button
                         key={plate}
                         type="button"

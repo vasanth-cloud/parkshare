@@ -376,11 +376,37 @@ class RentalsService:
                             )
                     else:
                         logger.warning(f"Attestr API returned status {resp.status_code}: {resp.text}")
+                        # If Attestr service is pending provisioning (Code 4035), allow mock fallback
+                        try:
+                            err_json = resp.json()
+                            if err_json.get("code") == 4035:
+                                logger.info("Attestr service 'Vehicle Ownership' not yet provisioned. Falling back to sandbox/mock.")
+                        except Exception:
+                            pass
             except Exception as e:
                 logger.error(f"Error calling Attestr Parivahan API: {e}. Falling back to Parivahan Sandbox.")
 
         # 2. Parivahan MoRTH Sandbox / Dev Mode Simulator
         MOCK_DATABASE = {
+            "KA03AB1234": {
+                "owner": "VASANTH A",
+                "status": "ACTIVE",
+                "registered": "2023-05-12",
+                "category": "4WN",
+                "categoryDescription": "Motor Car / LMV",
+                "makerDescription": "HYUNDAI MOTOR INDIA LIMITED",
+                "makerModel": "HYUNDAI CRETA SX (O)",
+                "bodyType": "SUV",
+                "fuelType": "PETROL",
+                "colorType": "TITAN GREY",
+                "fitnessUpto": "2038-05-11",
+                "insuranceProvider": "ICICI LOMBARD GENERAL INSURANCE",
+                "insurancePolicyNumber": "3001/55219082/00/000",
+                "insuranceUpto": "2027-05-11",
+                "commercial": False,
+                "rto": "INDIRANAGAR / BENGALURU EAST RTO (KA-03)",
+                "seatingCapacity": 5
+            },
             "AP09CU7296": {
                 "owner": "GITANJALI RAHEJA",
                 "status": "ACTIVE",
