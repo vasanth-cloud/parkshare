@@ -268,45 +268,69 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
 
     // Clean up if instance exists
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
+      try {
+        mapInstanceRef.current.remove();
+      } catch (e) {
+        console.warn('Map cleanup error:', e);
+      }
       mapInstanceRef.current = null;
     }
 
-    const defaultCenter: [number, number] = currentCoords || (listings.length > 0 && listings[0].latitude && listings[0].longitude ? [listings[0].latitude, listings[0].longitude] : [12.9716, 77.5946]);
+    // Safeguard against React StrictMode re-mount or orphaned Leaflet ID
+    if ((mapContainerRef.current as any)._leaflet_id) {
+      delete (mapContainerRef.current as any)._leaflet_id;
+    }
 
-    const map = L.map(mapContainerRef.current, {
-      center: defaultCenter,
-      zoom: currentCoords ? 14 : 12,
-      zoomControl: false,
-      attributionControl: false,
-    });
+    try {
+      const defaultCenter: [number, number] = currentCoords || (listings.length > 0 && listings[0].latitude && listings[0].longitude ? [listings[0].latitude, listings[0].longitude] : [12.9716, 77.5946]);
 
-    // High-performance OpenStreetMap tiles (100% free, no API key required)
-    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      const map = L.map(mapContainerRef.current, {
+        center: defaultCenter,
+        zoom: currentCoords ? 14 : 12,
+        zoomControl: false,
+        attributionControl: false,
+      });
 
-    const tiles = L.tileLayer(tileUrl, {
-      maxZoom: 19,
-      subdomains: 'abc',
-    }).addTo(map);
+      // High-performance OpenStreetMap tiles (100% free, no API key required)
+      const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-    tileLayerRef.current = tiles;
+      const tiles = L.tileLayer(tileUrl, {
+        maxZoom: 19,
+        subdomains: 'abc',
+      }).addTo(map);
 
-    const markersGroup = L.layerGroup().addTo(map);
-    markersLayerRef.current = markersGroup;
+      tileLayerRef.current = tiles;
 
-    const userGroup = L.layerGroup().addTo(map);
-    userMarkerLayerRef.current = userGroup;
+      const markersGroup = L.layerGroup().addTo(map);
+      markersLayerRef.current = markersGroup;
 
-    mapInstanceRef.current = map;
+      const userGroup = L.layerGroup().addTo(map);
+      userMarkerLayerRef.current = userGroup;
 
-    // Invalidate size shortly after mount for perfect mobile dimensions
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 200);
+      mapInstanceRef.current = map;
+
+      // Invalidate size shortly after mount for perfect mobile dimensions
+      setTimeout(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      }, 200);
+    } catch (err) {
+      console.warn('Map initialization error:', err);
+    }
 
     return () => {
-      map.remove();
-      mapInstanceRef.current = null;
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          console.warn('Map unmount cleanup error:', e);
+        }
+        mapInstanceRef.current = null;
+      }
+      if (mapContainerRef.current && (mapContainerRef.current as any)._leaflet_id) {
+        delete (mapContainerRef.current as any)._leaflet_id;
+      }
     };
   }, [isDark]);
 
