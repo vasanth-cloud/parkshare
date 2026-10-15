@@ -30,7 +30,9 @@ SAMPLE_FLEET: List[RentalVehicleSchema] = [
         city="Bengaluru",
         hubAddress="Indiranagar 100ft Road Metro Hub, Bengaluru",
         status="ACTIVE",
-        partnerName="Apex Prime Fleet"
+        partnerName="Apex Prime Fleet",
+        rcNumber="KA-03-MG-2041",
+        rcOwnershipType="COMMERCIAL"
     ),
     RentalVehicleSchema(
         id="veh-thar-02",
@@ -53,7 +55,9 @@ SAMPLE_FLEET: List[RentalVehicleSchema] = [
         city="Bengaluru",
         hubAddress="Koramangala 4th Block Hub, Bengaluru",
         status="ACTIVE",
-        partnerName="Outback Escapes"
+        partnerName="Outback Escapes",
+        rcNumber="KA-05-NB-7788",
+        rcOwnershipType="COMMERCIAL"
     ),
     RentalVehicleSchema(
         id="veh-nexon-03",
@@ -76,7 +80,9 @@ SAMPLE_FLEET: List[RentalVehicleSchema] = [
         city="Bengaluru",
         hubAddress="HSR Layout Sector 1 Hub, Bengaluru",
         status="ACTIVE",
-        partnerName="EcoMotion SelfDrive"
+        partnerName="EcoMotion SelfDrive",
+        rcNumber="KA-01-EQ-9012",
+        rcOwnershipType="PRIVATE"
     ),
     RentalVehicleSchema(
         id="veh-swift-04",
@@ -99,7 +105,9 @@ SAMPLE_FLEET: List[RentalVehicleSchema] = [
         city="Bengaluru",
         hubAddress="Whitefield ITPL Hub, Bengaluru",
         status="ACTIVE",
-        partnerName="CityWheels Express"
+        partnerName="CityWheels Express",
+        rcNumber="KA-51-AB-3420",
+        rcOwnershipType="COMMERCIAL"
     ),
     RentalVehicleSchema(
         id="veh-hunter-05",
@@ -122,7 +130,9 @@ SAMPLE_FLEET: List[RentalVehicleSchema] = [
         city="Bengaluru",
         hubAddress="Indiranagar 100ft Road Metro Hub, Bengaluru",
         status="ACTIVE",
-        partnerName="Throttle Riders Hub"
+        partnerName="Throttle Riders Hub",
+        rcNumber="KA-04-HX-4455",
+        rcOwnershipType="PRIVATE"
     ),
     RentalVehicleSchema(
         id="veh-ather-06",
@@ -145,7 +155,9 @@ SAMPLE_FLEET: List[RentalVehicleSchema] = [
         city="Bengaluru",
         hubAddress="Koramangala 4th Block Hub, Bengaluru",
         status="ACTIVE",
-        partnerName="VoltRider Fleets"
+        partnerName="VoltRider Fleets",
+        rcNumber="KA-02-EV-6060",
+        rcOwnershipType="PRIVATE"
     ),
     RentalVehicleSchema(
         id="veh-activa-07",
@@ -168,7 +180,9 @@ SAMPLE_FLEET: List[RentalVehicleSchema] = [
         city="Bengaluru",
         hubAddress="Majestic Central Hub, Bengaluru",
         status="ACTIVE",
-        partnerName="QuickScoot Rentals"
+        partnerName="QuickScoot Rentals",
+        rcNumber="KA-01-JM-1122",
+        rcOwnershipType="COMMERCIAL"
     )
 ]
 
