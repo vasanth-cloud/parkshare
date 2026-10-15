@@ -11,6 +11,7 @@ import { AdminUserDirectory } from './pages/AdminUserDirectory';
 import { AdminDisputesPage } from './pages/AdminDisputesPage';
 import { AdminDriversPage } from './pages/AdminDriversPage';
 import { AdminCarSpaPage } from './pages/AdminCarSpaPage';
+import { AdminRentalsPage } from './pages/AdminRentalsPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -71,6 +72,16 @@ export const AppContent: React.FC = () => {
             element={
               <ProtectedRoute>
                 <AdminCarSpaPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Service 4: Self-Drive Fleet & Vehicle Approvals */}
+          <Route
+            path="/rentals"
+            element={
+              <ProtectedRoute>
+                <AdminRentalsPage />
               </ProtectedRoute>
             }
           />

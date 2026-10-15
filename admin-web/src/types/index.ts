@@ -195,3 +195,27 @@ export interface CarSpaCenter {
   createdAt?: string;
 }
 
+export interface RentalVehicle {
+  id: string;
+  name: string;
+  vehicleType: 'CAR' | 'BIKE';
+  category: string;
+  photo: string;
+  rating: number;
+  trips: number;
+  transmission: 'AUTOMATIC' | 'MANUAL';
+  fuelType: 'PETROL' | 'DIESEL' | 'ELECTRIC';
+  seats: number;
+  mileageOrRange: string;
+  hourlyRate: number;
+  dailyRate: number;
+  securityDeposit: number;
+  isAvailable: boolean;
+  badge: string;
+  features: string[];
+  city: string;
+  hubAddress: string;
+  status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'REJECTED';
+  partnerName: string;
+}
+

@@ -165,6 +165,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                   </div>
                 </Link>
 
+                <Link
+                  to="/services/rentals"
+                  onClick={() => setShowManageDropdown(false)}
+                  className="flex items-center space-x-3 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition rounded-lg mx-1"
+                >
+                  <span className="text-xl flex-shrink-0">🚗</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Self-Drive Rentals</span>
+                    <span className="text-[10px] text-gray-400">Zero deposit cars, SUVs & bikes</span>
+                  </div>
+                </Link>
+
                 <div className="border-t border-slate-100 dark:border-slate-800 my-1"></div>
                 
                 <div className="px-3.5 py-1 text-[10px] font-black uppercase text-slate-400 tracking-wider">

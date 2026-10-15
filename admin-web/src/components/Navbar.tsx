@@ -18,7 +18,7 @@ export const Navbar: React.FC = () => {
   const serviceParam = searchParams.get('service');
 
   // Identify current active service context
-  let currentService: 'parking' | 'drivers' | 'car-spa' | 'general' = 'general';
+  let currentService: 'parking' | 'drivers' | 'car-spa' | 'rentals' | 'general' = 'general';
 
   if (location.pathname.startsWith('/approvals') || (location.pathname.startsWith('/disputes') && serviceParam === 'parking')) {
     currentService = 'parking';
@@ -26,6 +26,8 @@ export const Navbar: React.FC = () => {
     currentService = 'drivers';
   } else if (location.pathname.startsWith('/car-spas') || (location.pathname.startsWith('/disputes') && serviceParam === 'car-spa')) {
     currentService = 'car-spa';
+  } else if (location.pathname.startsWith('/rentals') || (location.pathname.startsWith('/disputes') && serviceParam === 'rentals')) {
+    currentService = 'rentals';
   }
 
   return (
@@ -52,6 +54,11 @@ export const Navbar: React.FC = () => {
             {currentService === 'car-spa' && (
               <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800">
                 ✨ Car Spa Operations
+              </span>
+            )}
+            {currentService === 'rentals' && (
+              <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-950 text-amber-300 border border-amber-800">
+                🚗 Fleet Rentals
               </span>
             )}
             {currentService === 'general' && (
@@ -149,7 +156,32 @@ export const Navbar: React.FC = () => {
                   </>
                 )}
 
-                {/* 4. GENERAL SYSTEM ADMIN NAV ITEMS (/dashboard, /users) */}
+                {/* 4. RENTALS NAV ITEMS */}
+                {currentService === 'rentals' && (
+                  <>
+                    <Link
+                      to="/rentals"
+                      className={`flex items-center space-x-1.5 transition text-xs sm:text-sm font-medium ${
+                        location.pathname === '/rentals' ? 'text-amber-400 font-bold' : 'text-slate-300 hover:text-amber-400'
+                      }`}
+                    >
+                      <span className="text-base leading-none">🚗</span>
+                      <span>Fleet Approvals</span>
+                    </Link>
+
+                    <Link
+                      to="/disputes?service=rentals"
+                      className={`flex items-center space-x-1.5 transition text-xs sm:text-sm font-medium ${
+                        location.pathname === '/disputes' && serviceParam === 'rentals' ? 'text-amber-400 font-bold' : 'text-slate-300 hover:text-amber-400'
+                      }`}
+                    >
+                      <ShieldAlert className="w-4 h-4" />
+                      <span>Fleet Disputes</span>
+                    </Link>
+                  </>
+                )}
+
+                {/* 5. GENERAL SYSTEM ADMIN NAV ITEMS (/dashboard, /users) */}
                 {currentService === 'general' && (
                   <>
                     <Link

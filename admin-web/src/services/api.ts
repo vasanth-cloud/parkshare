@@ -1,4 +1,4 @@
-import { User, ParkingListing, AdminStats, Dispute, DriverProfile, CarSpaCenter } from '../types';
+import { User, ParkingListing, AdminStats, Dispute, DriverProfile, CarSpaCenter, RentalVehicle } from '../types';
 
 function resolveBackendBase(): string {
   const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
@@ -201,6 +201,25 @@ export const api = {
       body: JSON.stringify({ status, reason }),
     });
     if (!res.ok) throw new Error((await res.json()).detail || 'Failed to update car spa status');
+    return res.json();
+  },
+
+  // Rental Vehicle Fleet Partner APIs
+  getRentalVehicles: async (status?: string): Promise<RentalVehicle[]> => {
+    const query = new URLSearchParams();
+    if (status && status !== 'ALL') query.set('status', status);
+    const res = await fetch(`${API_BASE}/rentals/all?${query.toString()}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load rental vehicles');
+    return res.json();
+  },
+
+  updateRentalVehicleStatus: async (vehicleId: string, status: string, reason?: string): Promise<RentalVehicle> => {
+    const res = await fetch(`${API_BASE}/rentals/${vehicleId}/status`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ status, reason }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to update rental vehicle status');
     return res.json();
   },
 };

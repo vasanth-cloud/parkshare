@@ -71,6 +71,23 @@ export const AdminServicesHomePage: React.FC = () => {
         button: 'bg-cyan-600 hover:bg-cyan-500 text-white',
       },
     },
+    {
+      id: 'rentals',
+      title: 'Self-Drive Fleet & Vehicle Approvals',
+      shortTitle: 'Fleet Rentals',
+      subtitle: 'Audit car & bike partner listings, RC documents, tariffs & status',
+      badge: 'Vehicle Fleet',
+      iconText: '🚗',
+      route: '/rentals',
+      actionText: 'Manage Fleets',
+      features: ['RC & Insurance Audit', 'Cars, SUVs & Smart EVs', 'Zero-Deposit Control'],
+      theme: {
+        border: 'border-amber-500/30 hover:border-amber-500',
+        badgeBg: 'bg-amber-950 text-amber-400 border-amber-800',
+        iconBg: 'bg-amber-950/80 text-amber-400 border-amber-800',
+        button: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white',
+      },
+    },
   ];
 
   // Real-time filter: only searches among services!
@@ -85,8 +102,9 @@ export const AdminServicesHomePage: React.FC = () => {
       srv.actionText.toLowerCase().includes(q) ||
       srv.features.some((f) => f.toLowerCase().includes(q)) ||
       (q === 'parking' || q === 'park' || q === 'bay' || q === 'bays' || q === 'space' || q === 'spaces' || q === 'driveway' || q === 'garage' || q === 'approval' || q === 'approvals' || q === 'radar' || q === 'listing' ? srv.id === 'parking' : false) ||
-      (q === 'driver' || q === 'drivers' || q === 'chauffeur' || q === 'acting' || q === 'fleet' || q === 'chauffeurs' ? srv.id === 'drivers' : false) ||
-      (q === 'spa' || q === 'wash' || q === 'clean' || q === 'detailing' || q === 'car spa' || q === 'workshop' || q === 'detail' ? srv.id === 'car-spa' : false)
+      (q === 'driver' || q === 'drivers' || q === 'chauffeur' || q === 'acting' || q === 'chauffeurs' ? srv.id === 'drivers' : false) ||
+      (q === 'spa' || q === 'wash' || q === 'clean' || q === 'detailing' || q === 'car spa' || q === 'workshop' || q === 'detail' ? srv.id === 'car-spa' : false) ||
+      (q === 'rent' || q === 'rental' || q === 'rentals' || q === 'fleet' || q === 'bike' || q === 'car' || q === 'scooter' ? srv.id === 'rentals' : false)
     );
   });
 
@@ -97,18 +115,20 @@ export const AdminServicesHomePage: React.FC = () => {
       return;
     }
     const q = searchQuery.toLowerCase().trim();
-    if (q.includes('driver') || q.includes('chauffeur') || q.includes('acting') || q.includes('fleet')) {
+    if (q.includes('driver') || q.includes('chauffeur') || q.includes('acting')) {
       setSearchError('');
       navigate('/drivers');
     } else if (q.includes('spa') || q.includes('wash') || q.includes('clean') || q.includes('detail') || q.includes('workshop')) {
       setSearchError('');
       navigate('/car-spas');
+    } else if (q.includes('rent') || q.includes('rental') || q.includes('fleet') || q.includes('bike') || q.includes('car')) {
+      setSearchError('');
+      navigate('/rentals');
     } else if (q.includes('park') || q.includes('space') || q.includes('bay') || q.includes('garage') || q.includes('driveway') || q.includes('approval') || q.includes('listing')) {
       setSearchError('');
       navigate('/approvals');
     } else {
-      // Other search does NOT work before selecting services!
-      setSearchError(`No services match "${searchQuery}". Search is only available for platform services (Parking, Acting Driver, Car Spa).`);
+      setSearchError(`No services match "${searchQuery}". Search is available for Parking, Acting Drivers, Car Spa, and Fleet Rentals.`);
     }
   };
 

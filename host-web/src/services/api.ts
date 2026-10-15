@@ -1,4 +1,4 @@
-import { User, ParkingListing, Booking, HostSummary, VerificationStatus, DriverProfile, CarSpaCenter, Review } from '../types';
+import { User, ParkingListing, Booking, HostSummary, VerificationStatus, DriverProfile, CarSpaCenter, Review, RentalPartnerVehicle } from '../types';
 
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
@@ -384,6 +384,23 @@ export const api = {
   getCarSpas: async (): Promise<CarSpaCenter[]> => {
     const res = await fetch(`${API_BASE}/car-spa/all`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to load car spas directory');
+    return res.json();
+  },
+
+  // Rental Vehicle Fleet Partner APIs
+  registerRentalVehicle: async (data: any): Promise<RentalPartnerVehicle> => {
+    const res = await fetch(`${API_BASE}/rentals/register`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to submit rental vehicle registration'));
+    return res.json();
+  },
+
+  getRentalVehicles: async (): Promise<RentalPartnerVehicle[]> => {
+    const res = await fetch(`${API_BASE}/rentals/all`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load rental fleet directory');
     return res.json();
   },
 };

@@ -15,6 +15,7 @@ import { HostEarningsPage } from './pages/HostEarningsPage';
 import { HostVerificationPage } from './pages/HostVerificationPage';
 import { RegisterDriverPage } from './pages/RegisterDriverPage';
 import { RegisterCarSpaPage } from './pages/RegisterCarSpaPage';
+import { RegisterRentalVehiclePage } from './pages/RegisterRentalVehiclePage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -43,6 +44,9 @@ export const AppContent: React.FC = () => {
           <Route path="/partner/driver" element={<RegisterDriverPage />} />
           <Route path="/register/car-spa" element={<RegisterCarSpaPage />} />
           <Route path="/partner/car-spa" element={<RegisterCarSpaPage />} />
+          <Route path="/register/rental" element={<RegisterRentalVehiclePage />} />
+          <Route path="/partner/rental" element={<RegisterRentalVehiclePage />} />
+          <Route path="/register/fleet" element={<RegisterRentalVehiclePage />} />
           <Route
             path="/dashboard"
             element={

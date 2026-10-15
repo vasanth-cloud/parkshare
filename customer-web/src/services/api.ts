@@ -1,4 +1,4 @@
-import { User, Vehicle, ParkingListing, Booking, Review } from '../types';
+import { User, Vehicle, ParkingListing, Booking, Review, RentalVehicle, RentalBooking } from '../types';
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
 
@@ -406,6 +406,40 @@ export const api = {
         "How do I check in with QR pass?"
       ];
     }
+  },
+
+  getRentalVehicles: async (params?: { type?: string; transmission?: string; city?: string }): Promise<RentalVehicle[]> => {
+    const query = new URLSearchParams();
+    if (params?.type && params.type !== 'ALL') query.set('type', params.type);
+    if (params?.transmission && params.transmission !== 'ANY') query.set('transmission', params.transmission);
+    if (params?.city) query.set('city', params.city);
+
+    const res = await fetch(`${API_BASE}/rentals/available?${query.toString()}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to fetch rental vehicles'));
+    return res.json();
+  },
+
+  bookRentalVehicle: async (payload: {
+    vehicleId: string;
+    customerName: string;
+    customerPhone: string;
+    pickupDate: string;
+    returnDate: string;
+    pickupTime: string;
+    deliveryType?: string;
+    doorstepAddress?: string;
+    withInsurance?: boolean;
+    city?: string;
+  }): Promise<RentalBooking> => {
+    const res = await fetch(`${API_BASE}/rentals/book`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to create rental reservation'));
+    return res.json();
   },
 };
 
