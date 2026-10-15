@@ -6,6 +6,8 @@ from app.schemas.rentals import (
     RentalBookingOut,
     RentalPartnerCreate,
     RentalApprovalAction,
+    RcVerifyRequest,
+    RcVerifyResponse,
 )
 from app.services.rentals_service import RentalsService
 
@@ -55,3 +57,11 @@ def book_rental(data: RentalBookingCreate):
     Reserve a self-drive car or bike with doorstep delivery or hub pickup.
     """
     return RentalsService.create_booking(data)
+
+@router.post("/verify-rc", response_model=RcVerifyResponse)
+async def verify_vehicle_rc(data: RcVerifyRequest):
+    """
+    Verify vehicle Registration Certificate (RC) number in real-time via Ministry of Road Transport and Highways (MoRTH / Parivahan) & Attestr API Suite.
+    """
+    return await RentalsService.verify_rc(data)
+

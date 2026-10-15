@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     # Google Gemini AI Assistant
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", "")
 
+    # Attestr Parivahan RC Check API
+    ATTESTR_AUTH_TOKEN: Optional[str] = os.getenv("ATTESTR_AUTH_TOKEN", None)
+    ATTESTR_RC_API_URL: str = "https://api.attestr.com/api/v2/public/checkx/rc"
+
     class Config:
         case_sensitive = True
         env_file = (ENV_FILE_PATH, ".env")

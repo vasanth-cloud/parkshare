@@ -1,4 +1,4 @@
-import { User, ParkingListing, Booking, HostSummary, VerificationStatus, DriverProfile, CarSpaCenter, Review, RentalPartnerVehicle } from '../types';
+import { User, ParkingListing, Booking, HostSummary, VerificationStatus, DriverProfile, CarSpaCenter, Review, RentalPartnerVehicle, RcVerificationResult } from '../types';
 
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
@@ -401,6 +401,16 @@ export const api = {
   getRentalVehicles: async (): Promise<RentalPartnerVehicle[]> => {
     const res = await fetch(`${API_BASE}/rentals/all`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to load rental fleet directory');
+    return res.json();
+  },
+
+  verifyRcNumber: async (reg: string): Promise<RcVerificationResult> => {
+    const res = await fetch(`${API_BASE}/rentals/verify-rc`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ reg, consent: true }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to verify vehicle RC number'));
     return res.json();
   },
 };

@@ -269,3 +269,29 @@ export interface RentalPartnerVehicle {
   payoutUpiId?: string;
 }
 
+export interface RcVerificationResult {
+  valid: boolean;
+  status?: string;
+  registered?: string;
+  owner?: string;
+  masked?: boolean;
+  ownerNumber?: string;
+  category?: string;
+  categoryDescription?: string;
+  makerDescription?: string;
+  makerModel?: string;
+  bodyType?: string;
+  fuelType?: string;
+  colorType?: string;
+  fitnessUpto?: string;
+  insuranceProvider?: string;
+  insurancePolicyNumber?: string;
+  insuranceUpto?: string;
+  commercial?: boolean;
+  blacklistStatus?: string;
+  rto?: string;
+  seatingCapacity?: number;
+  message?: string;
+  source?: string;
+}
+

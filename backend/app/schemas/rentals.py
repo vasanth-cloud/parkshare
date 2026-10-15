@@ -88,3 +88,32 @@ class RentalPartnerCreate(BaseModel):
 class RentalApprovalAction(BaseModel):
     status: str # ACTIVE, SUSPENDED, REJECTED
     reason: Optional[str] = None
+
+class RcVerifyRequest(BaseModel):
+    reg: str = Field(..., description="Vehicle registration plate number (e.g. KA01AB1234 or AP09CU7296)")
+    consent: bool = Field(True, description="Explicit user consent pursuant to DPDP Act 2023")
+
+class RcVerifyResponse(BaseModel):
+    valid: bool
+    status: Optional[str] = "ACTIVE"
+    registered: Optional[str] = None
+    owner: Optional[str] = None
+    masked: Optional[bool] = False
+    ownerNumber: Optional[str] = "1"
+    category: Optional[str] = None
+    categoryDescription: Optional[str] = None
+    makerDescription: Optional[str] = None
+    makerModel: Optional[str] = None
+    bodyType: Optional[str] = None
+    fuelType: Optional[str] = None
+    colorType: Optional[str] = None
+    fitnessUpto: Optional[str] = None
+    insuranceProvider: Optional[str] = None
+    insurancePolicyNumber: Optional[str] = None
+    insuranceUpto: Optional[str] = None
+    commercial: Optional[bool] = False
+    blacklistStatus: Optional[str] = "CLEAN"
+    rto: Optional[str] = None
+    seatingCapacity: Optional[int] = 5
+    message: Optional[str] = None
+    source: str = "PARIVAHAN_MORTH"  # "LIVE_ATTESTR" or "PARIVAHAN_MORTH_SANDBOX"
