@@ -38,6 +38,9 @@ services:
     rootDir: customer-web
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://parkshare-backend-9anh.onrender.com
     routes:
       - type: rewrite
         source: /*
@@ -49,6 +52,9 @@ services:
     rootDir: host-web
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://parkshare-backend-9anh.onrender.com
     routes:
       - type: rewrite
         source: /*
