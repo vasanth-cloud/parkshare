@@ -261,5 +261,11 @@ export interface RentalPartnerVehicle {
   hubAddress: string;
   status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'REJECTED';
   partnerName: string;
+  rcNumber?: string;
+  rcDocumentUrl?: string;
+  rcOwnershipType?: string;
+  insurancePolicyUrl?: string;
+  insuranceExpiry?: string;
+  payoutUpiId?: string;
 }
 

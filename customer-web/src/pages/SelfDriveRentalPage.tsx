@@ -417,6 +417,17 @@ export const SelfDriveRentalPage: React.FC = () => {
                           <span className="truncate max-w-[200px]">{vehicle.hubAddress}</span>
                         </p>
                       </div>
+                      {vehicle.rcNumber && (
+                        <div className="flex flex-col items-end shrink-0 pl-2">
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-black border border-emerald-200 dark:border-emerald-800">
+                            <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                            <span>RC Verified</span>
+                          </span>
+                          <span className="text-[9px] font-mono font-bold text-slate-400 tracking-wider uppercase mt-0.5">
+                            {vehicle.rcNumber}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Specs Matrix */}

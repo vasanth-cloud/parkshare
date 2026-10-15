@@ -23,6 +23,12 @@ class RentalVehicleSchema(BaseModel):
     hubAddress: str
     status: str = "ACTIVE" # ACTIVE, PENDING_APPROVAL, SUSPENDED
     partnerName: str
+    rcNumber: Optional[str] = None
+    rcDocumentUrl: Optional[str] = None
+    rcOwnershipType: Optional[str] = "PRIVATE" # PRIVATE, COMMERCIAL, SELF_DRIVE_PERMIT
+    insurancePolicyUrl: Optional[str] = None
+    insuranceExpiry: Optional[str] = None
+    payoutUpiId: Optional[str] = None
 
 class RentalBookingCreate(BaseModel):
     vehicleId: str
@@ -72,6 +78,12 @@ class RentalPartnerCreate(BaseModel):
     hubAddress: str
     photoUrl: Optional[str] = None
     features: Optional[List[str]] = None
+    rcNumber: Optional[str] = None
+    rcDocumentUrl: Optional[str] = None
+    rcOwnershipType: Optional[str] = "PRIVATE"
+    insurancePolicyUrl: Optional[str] = None
+    insuranceExpiry: Optional[str] = None
+    payoutUpiId: Optional[str] = None
 
 class RentalApprovalAction(BaseModel):
     status: str # ACTIVE, SUSPENDED, REJECTED

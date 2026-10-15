@@ -234,7 +234,13 @@ class RentalsService:
             city=data.city,
             hubAddress=data.hubAddress,
             status="ACTIVE",
-            partnerName=data.ownerName
+            partnerName=data.ownerName,
+            rcNumber=data.rcNumber or data.regNumber,
+            rcDocumentUrl=data.rcDocumentUrl,
+            rcOwnershipType=data.rcOwnershipType or "PRIVATE",
+            insurancePolicyUrl=data.insurancePolicyUrl,
+            insuranceExpiry=data.insuranceExpiry,
+            payoutUpiId=data.payoutUpiId
         )
         SAMPLE_FLEET.insert(0, new_vehicle)
         return new_vehicle

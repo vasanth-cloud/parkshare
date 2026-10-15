@@ -222,6 +222,11 @@ export interface RentalVehicle {
   hubAddress: string;
   status: string;
   partnerName: string;
+  rcNumber?: string;
+  rcOwnershipType?: 'PRIVATE' | 'COMMERCIAL';
+  rcDocumentUrl?: string;
+  insurancePolicyUrl?: string;
+  insuranceExpiry?: string;
 }
 
 export interface RentalBooking {
