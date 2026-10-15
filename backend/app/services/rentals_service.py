@@ -484,49 +484,16 @@ class RentalsService:
                 source="PARIVAHAN_MORTH_SANDBOX"
             )
 
-        # Procedural generator for any other valid Indian plate format
-        state_prefix = clean_reg[:2]
-        STATE_MAP = {
-            "KA": ("Karnataka", "KA-01 Central Bengaluru RTO"),
-            "DL": ("Delhi", "DL-01 Mall Road RTO, New Delhi"),
-            "MH": ("Maharashtra", "MH-02 Andheri RTO, Mumbai"),
-            "TN": ("Tamil Nadu", "TN-07 Thiruvanmiyur RTO, Chennai"),
-            "TS": ("Telangana", "TS-09 Central Hyderabad RTO"),
-            "AP": ("Andhra Pradesh", "AP-09 Vijayawada RTO"),
-            "KL": ("Kerala", "KL-01 Thiruvananthapuram RTO"),
-            "HR": ("Haryana", "HR-26 Gurugram RTO"),
-            "UP": ("Uttar Pradesh", "UP-16 Noida RTO"),
-            "GJ": ("Gujarat", "GJ-01 Ahmedabad RTO"),
-            "WB": ("West Bengal", "WB-01 Kolkata Central RTO"),
-            "RJ": ("Rajasthan", "RJ-14 Jaipur South RTO"),
-        }
-
-        state_info = STATE_MAP.get(state_prefix, ("India", f"{state_prefix}-01 Regional Transport Authority"))
-        is_two_wheeler = any(c in clean_reg for c in ["SC", "BK", "MC", "TW", "VN"]) or clean_reg.endswith("2")
-        is_commercial = any(c in clean_reg for c in ["TX", "CM", "CB", "PT"]) or clean_reg.endswith("9")
-
+        # If not in mock database and no live Attestr token configured:
+        # Do NOT generate fake valid vehicle data!
         return RcVerifyResponse(
-            valid=True,
-            status="ACTIVE",
-            registered="2022-06-18",
-            owner=f"REGISTERED OWNER ({clean_reg[:4]}****)",
-            masked=True,
-            ownerNumber="1",
-            category="2WN" if is_two_wheeler else "4WN",
-            categoryDescription="M-Cycle / Scooter" if is_two_wheeler else "Motor Car (LMV)",
-            makerDescription="HERO MOTOCORP LTD" if is_two_wheeler else "MARUTI SUZUKI INDIA LTD",
-            makerModel="HERO SPLENDOR PLUS" if is_two_wheeler else "MARUTI SUZUKI SWIFT ZXI",
-            bodyType="MOTORCYCLE" if is_two_wheeler else "HATCHBACK",
-            fuelType="PETROL",
-            colorType="METALLIC GREY",
-            fitnessUpto="2037-06-17",
-            insuranceProvider="NATIONAL INSURANCE CO LTD",
-            insurancePolicyNumber=f"NIC-IND-{random.randint(1000000, 9999999)}",
-            insuranceUpto="2027-06-16",
-            commercial=is_commercial,
-            blacklistStatus="CLEAN",
-            rto=state_info[1],
-            seatingCapacity=2 if is_two_wheeler else 5,
-            source="PARIVAHAN_MORTH_SANDBOX"
+            valid=False,
+            status="UNVERIFIED",
+            message=(
+                f"Registration '{raw_reg}' could not be verified with live Parivahan. "
+                "Live government lookups require an Attestr Auth Token in backend/.env (ATTESTR_AUTH_TOKEN). "
+                "For testing without an API key, please use test presets: KA03MG2041 (Creta), KA05NB7788 (Thar), AP09CU7296 (Activa), or KA01AB1234 (Nexon EV)."
+            ),
+            source="PARIVAHAN_MORTH_UNCONFIGURED"
         )
 
