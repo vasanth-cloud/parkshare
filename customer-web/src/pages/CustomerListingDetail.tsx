@@ -632,22 +632,22 @@ export const CustomerListingDetail: React.FC = () => {
           <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
             {listing.is_covered && (
               <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-xl text-[11px] font-semibold">
-                🛡️ Covered
+                 Covered
               </span>
             )}
             {listing.has_ev_charging && (
               <span className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800 px-2.5 py-1 rounded-xl text-[11px] font-semibold">
-                ⚡ EV Charger
+                 EV Charger
               </span>
             )}
             {listing.has_cctv && (
               <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800 px-2.5 py-1 rounded-xl text-[11px] font-semibold">
-                📹 CCTV
+                 CCTV
               </span>
             )}
             {listing.has_gated_access && (
               <span className="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800 px-2.5 py-1 rounded-xl text-[11px] font-semibold">
-                🚪 Gated
+                 Gated
               </span>
             )}
             {listing.has_24_7_access && (
@@ -663,12 +663,10 @@ export const CustomerListingDetail: React.FC = () => {
           <span className="font-bold text-slate-700 dark:text-slate-300">Slot Availability:</span>
           {listing.is_reserved || (listing.available_spaces !== undefined && listing.available_spaces === 0) ? (
             <span className="font-black text-rose-600 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-xl border border-rose-200 dark:border-rose-800 flex items-center space-x-1">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
               <span>Fully Occupied ({listing.capacity}/{listing.capacity} Booked)</span>
             </span>
           ) : (
             <span className="font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center space-x-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <span>{listing.available_spaces ?? listing.capacity} of {listing.capacity} {listing.capacity === 1 ? 'spot' : 'spots'} available</span>
             </span>
           )}
@@ -722,7 +720,7 @@ export const CustomerListingDetail: React.FC = () => {
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              ⚡ Hourly
+               Hourly
             </button>
             <button
               type="button"
@@ -733,7 +731,7 @@ export const CustomerListingDetail: React.FC = () => {
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              📅 1-Day Pass
+               1-Day Pass
             </button>
             <button
               type="button"
@@ -744,7 +742,7 @@ export const CustomerListingDetail: React.FC = () => {
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              🏠 Monthly
+               Monthly
             </button>
           </div>
 
@@ -850,7 +848,7 @@ export const CustomerListingDetail: React.FC = () => {
                 >
                   {vehicles.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {v.vehicle_type === 'BIKE' || v.vehicle_type === 'SCOOTER' ? '🏍️' : '🚗'} {v.registration_number} • {v.make || 'Vehicle'} {v.model || ''}
+                      {v.vehicle_type ==='BIKE'|| v.vehicle_type ==='SCOOTER'?'':''} {v.registration_number} • {v.make ||'Vehicle'} {v.model ||''}
                     </option>
                   ))}
                 </select>
@@ -1223,7 +1221,6 @@ export const CustomerListingDetail: React.FC = () => {
                   <div className="py-8 text-center text-xs text-slate-400">Loading reviews...</div>
                 ) : filteredReviews.length === 0 ? (
                   <div className="py-8 px-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center space-y-1.5">
-                    <span className="text-2xl block">🅿️</span>
                     <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
                       {totalReviewsCount === 0 ? 'No driver reviews yet' : 'No reviews match this rating filter'}
                     </p>

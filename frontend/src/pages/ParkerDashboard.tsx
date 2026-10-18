@@ -77,7 +77,6 @@ export const ParkerDashboard: React.FC = () => {
         <div className="bg-white rounded-3xl p-6 border-2 border-emerald-500 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
               <span className="text-sm font-bold text-emerald-700 uppercase tracking-wide">
                 Active Parking Booking Pass
               </span>

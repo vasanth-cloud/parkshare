@@ -248,3 +248,168 @@ export interface RentalBooking {
   createdAt: string;
 }
 
+// ---------------------------------------------------------------------------
+// Acting Driver bookings (DB-backed, see backend /api/v1/drivers)
+// ---------------------------------------------------------------------------
+export type DriverBookingStatus =
+  | 'REQUESTED'
+  | 'DRIVER_ACCEPTED'
+  | 'CONFIRMED'
+  | 'TRIP_STARTED'
+  | 'PAYMENT_DUE'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'EXPIRED';
+
+export interface DriverPublic {
+  id: number;
+  display_name: string;
+  photo_url?: string | null;
+  city: string;
+  experience_years: number;
+  transmissions: string[];
+  vehicle_categories: string[];
+  languages: string[];
+  rating: number;
+  rating_count: number;
+  total_trips: number;
+  badge: string;
+}
+
+export interface DriverContact extends DriverPublic {
+  full_name: string;
+  phone: string;
+  dl_number_masked: string;
+}
+
+export interface DriverPricing {
+  hourly_rate: number;
+  platform_fee_percent: number;
+  tax_percent: number;
+  min_billable_hours: number;
+  night_surcharge_percent: number;
+  night_start_hour: number;
+  night_end_hour: number;
+  outstation_hourly_rate: number;
+  outstation_min_hours: number;
+  car_type_multipliers: Record<string, number>;
+  billing_increment_minutes: number;
+}
+
+export interface DriverFareBreakdown {
+  hours: number;
+  billable_hours: number;
+  hourly_rate: number;
+  car_type: string;
+  car_multiplier: number;
+  effective_hourly_rate: number;
+  night_hours: number;
+  night_surcharge: number;
+  trip_type: string;
+  driver_fee: number;
+  platform_fee_percent: number;
+  platform_fee: number;
+  tax_percent: number;
+  tax: number;
+  total: number;
+  available_drivers: number;
+}
+
+export interface DriverBookingCreate {
+  pickup_address: string;
+  pickup_city: string;
+  pickup_latitude?: number | null;
+  pickup_longitude?: number | null;
+  drop_address?: string | null;
+  start_time: string;
+  end_time: string;
+  car_type: string;
+  transmission: string;
+  seater: number;
+  car_make_model?: string | null;
+  car_registration?: string | null;
+  notes?: string | null;
+}
+
+export interface DriverBooking {
+  id: number;
+  booking_reference: string;
+  customer_id: number;
+  driver_id?: number | null;
+  status: DriverBookingStatus;
+  pickup_address: string;
+  pickup_city: string;
+  pickup_latitude?: number | null;
+  pickup_longitude?: number | null;
+  drop_address?: string | null;
+  start_time: string;
+  end_time: string;
+  trip_type: string;
+  car_type: string;
+  transmission: string;
+  seater: number;
+  car_make_model?: string | null;
+  car_registration?: string | null;
+  notes?: string | null;
+  hourly_rate: number;
+  car_multiplier: number;
+  platform_fee_percent: number;
+  tax_percent: number;
+  estimated_hours: number;
+  estimated_driver_fee: number;
+  estimated_platform_fee: number;
+  estimated_tax: number;
+  estimated_total: number;
+  accepted_at?: string | null;
+  paid_at?: string | null;
+  trip_started_at?: string | null;
+  trip_ended_at?: string | null;
+  start_otp?: string | null;
+  end_otp?: string | null;
+  actual_hours?: number | null;
+  billable_hours?: number | null;
+  overtime_hours: number;
+  final_driver_fee?: number | null;
+  final_platform_fee?: number | null;
+  final_tax?: number | null;
+  final_total?: number | null;
+  amount_paid: number;
+  balance_due: number;
+  driver_earning: number;
+  cancellation_reason?: string | null;
+  cancelled_by?: string | null;
+  cancelled_at?: string | null;
+  refund_amount: number;
+  customer_rating?: number | null;
+  customer_review?: string | null;
+  driver?: DriverPublic | null;
+  driver_contact?: DriverContact | null;
+  live_elapsed_minutes?: number | null;
+  live_running_total?: number | null;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface DriverPaymentOrder {
+  payment_id: number;
+  booking_id: number;
+  booking_reference: string;
+  order_id: string;
+  purpose: string;
+  amount: number;
+  amount_in_paise: number;
+  currency: string;
+  key_id: string;
+  mock_mode: boolean;
+  description: string;
+}
+
+export interface AppNotification {
+  id: number;
+  title: string;
+  message: string;
+  notification_type: string;
+  is_read: boolean;
+  created_at: string;
+}
+

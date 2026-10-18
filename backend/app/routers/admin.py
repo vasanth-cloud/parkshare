@@ -6,8 +6,9 @@ from app.core.database import get_db
 from app.schemas.admin import AdminStatsOut, ListingApprovalAction, ServiceClassificationOut, ClassifiedTransactionOut
 from app.schemas.listing import ListingOut
 from app.services.listing_service import ListingService
-from app.dependencies.auth import require_role
-from app.models.user import User, UserRoleEnum, HostProfile
+from app.dependencies.auth import require_role, account_kind
+from app.models.user import User, UserRoleEnum
+from app.models.account import Host, Admin
 from app.models.listing import ParkingListing, ListingStatusEnum
 from app.models.booking import Booking, BookingStatusEnum
 from app.models.payment import Payment, PaymentStatusEnum
@@ -20,7 +21,7 @@ def get_admin_stats(
     db: Session = Depends(get_db)
 ):
     total_users = db.query(User).count()
-    total_hosts = db.query(HostProfile).count()
+    total_hosts = db.query(Host).count()
     total_listings = db.query(ParkingListing).count()
     pending_listings = db.query(ParkingListing).filter(ParkingListing.status == ListingStatusEnum.PENDING_APPROVAL).count()
     parking_bookings = db.query(Booking).count()
@@ -34,13 +35,18 @@ def get_admin_stats(
         parking_commission = round(parking_revenue * 0.10, 2)
         parking_payouts = round(parking_revenue * 0.90, 2)
 
-    # 2. Acting Drivers Service Financials
+    # 2. Acting Drivers Service Financials (DB-backed)
     from app.services.driver_service import DriverService
-    total_drivers = len(DriverService.get_all_drivers())
-    driver_revenue = float(DriverService.get_total_revenue())
-    driver_trips = DriverService.get_total_trips()
-    driver_commission = round(driver_revenue * 0.10, 2)
-    driver_payouts = round(driver_revenue * 0.90, 2)
+    from app.models.driver import ActingDriverProfile, ActingDriverBooking, DriverBookingStatusEnum
+    driver_summary = DriverService.admin_summary(db)
+    total_drivers = driver_summary.total_drivers
+    driver_revenue = driver_summary.gross_collected
+    driver_trips = DriverService.get_total_trips(db)
+    driver_commission = driver_summary.platform_commission
+    driver_payouts = driver_summary.driver_payouts
+    if driver_revenue > 0 and driver_commission == 0:
+        driver_commission = round(driver_revenue * 0.10, 2)
+        driver_payouts = round(driver_revenue * 0.90, 2)
 
     # 3. Car Spa & Detailing Service Financials
     from app.services.car_spa_service import CarSpaService
@@ -68,7 +74,7 @@ def get_admin_stats(
             service_name="Parking Radar & Spaces",
             short_name="Parking Radar",
             category="Driveways & Garages",
-            icon="🅿️",
+            icon="",
             gross_collected=parking_revenue,
             platform_commission=parking_commission,
             partner_payouts=parking_payouts,
@@ -83,7 +89,7 @@ def get_admin_stats(
             service_name="Acting Drivers Fleet",
             short_name="Acting Drivers",
             category="On-Demand Chauffeurs",
-            icon="🧑‍✈️",
+            icon="",
             gross_collected=driver_revenue,
             platform_commission=driver_commission,
             partner_payouts=driver_payouts,
@@ -98,7 +104,7 @@ def get_admin_stats(
             service_name="Car Spa & Detailing Hubs",
             short_name="Car Spa",
             category="Doorstep & In-Bay Detailing",
-            icon="✨",
+            icon="",
             gross_collected=spa_revenue,
             platform_commission=spa_commission,
             partner_payouts=spa_payouts,
@@ -113,21 +119,32 @@ def get_admin_stats(
     # 7. Classified Transactions Stream (Recent cross-service ledger)
     classified_transactions = []
     
-    # Add driver transactions
-    for d_book in DriverService.get_all_bookings():
+    # Add driver transactions (paid / live / completed trips from the DB)
+    driver_rows = db.query(ActingDriverBooking).filter(
+        ActingDriverBooking.status.in_([
+            DriverBookingStatusEnum.CONFIRMED.value,
+            DriverBookingStatusEnum.TRIP_STARTED.value,
+            DriverBookingStatusEnum.PAYMENT_DUE.value,
+            DriverBookingStatusEnum.COMPLETED.value,
+        ])
+    ).order_by(ActingDriverBooking.created_at.desc()).limit(15).all()
+    for d_book in driver_rows:
+        gross = float(d_book.amount_paid or 0.0)
+        commission = float(d_book.final_platform_fee if d_book.final_platform_fee is not None else d_book.estimated_platform_fee or 0.0)
+        payout = float(d_book.driver_earning or (d_book.final_driver_fee if d_book.final_driver_fee is not None else d_book.estimated_driver_fee) or 0.0)
         classified_transactions.append(
             ClassifiedTransactionOut(
-                id=d_book.bookingId,
+                id=d_book.booking_reference,
                 service="DRIVERS",
                 service_label="Acting Driver",
-                service_icon="🧑‍✈️",
-                booking_reference=d_book.bookingId,
-                customer_name=d_book.pickupLocation.split(",")[0] if d_book.pickupLocation else "Customer",
-                gross_amount=d_book.totalFare,
-                commission=round(d_book.totalFare * 0.10, 2),
-                net_payout=round(d_book.totalFare * 0.90, 2),
-                status="COMPLETED",
-                date=d_book.createdAt or "Recently",
+                service_icon="",
+                booking_reference=d_book.booking_reference,
+                customer_name=d_book.customer.full_name if d_book.customer else "Customer",
+                gross_amount=round(gross, 2),
+                commission=round(commission, 2),
+                net_payout=round(payout, 2),
+                status=d_book.status,
+                date=d_book.created_at.isoformat() if d_book.created_at else "Recently",
                 payment_method="UPI / Razorpay"
             )
         )
@@ -139,7 +156,7 @@ def get_admin_stats(
                 id=s_book.bookingId,
                 service="CAR_SPA",
                 service_label="Car Spa Detailing",
-                service_icon="✨",
+                service_icon="",
                 booking_reference=s_book.bookingId,
                 customer_name=s_book.package.name if s_book.package else "Spa Service",
                 gross_amount=s_book.finalPrice,
@@ -158,7 +175,7 @@ def get_admin_stats(
                 id=pay.order_id or f"PAY-{pay.id}",
                 service="PARKING",
                 service_label="Parking Radar",
-                service_icon="🅿️",
+                service_icon="",
                 booking_reference=f"PRK-{pay.booking_id}",
                 customer_name="Driveway Parker",
                 gross_amount=pay.amount,
@@ -223,6 +240,23 @@ def approve_or_reject_listing(
     db.refresh(listing)
     return ListingService.get_listing_by_id(db, listing.id, current_user_id=current_user.id, is_confirmed_parker=True)
 
+def _directory_row(account, roles: list, account_name: str) -> dict:
+    role_values = []
+    for role in roles:
+        role_values.append(role.value if hasattr(role, "value") else str(role))
+    return {
+        "id": account.id,
+        "email": account.email,
+        "full_name": account.full_name,
+        "phone_number": account.phone_number,
+        "is_active": account.is_active,
+        "is_verified": account.is_verified,
+        "roles": role_values,
+        "account": account_name,
+        "created_at": account.created_at.isoformat() if account.created_at else None,
+    }
+
+
 @router.get("/users")
 def get_all_users_admin(
     role: Optional[str] = None,
@@ -230,41 +264,56 @@ def get_all_users_admin(
     current_user: User = Depends(require_role(UserRoleEnum.ADMIN)),
     db: Session = Depends(get_db)
 ):
-    query = db.query(User)
-    if role:
-        query = query.filter(User.roles.any(role))
-    if search:
-        query = query.filter((User.full_name.ilike(f"%{search}%")) | (User.email.ilike(f"%{search}%")))
-    
-    users = query.all()
-    return [
-        {
-            "id": u.id,
-            "email": u.email,
-            "full_name": u.full_name,
-            "phone_number": u.phone_number,
-            "is_active": u.is_active,
-            "is_verified": u.is_verified,
-            "roles": [r.value if hasattr(r, 'value') else str(r) for r in u.roles],
-            "created_at": u.created_at.isoformat() if u.created_at else None
-        }
-        for u in users
-    ]
+    """Customers come from users, hosts from hosts, admins from admins."""
+    wanted = (role or "").upper()
+    needle = f"%{search}%" if search else None
+    rows = []
+
+    if wanted in ("", "PARKER"):
+        query = db.query(User)
+        if needle:
+            query = query.filter((User.full_name.ilike(needle)) | (User.email.ilike(needle)))
+        for user in query.all():
+            roles = [r.role for r in user.roles] or [UserRoleEnum.PARKER]
+            rows.append(_directory_row(user, roles, "customer"))
+
+    if wanted in ("", "HOST"):
+        query = db.query(Host)
+        if needle:
+            query = query.filter((Host.full_name.ilike(needle)) | (Host.email.ilike(needle)))
+        for host in query.all():
+            rows.append(_directory_row(host, [UserRoleEnum.HOST], "host"))
+
+    if wanted in ("", "ADMIN"):
+        query = db.query(Admin)
+        if needle:
+            query = query.filter((Admin.full_name.ilike(needle)) | (Admin.email.ilike(needle)))
+        for admin in query.all():
+            rows.append(_directory_row(admin, [UserRoleEnum.ADMIN], "admin"))
+
+    rows.sort(key=lambda row: row["created_at"] or "", reverse=True)
+    return rows
 
 @router.post("/users/{user_id}/toggle-status")
 def toggle_user_status_admin(
     user_id: int,
+    account: str = "customer",
     current_user: User = Depends(require_role(UserRoleEnum.ADMIN)),
     db: Session = Depends(get_db)
 ):
-    user = db.query(User).filter(User.id == user_id).first()
+    account = (account or "customer").lower()
+    model = {"customer": User, "host": Host, "admin": Admin}.get(account)
+    if model is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown account type")
+
+    user = db.query(model).filter(model.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    
-    if user.id == current_user.id:
+
+    if account_kind(current_user) == account and user.id == current_user.id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot toggle status of yourself")
 
     user.is_active = not user.is_active
     db.commit()
-    return {"id": user.id, "email": user.email, "is_active": user.is_active}
+    return {"id": user.id, "email": user.email, "is_active": user.is_active, "account": account}
 

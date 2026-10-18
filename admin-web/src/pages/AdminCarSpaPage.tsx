@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { api, getFullImageUrl } from '../services/api';
 import { CarSpaCenter } from '../types';
 import {
-  Sparkles,
   Search,
   CheckCircle2,
   XCircle,
@@ -145,12 +144,9 @@ export const AdminCarSpaPage: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <span className="text-2xl">✨</span>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">
-              Car Spa & Detailing Hubs Console
-            </h1>
-          </div>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">
+            Car Spa & Detailing Hubs Console
+          </h1>
           <p className="text-xs text-slate-400 mt-1">
             Supervise mobile detailing units, verify workshop bays, and curate auto wash packages
           </p>
@@ -267,7 +263,6 @@ export const AdminCarSpaPage: React.FC = () => {
         </div>
       ) : filteredSpas.length === 0 ? (
         <div className="bg-slate-900 rounded-3xl p-10 text-center border border-slate-800 space-y-3">
-          <span className="text-4xl block">✨</span>
           <h3 className="text-base font-bold text-white">No Car Spa Partners Found</h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
             {searchQuery
@@ -284,10 +279,10 @@ export const AdminCarSpaPage: React.FC = () => {
 
             const serviceModelLabel =
               spa.serviceType === 'DOORSTEP_MOBILE'
-                ? '🚐 Doorstep Mobile Van'
+                ?'Doorstep Mobile Van'
                 : spa.serviceType === 'WORKSHOP_BAY'
-                ? '🏢 Workshop In-Bay'
-                : '⚡ Hybrid (Doorstep + Bay)';
+                ?'Workshop In-Bay'
+                :'Hybrid (Doorstep + Bay)';
 
             return (
               <div
@@ -390,7 +385,7 @@ export const AdminCarSpaPage: React.FC = () => {
                           key={svc}
                           className="bg-cyan-950/60 text-cyan-300 border border-cyan-800/60 text-[10px] font-bold px-2 py-0.5 rounded-lg"
                         >
-                          ✨ {svc}
+                          {svc}
                         </span>
                       ))}
                     </div>
@@ -434,10 +429,7 @@ export const AdminCarSpaPage: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center space-x-2">
-                <span className="text-xl">✨</span>
-                <h3 className="text-base font-black text-white">Register Car Spa Partner Hub</h3>
-              </div>
+              <h3 className="text-base font-black text-white">Register Car Spa Partner Hub</h3>
               <button
                 type="button"
                 onClick={() => setIsRegisterModalOpen(false)}

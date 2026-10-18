@@ -90,9 +90,8 @@ export const RegisterCarSpaPage: React.FC = () => {
           </button>
 
           <div className="flex items-center space-x-2">
-            <span className="text-xs font-black bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-              <span className="text-sm">✨</span>
-              <span>Car Spa & Detailing Partner Hub</span>
+            <span className="text-xs font-black bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800 px-2.5 py-0.5 rounded-full">
+              Car Spa & Detailing Partner Hub
             </span>
           </div>
         </div>
@@ -164,7 +163,6 @@ export const RegisterCarSpaPage: React.FC = () => {
             <div className="max-w-md mx-auto bg-gradient-to-br from-cyan-950 via-slate-900 to-slate-950 text-white rounded-3xl p-5 border border-cyan-700/60 shadow-xl text-left space-y-4">
               <div className="flex items-center justify-between border-b border-cyan-800/80 pb-3">
                 <div className="flex items-center space-x-2">
-                  <span className="text-xl">✨</span>
                   <div>
                     <h4 className="text-xs font-black text-white">ParkCo Auto Spa Hub</h4>
                     <span className="font-mono text-[10px] text-cyan-300 font-bold">
@@ -196,7 +194,7 @@ export const RegisterCarSpaPage: React.FC = () => {
                 <div>
                   <span className="text-[10px] text-cyan-300 block">Service Delivery</span>
                   <span className="font-bold text-white">
-                    {registeredSpa.serviceType === 'DOORSTEP_MOBILE' ? '🚐 Mobile Van' : '🏢 In-Bay Workshop'}
+                    {registeredSpa.serviceType ==='DOORSTEP_MOBILE'?'Mobile Van':'In-Bay Workshop'}
                   </span>
                 </div>
                 <div>
@@ -330,9 +328,9 @@ export const RegisterCarSpaPage: React.FC = () => {
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {[
-                      { id: 'DOORSTEP_MOBILE', title: '🚐 Doorstep Mobile Unit', desc: 'Wash cars at client premises or parking lot' },
-                      { id: 'WORKSHOP_BAY', title: '🏢 Workshop In-Bay', desc: 'Customer parks inside your detailing bay' },
-                      { id: 'BOTH', title: '⚡ Hybrid (Both)', desc: 'Mobile vans + physical workshop bay' },
+                      { id:'DOORSTEP_MOBILE', title:'Doorstep Mobile Unit', desc:'Wash cars at client premises or parking lot'},
+                      { id:'WORKSHOP_BAY', title:'Workshop In-Bay', desc:'Customer parks inside your detailing bay'},
+                      { id:'BOTH', title:'Hybrid (Both)', desc:'Mobile vans + physical workshop bay'},
                     ].map((model) => (
                       <button
                         key={model.id}

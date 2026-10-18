@@ -14,7 +14,6 @@ import {
   PieChart,
   TrendingUp,
   ArrowUpRight,
-  Sparkles,
   CreditCard,
   Layers,
   Activity,
@@ -29,7 +28,6 @@ export const AdminDashboard: React.FC = () => {
 
   // Classification Controls
   const [selectedClassification, setSelectedClassification] = useState<'ALL' | 'PARKING' | 'DRIVERS' | 'CAR_SPA'>('ALL');
-  const [viewMode, setViewMode] = useState<'LIVE' | 'BENCHMARK'>('LIVE');
 
   const fetchStats = async () => {
     try {
@@ -52,157 +50,19 @@ export const AdminDashboard: React.FC = () => {
     fetchStats();
   };
 
-  // Realistic business model benchmark for demonstration/projection
-  const benchmarkClassification: ServiceFinancialClassification[] = [
-    {
-      service_id: 'PARKING',
-      service_name: 'Parking Radar & Spaces',
-      short_name: 'Parking Radar',
-      category: 'Driveways & Garages',
-      icon: '🅿️',
-      gross_collected: 12450.0,
-      platform_commission: 1245.0,
-      partner_payouts: 11205.0,
-      total_bookings: 38,
-      active_units: stats?.total_listings || 2,
-      contribution_percentage: 45.0,
-      avg_ticket_size: 327.63,
-      status: 'ACTIVE'
-    },
-    {
-      service_id: 'DRIVERS',
-      service_name: 'Acting Drivers Fleet',
-      short_name: 'Acting Drivers',
-      category: 'On-Demand Chauffeurs',
-      icon: '🧑‍✈️',
-      gross_collected: 8750.0,
-      platform_commission: 875.0,
-      partner_payouts: 7875.0,
-      total_bookings: 21,
-      active_units: stats?.total_drivers || 3,
-      contribution_percentage: 31.6,
-      avg_ticket_size: 416.67,
-      status: 'ACTIVE'
-    },
-    {
-      service_id: 'CAR_SPA',
-      service_name: 'Car Spa & Detailing Hubs',
-      short_name: 'Car Spa Detailing',
-      category: 'Doorstep & In-Bay Detailing',
-      icon: '✨',
-      gross_collected: 6480.0,
-      platform_commission: 648.0,
-      partner_payouts: 5832.0,
-      total_bookings: 14,
-      active_units: stats?.total_car_spas || 3,
-      contribution_percentage: 23.4,
-      avg_ticket_size: 462.86,
-      status: 'ACTIVE'
-    }
-  ];
+  function round(num: number) {
+    return Math.round(num * 100) / 100;
+  }
 
-  const benchmarkTransactions: ClassifiedTransaction[] = [
-    {
-      id: 'TXN-PRK-901',
-      service: 'PARKING',
-      service_label: 'Parking Space',
-      service_icon: '🅿️',
-      booking_reference: 'PRK-89211',
-      customer_name: 'Indiranagar Prime Driveway',
-      gross_amount: 420.0,
-      commission: 42.0,
-      net_payout: 378.0,
-      status: 'COMPLETED',
-      date: 'Today, 11:20 AM',
-      payment_method: 'UPI / Razorpay'
-    },
-    {
-      id: 'TXN-DRV-402',
-      service: 'DRIVERS',
-      service_label: 'Acting Driver',
-      service_icon: '🧑‍✈️',
-      booking_reference: 'DRV-894103',
-      customer_name: 'Koramangala 4th Block (Outstation)',
-      gross_amount: 2099.0,
-      commission: 209.9,
-      net_payout: 1889.1,
-      status: 'COMPLETED',
-      date: 'Today, 09:15 AM',
-      payment_method: 'UPI / Razorpay'
-    },
-    {
-      id: 'TXN-SPA-303',
-      service: 'CAR_SPA',
-      service_label: 'Car Spa Detailing',
-      service_icon: '✨',
-      booking_reference: 'SPA-719323',
-      customer_name: '3M Ceramic Glaze & Polish',
-      gross_amount: 1349.0,
-      commission: 134.9,
-      net_payout: 1214.1,
-      status: 'COMPLETED',
-      date: 'Yesterday, 04:30 PM',
-      payment_method: 'UPI / Razorpay'
-    },
-    {
-      id: 'TXN-PRK-904',
-      service: 'PARKING',
-      service_label: 'Parking Space',
-      service_icon: '🅿️',
-      booking_reference: 'PRK-89212',
-      customer_name: 'Koramangala Covered Bay Slot A2',
-      gross_amount: 800.0,
-      commission: 80.0,
-      net_payout: 720.0,
-      status: 'COMPLETED',
-      date: 'Yesterday, 02:10 PM',
-      payment_method: 'Razorpay Gateway'
-    },
-    {
-      id: 'TXN-DRV-405',
-      service: 'DRIVERS',
-      service_label: 'Acting Driver',
-      service_icon: '🧑‍✈️',
-      booking_reference: 'DRV-894104',
-      customer_name: 'MG Road Night Chauffeur',
-      gross_amount: 597.0,
-      commission: 59.7,
-      net_payout: 537.3,
-      status: 'COMPLETED',
-      date: '2 days ago',
-      payment_method: 'UPI / Razorpay'
-    },
-    {
-      id: 'TXN-SPA-306',
-      service: 'CAR_SPA',
-      service_label: 'Car Spa Detailing',
-      service_icon: '✨',
-      booking_reference: 'SPA-719322',
-      customer_name: 'Deep Interior Spa & Steam',
-      gross_amount: 799.0,
-      commission: 79.9,
-      net_payout: 719.1,
-      status: 'COMPLETED',
-      date: '2 days ago',
-      payment_method: 'UPI / Razorpay'
-    }
-  ];
-
-  // Resolve classification data (use API live data or synthesize if not present)
   const resolvedClassifications: ServiceFinancialClassification[] = (() => {
-    if (viewMode === 'BENCHMARK') {
-      return benchmarkClassification;
-    }
-
     if (stats?.services_classification && stats.services_classification.length > 0) {
       return stats.services_classification;
     }
 
-    // Dynamic synthesis based on current stats if backend schema is earlier version
-    const totalRev = stats?.total_revenue || 0;
-    const parkingRev = totalRev;
-    const parkingComm = stats?.platform_commission_earned || round(parkingRev * 0.1);
-    const parkingPayout = stats?.total_payouts || round(parkingRev * 0.9);
+    const totalRev = stats?.total_revenue ?? 0;
+    const parkingComm = stats?.platform_commission_earned ?? 0;
+    const parkingPayout = stats?.total_payouts ?? 0;
+    const bookings = stats?.total_bookings ?? 0;
 
     return [
       {
@@ -210,14 +70,14 @@ export const AdminDashboard: React.FC = () => {
         service_name: 'Parking Radar & Spaces',
         short_name: 'Parking Radar',
         category: 'Driveways & Garages',
-        icon: '🅿️',
-        gross_collected: parkingRev,
+        icon:'',
+        gross_collected: totalRev,
         platform_commission: parkingComm,
         partner_payouts: parkingPayout,
-        total_bookings: stats?.total_bookings || 0,
-        active_units: stats?.total_listings || 2,
+        total_bookings: bookings,
+        active_units: stats?.total_listings ?? 0,
         contribution_percentage: totalRev > 0 ? 100 : 0,
-        avg_ticket_size: stats?.total_bookings ? round(parkingRev / stats.total_bookings) : 0,
+        avg_ticket_size: bookings ? round(totalRev / bookings) : 0,
         status: 'ACTIVE'
       },
       {
@@ -225,12 +85,12 @@ export const AdminDashboard: React.FC = () => {
         service_name: 'Acting Drivers Fleet',
         short_name: 'Acting Drivers',
         category: 'On-Demand Chauffeurs',
-        icon: '🧑‍✈️',
+        icon:'',
         gross_collected: 0,
         platform_commission: 0,
         partner_payouts: 0,
         total_bookings: 0,
-        active_units: stats?.total_drivers || 3,
+        active_units: stats?.total_drivers ?? 0,
         contribution_percentage: 0,
         avg_ticket_size: 0,
         status: 'ACTIVE'
@@ -240,12 +100,12 @@ export const AdminDashboard: React.FC = () => {
         service_name: 'Car Spa & Detailing Hubs',
         short_name: 'Car Spa Detailing',
         category: 'Doorstep & In-Bay Detailing',
-        icon: '✨',
+        icon: '',
         gross_collected: 0,
         platform_commission: 0,
         partner_payouts: 0,
         total_bookings: 0,
-        active_units: stats?.total_car_spas || 3,
+        active_units: stats?.total_car_spas ?? 0,
         contribution_percentage: 0,
         avg_ticket_size: 0,
         status: 'ACTIVE'
@@ -253,19 +113,7 @@ export const AdminDashboard: React.FC = () => {
     ];
   })();
 
-  const resolvedTransactions: ClassifiedTransaction[] = (() => {
-    if (viewMode === 'BENCHMARK') {
-      return benchmarkTransactions;
-    }
-    if (stats?.classified_transactions && stats.classified_transactions.length > 0) {
-      return stats.classified_transactions;
-    }
-    return benchmarkTransactions;
-  })();
-
-  function round(num: number) {
-    return Math.round(num * 100) / 100;
-  }
+  const resolvedTransactions: ClassifiedTransaction[] = stats?.classified_transactions ?? [];
 
   // Calculate live aggregate totals across all services
   const aggregatedGMV = resolvedClassifications.reduce((sum, item) => sum + item.gross_collected, 0);
@@ -324,7 +172,6 @@ export const AdminDashboard: React.FC = () => {
                 </span>
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Real-time marketplace system statistics & classified cross-service collections
               </p>
             </div>
           </div>
@@ -344,14 +191,14 @@ export const AdminDashboard: React.FC = () => {
             to="/drivers"
             className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition flex items-center space-x-1.5 shadow-sm"
           >
-            <span>🧑‍✈️ Drivers ({stats?.total_drivers || 3})</span>
+            <span>Drivers ({stats?.total_drivers ?? 0})</span>
           </Link>
 
           <Link
             to="/car-spas"
             className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-3 py-2 rounded-xl text-xs transition flex items-center space-x-1.5 shadow-sm"
           >
-            <span>✨ Car Spas ({stats?.total_car_spas || 3})</span>
+            <span>Car Spas ({stats?.total_car_spas ?? 0})</span>
           </Link>
 
           <Link
@@ -359,7 +206,7 @@ export const AdminDashboard: React.FC = () => {
             className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3 py-2 rounded-xl text-xs transition flex items-center space-x-1.5 border border-slate-700"
           >
             <Users className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Users ({stats?.total_users || 3})</span>
+            <span>Users ({stats?.total_users ?? 0})</span>
           </Link>
         </div>
       </div>
@@ -381,7 +228,6 @@ export const AdminDashboard: React.FC = () => {
               </div>
               <div className="text-3xl font-extrabold text-white tracking-tight">{stats.total_users}</div>
               <div className="flex items-center space-x-1.5 text-[11px] text-slate-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                 <span>{stats.total_hosts} Registered Hosts & Partners</span>
               </div>
             </div>
@@ -393,12 +239,12 @@ export const AdminDashboard: React.FC = () => {
                 <Building className="w-4 h-4 text-emerald-400" />
               </div>
               <div className="text-3xl font-extrabold text-white tracking-tight">
-                {(stats.total_listings || 1) + (stats.total_drivers || 3) + (stats.total_car_spas || 3)}
+                {(stats.total_listings ?? 0) + (stats.total_drivers ?? 0) + (stats.total_car_spas ?? 0)}
               </div>
               <div className="text-[11px] text-slate-400 flex flex-wrap gap-1">
                 <span className="text-emerald-400 font-semibold">{stats.total_listings} Spaces</span> •{' '}
-                <span className="text-indigo-400 font-semibold">{stats.total_drivers || 3} Drivers</span> •{' '}
-                <span className="text-cyan-400 font-semibold">{stats.total_car_spas || 3} Spas</span>
+                <span className="text-indigo-400 font-semibold">{stats.total_drivers ?? 0} Drivers</span> •{' '}
+                <span className="text-cyan-400 font-semibold">{stats.total_car_spas ?? 0} Spas</span>
               </div>
             </div>
 
@@ -412,9 +258,9 @@ export const AdminDashboard: React.FC = () => {
                 {aggregatedBookings}
               </div>
               <div className="text-[11px] text-slate-400 flex flex-wrap gap-1">
-                <span>🅿️ {parkingItem?.total_bookings || 0}</span> •{' '}
-                <span>🧑‍✈️ {driversItem?.total_bookings || 0}</span> •{' '}
-                <span>✨ {spaItem?.total_bookings || 0}</span>
+                <span>{parkingItem?.total_bookings || 0}</span>•{''}
+                <span>{driversItem?.total_bookings || 0}</span>•{''}
+                <span>{spaItem?.total_bookings || 0}</span>
               </div>
             </div>
 
@@ -458,13 +304,13 @@ export const AdminDashboard: React.FC = () => {
               {/* Classified mini pills */}
               <div className="pt-2 border-t border-slate-800/80 flex flex-wrap gap-2 text-xs">
                 <span className="px-2.5 py-1 rounded-xl bg-emerald-950/70 text-emerald-300 border border-emerald-800/60 font-medium">
-                  🅿️ Parking: ₹{(parkingItem?.platform_commission || 0).toLocaleString()}
+                   Parking: ₹{(parkingItem?.platform_commission || 0).toLocaleString()}
                 </span>
                 <span className="px-2.5 py-1 rounded-xl bg-indigo-950/70 text-indigo-300 border border-indigo-800/60 font-medium">
-                  🧑‍✈️ Drivers: ₹{(driversItem?.platform_commission || 0).toLocaleString()}
+                   Drivers: ₹{(driversItem?.platform_commission || 0).toLocaleString()}
                 </span>
                 <span className="px-2.5 py-1 rounded-xl bg-cyan-950/70 text-cyan-300 border border-cyan-800/60 font-medium">
-                  ✨ Car Spa: ₹{(spaItem?.platform_commission || 0).toLocaleString()}
+                  Car Spa: ₹{(spaItem?.platform_commission || 0).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -489,20 +335,20 @@ export const AdminDashboard: React.FC = () => {
               {/* Classified mini pills */}
               <div className="pt-2 border-t border-slate-800/80 flex flex-wrap gap-2 text-xs">
                 <span className="px-2.5 py-1 rounded-xl bg-emerald-950/70 text-emerald-300 border border-emerald-800/60 font-medium">
-                  🅿️ Space Hosts: ₹{(parkingItem?.partner_payouts || 0).toLocaleString()}
+                   Space Hosts: ₹{(parkingItem?.partner_payouts || 0).toLocaleString()}
                 </span>
                 <span className="px-2.5 py-1 rounded-xl bg-indigo-950/70 text-indigo-300 border border-indigo-800/60 font-medium">
-                  🧑‍✈️ Chauffeurs: ₹{(driversItem?.partner_payouts || 0).toLocaleString()}
+                   Chauffeurs: ₹{(driversItem?.partner_payouts || 0).toLocaleString()}
                 </span>
                 <span className="px-2.5 py-1 rounded-xl bg-cyan-950/70 text-cyan-300 border border-cyan-800/60 font-medium">
-                  ✨ Detailing Bays: ₹{(spaItem?.partner_payouts || 0).toLocaleString()}
+                  Detailing Bays: ₹{(spaItem?.partner_payouts || 0).toLocaleString()}
                 </span>
               </div>
             </div>
           </div>
 
           {/* ============================================================== */}
-          {/* 🌟 PRIMARY SECTION: ALL SERVICES COLLECTIONS CLASSIFICATION   */}
+          {/*  PRIMARY SECTION: ALL SERVICES COLLECTIONS CLASSIFICATION   */}
           {/* ============================================================== */}
           <div className="bg-slate-900/60 rounded-3xl border border-slate-800 p-6 sm:p-8 space-y-6">
             {/* Section Header with Mode Toggle & Filters */}
@@ -517,38 +363,10 @@ export const AdminDashboard: React.FC = () => {
                   </h2>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Comprehensive financial classification and amount collected breakdown across Parking Radar, Acting Drivers, and Car Spa Detailing
                 </p>
               </div>
 
-              {/* Controls: Mode Switcher & Filter Pills */}
               <div className="flex flex-wrap items-center gap-3">
-                {/* Mode Selector */}
-                <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center space-x-1 text-xs">
-                  <button
-                    onClick={() => setViewMode('LIVE')}
-                    className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
-                      viewMode === 'LIVE'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                    <span>Live Ledger</span>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('BENCHMARK')}
-                    className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
-                      viewMode === 'BENCHMARK'
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Projected Model</span>
-                  </button>
-                </div>
-
                 {/* Classification Filter Tabs */}
                 <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center space-x-1 text-xs">
                   <button
@@ -569,7 +387,7 @@ export const AdminDashboard: React.FC = () => {
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <span>🅿️ Parking</span>
+                    <span>Parking</span>
                   </button>
                   <button
                     onClick={() => setSelectedClassification('DRIVERS')}
@@ -579,7 +397,7 @@ export const AdminDashboard: React.FC = () => {
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <span>🧑‍✈️ Drivers</span>
+                    <span>Drivers</span>
                   </button>
                   <button
                     onClick={() => setSelectedClassification('CAR_SPA')}
@@ -589,7 +407,7 @@ export const AdminDashboard: React.FC = () => {
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <span>✨ Car Spa</span>
+                    <span>Car Spa</span>
                   </button>
                 </div>
               </div>
@@ -846,7 +664,6 @@ export const AdminDashboard: React.FC = () => {
                         </td>
                         <td className="py-3 px-4 text-right">
                           <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800">
-                            <span className="w-1 h-1 rounded-full bg-emerald-400"></span>
                             <span>ACTIVE</span>
                           </span>
                         </td>
@@ -886,7 +703,6 @@ export const AdminDashboard: React.FC = () => {
                     <span>Recent Cross-Service Collections Ledger</span>
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Individual booking payments and verified remittances across services
                   </p>
                 </div>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
@@ -978,7 +794,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="w-10 h-10 rounded-2xl bg-emerald-950 flex items-center justify-center text-xl border border-emerald-800">
-                      🅿️
+                      
                     </span>
                     <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-800">
                       {stats.total_listings} Spaces ({stats.pending_listings} Pending)
@@ -1002,10 +818,10 @@ export const AdminDashboard: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="w-10 h-10 rounded-2xl bg-indigo-950 flex items-center justify-center text-xl border border-indigo-800">
-                      🧑‍✈️
+                      
                     </span>
                     <span className="text-xs font-bold text-indigo-400 bg-indigo-950/80 px-2.5 py-1 rounded-full border border-indigo-800">
-                      {stats.total_drivers || 3} Registered Chauffeurs
+                      {stats.total_drivers ?? 0} Registered Chauffeurs
                     </span>
                   </div>
                   <h3 className="text-base font-bold text-white">Acting Drivers Fleet</h3>
@@ -1026,10 +842,9 @@ export const AdminDashboard: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="w-10 h-10 rounded-2xl bg-cyan-950 flex items-center justify-center text-xl border border-cyan-800">
-                      ✨
                     </span>
                     <span className="text-xs font-bold text-cyan-400 bg-cyan-950/80 px-2.5 py-1 rounded-full border border-cyan-800">
-                      {stats.total_car_spas || 3} Partner Centers
+                      {stats.total_car_spas ?? 0} Partner Centers
                     </span>
                   </div>
                   <h3 className="text-base font-bold text-white">Car Spa & Detailing Hubs</h3>

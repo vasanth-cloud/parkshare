@@ -150,10 +150,10 @@ export const CustomerVehiclesPage: React.FC = () => {
             <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Vehicle Category</label>
             <div className="grid grid-cols-4 gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
               {[
-                { type: 'CAR', label: 'Car', icon: '🚗' },
-                { type: 'BIKE', label: 'Bike', icon: '🏍️' },
-                { type: 'SUV', label: 'SUV', icon: '🚙' },
-                { type: 'SCOOTER', label: 'Scooter', icon: '🛵' },
+                { type:'CAR', label:'Car', icon:''},
+                { type:'BIKE', label:'Bike', icon:''},
+                { type:'SUV', label:'SUV', icon:''},
+                { type:'SCOOTER', label:'Scooter', icon:''},
               ].map((item) => (
                 <button
                   key={item.type}
@@ -180,7 +180,7 @@ export const CustomerVehiclesPage: React.FC = () => {
                 {/* Left Blue IND Strip */}
                 <div className="bg-[#0038A8] text-white flex flex-col items-center justify-center px-2 py-1.5 self-stretch border-r border-slate-300">
                   <div className="w-3.5 h-3.5 rounded-full border border-amber-300 flex items-center justify-center text-[7px] font-black text-amber-300">
-                    ☸
+                    
                   </div>
                   <span className="text-[10px] font-black tracking-tighter mt-0.5 leading-none">IND</span>
                 </div>
@@ -257,7 +257,7 @@ export const CustomerVehiclesPage: React.FC = () => {
           <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
             <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/20 rounded-full animate-ping" />
             <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-3xl shadow-sm">
-              🚗
+              
             </div>
           </div>
 
@@ -308,7 +308,7 @@ export const CustomerVehiclesPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <span className="bg-white/10 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border border-white/10 flex items-center space-x-1">
-                    <span>{v.vehicle_type === 'BIKE' || v.vehicle_type === 'SCOOTER' ? '🏍️ TWO-WHEELER' : '🚗 FOUR-WHEELER'}</span>
+                    <span>{v.vehicle_type ==='BIKE'|| v.vehicle_type ==='SCOOTER'?'TWO-WHEELER':'FOUR-WHEELER'}</span>
                   </span>
                   {v.is_default && (
                     <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold px-2.5 py-1 rounded-full border border-emerald-500/30 flex items-center space-x-1">
@@ -333,7 +333,7 @@ export const CustomerVehiclesPage: React.FC = () => {
                 {/* Left Blue IND Strip */}
                 <div className="bg-[#0038A8] text-white flex flex-col items-center justify-center px-2 py-1 rounded-lg self-stretch">
                   <div className="w-3 h-3 rounded-full border border-amber-300 flex items-center justify-center text-[6px] font-black text-amber-300">
-                    ☸
+                    
                   </div>
                   <span className="text-[9px] font-black tracking-tighter mt-0.5 leading-none">IND</span>
                 </div>
@@ -389,19 +389,16 @@ export const CustomerVehiclesPage: React.FC = () => {
         {/* 3 Step Visual Mini Flow */}
         <div className="grid grid-cols-3 gap-2 text-center pt-1">
           <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
-            <span className="text-lg block">📹</span>
             <span className="text-[10px] font-extrabold text-slate-800 dark:text-slate-200 block">1. Approach</span>
             <span className="text-[9px] text-slate-500 leading-tight block">Camera reads plate</span>
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
-            <span className="text-lg block">🚪</span>
             <span className="text-[10px] font-extrabold text-slate-800 dark:text-slate-200 block">2. Gate Opens</span>
             <span className="text-[9px] text-slate-500 leading-tight block">Barrier lifts in 2s</span>
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-1">
-            <span className="text-lg block">🅿️</span>
             <span className="text-[10px] font-extrabold text-slate-800 dark:text-slate-200 block">3. Park Slot</span>
             <span className="text-[9px] text-slate-500 leading-tight block">Zero ticket queues</span>
           </div>

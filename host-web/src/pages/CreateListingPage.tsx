@@ -766,7 +766,7 @@ export const CreateListingPage: React.FC = () => {
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  <span>🏡</span>
+                  <span></span>
                   <span className="truncate">Individual</span>
                 </button>
                 <button
@@ -778,7 +778,7 @@ export const CreateListingPage: React.FC = () => {
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  <span>🏢</span>
+                  <span></span>
                   <span className="truncate">Commercial</span>
                 </button>
               </div>
@@ -1318,7 +1318,7 @@ export const CreateListingPage: React.FC = () => {
             Spaces with landmark titles like <em>"Safe Driveway near Metro"</em> get up to <strong>3x more driver bookings</strong>.
           </p>
           <div className="pt-1.5 border-t border-emerald-200/60 flex items-center justify-between text-[10px] text-emerald-800 font-semibold">
-            <span>🛡️ Host Property Protection</span>
+            <span>Host Property Protection</span>
             <span className="bg-emerald-100/90 text-emerald-900 px-2 py-0.5 rounded-md font-bold">₹50,000 Cover</span>
           </div>
         </div>
@@ -1334,7 +1334,7 @@ export const CreateListingPage: React.FC = () => {
             Your exact house number is <strong>never displayed publicly</strong> on maps. Drivers receive arrival directions only after payment is confirmed.
           </p>
           <div className="pt-1.5 border-t border-blue-200/60 flex items-center justify-between text-[10px] text-blue-800 font-semibold">
-            <span>📍 High-Accuracy Pin</span>
+            <span>High-Accuracy Pin</span>
             <span className="text-blue-700">Turn-by-turn Driver GPS</span>
           </div>
         </div>
@@ -1350,7 +1350,7 @@ export const CreateListingPage: React.FC = () => {
             Standard hatchbacks require ~4.0m, sedans ~4.6m, and large SUVs (like Fortuner or Safari) need 5.0m+ with at least 2.1m height clearance.
           </p>
           <div className="pt-1.5 border-t border-purple-200/60 flex items-center justify-between text-[10px] text-purple-800 font-semibold">
-            <span>⚡ EV Charger Bonus</span>
+            <span>EV Charger Bonus</span>
             <span className="text-purple-700">+25% Higher Hourly Earnings</span>
           </div>
         </div>
@@ -1366,7 +1366,7 @@ export const CreateListingPage: React.FC = () => {
             Hosts in your area earn an average of <strong>₹8,000 – ₹15,000/month</strong>. Payouts are transferred automatically to your registered UPI ID every week.
           </p>
           <div className="pt-1.5 border-t border-amber-200/60 flex items-center justify-between text-[10px] text-amber-800 font-semibold">
-            <span>⚡ Automated UPI Settlement</span>
+            <span>Automated UPI Settlement</span>
             <span className="text-amber-800 font-bold">Zero Withdrawal Fees</span>
           </div>
         </div>
@@ -1382,7 +1382,7 @@ export const CreateListingPage: React.FC = () => {
             Spaces with clear photos of the entrance and slot are approved in under <strong>15 minutes</strong> and become instantly searchable on the driver app.
           </p>
           <div className="pt-1.5 border-t border-emerald-200/60 flex items-center justify-between text-[10px] text-emerald-800 font-semibold">
-            <span>🛡️ Official Verified Host Badge</span>
+            <span>Official Verified Host Badge</span>
             <span className="text-emerald-700 font-bold">Unlocks Instant Bookings</span>
           </div>
         </div>

@@ -16,39 +16,8 @@ export const spaApi = {
       if (!res.ok) throw new Error('Failed to fetch spa packages');
       return await res.json();
     } catch (err) {
-      console.warn('Using client fallback spa packages:', err);
-      return [
-        {
-          id: 'ECO_EXPRESS',
-          name: 'Eco Waterless Express',
-          tagline: 'Quick 30-min exterior shine',
-          price: 199,
-          durationMinutes: 30,
-          features: [
-            'Polymer waterless foam wash',
-            'Scratch-free microfiber buffing',
-            'Windshield & mirror de-greasing',
-            'Tire dress & rim wipe',
-          ],
-          recommendedFor: 'Daily maintenance & dusty cars',
-        },
-        {
-          id: 'FOAM_PRESSURE',
-          name: 'Signature Foam Wash',
-          tagline: 'Deep active foam & wheel care',
-          price: 399,
-          durationMinutes: 45,
-          popular: true,
-          features: [
-            'High-pressure water rinse',
-            'pH-neutral snow foam bath',
-            'Deep alloy rim & brake dust removal',
-            'Door jamb cleaning & wiper blade degrease',
-            'Tire conditioning gloss',
-          ],
-          recommendedFor: 'Weekly wash & highway trips',
-        },
-      ];
+      console.warn('Spa packages unavailable:', err);
+      return [];
     }
   },
 

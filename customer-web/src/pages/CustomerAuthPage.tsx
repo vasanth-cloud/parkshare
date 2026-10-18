@@ -161,7 +161,7 @@ export const CustomerAuthPage: React.FC = () => {
           return;
         }
         if (!isPhoneVerified) {
-          setError('⚠️ Mobile Verification Required: Please click "Send OTP" and enter the 6-digit code to verify your phone number.');
+          setError('Mobile Verification Required: Please click"Send OTP"and enter the 6-digit code to verify your phone number.');
           setLoading(false);
           return;
         }
@@ -171,7 +171,7 @@ export const CustomerAuthPage: React.FC = () => {
           return;
         }
         if (!isEmailVerified) {
-          setError('⚠️ Email Verification Required: Please click "Send OTP" and enter the 6-digit code to verify your email address.');
+          setError('Email Verification Required: Please click"Send OTP"and enter the 6-digit code to verify your email address.');
           setLoading(false);
           return;
         }

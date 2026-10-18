@@ -92,7 +92,7 @@ export const WelcomeAuthPage: React.FC = () => {
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
                 appRole === 'PARKER' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-slate-300'
               }`}>
-                🚗
+                
               </div>
               <div>
                 <span className="block font-black text-xs text-white">Driver App</span>
@@ -112,7 +112,7 @@ export const WelcomeAuthPage: React.FC = () => {
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
                 appRole === 'HOST' ? 'bg-amber-500 text-slate-950' : 'bg-slate-700 text-slate-300'
               }`}>
-                ⚡
+                
               </div>
               <div>
                 <span className="block font-black text-xs text-white">Captain App</span>

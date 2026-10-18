@@ -4,7 +4,7 @@ This guide covers everything required to take **ParkShare** from local developme
 
 ---
 
-## 📋 The 4-Phase Roadmap
+## The 4-Phase Roadmap
 
 ```mermaid
 graph TD
@@ -15,7 +15,7 @@ graph TD
 
 ---
 
-## 🚀 Phase 1: Deploy the Backend to Cloud (Render)
+## Phase 1: Deploy the Backend to Cloud (Render)
 
 Because physical Android phones cannot connect to `http://localhost:8000`, the FastAPI backend and PostgreSQL database must be hosted on the internet with a public `https://` URL.
 
@@ -49,7 +49,7 @@ Because physical Android phones cannot connect to `http://localhost:8000`, the F
 
 ---
 
-## 📱 Phase 2: Convert `customer-web` to Android (Capacitor)
+## Phase 2: Convert`customer-web`to Android (Capacitor)
 
 We use **Capacitor** (by Ionic) to wrap your React/Vite customer app into an official Android Studio project.
 
@@ -93,7 +93,7 @@ In `android/app/src/main/AndroidManifest.xml`, ensure the following permissions 
 
 ---
 
-## 🎨 Phase 3: Google Play Store Assets & Policy Checklist
+## Phase 3: Google Play Store Assets & Policy Checklist
 
 Google Play Store has strict metadata and asset guidelines:
 
@@ -116,7 +116,7 @@ Google Play Store has strict metadata and asset guidelines:
 
 ---
 
-## 🔐 Phase 4: Signing Key & Building Release AAB
+## Phase 4: Signing Key & Building Release AAB
 
 Google Play requires an **Android App Bundle (.aab)** signed with a production Keystore.
 
@@ -151,7 +151,7 @@ keytool -genkey -v -keystore parkshare-release-key.jks -keyalg RSA -keysize 2048
 
 ---
 
-## 🎯 Immediate Next Steps
+## Immediate Next Steps
 
 1. **Step 1**: Push your project to GitHub.
 2. **Step 2**: Open [Render.com](https://dashboard.render.com), click **New + > Blueprint**, and select this repo to launch the live backend.

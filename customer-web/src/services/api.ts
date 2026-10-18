@@ -1,4 +1,7 @@
-import { User, Vehicle, ParkingListing, Booking, Review, RentalVehicle, RentalBooking } from '../types';
+import {
+  User, Vehicle, ParkingListing, Booking, Review, RentalVehicle, RentalBooking,
+  DriverPublic, DriverPricing, DriverFareBreakdown, DriverBooking, DriverBookingCreate, DriverPaymentOrder, AppNotification,
+} from '../types';
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
 
@@ -34,6 +37,24 @@ function resolveBackendBase(): string {
 export const BACKEND_BASE = resolveBackendBase();
 const API_BASE = `${BACKEND_BASE}/api/v1`;
 
+export function getFullImageUrl(url?: string): string {
+  if (!url) return '';
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+  const uploadsIdx = url.indexOf('/uploads/');
+  if (uploadsIdx !== -1) {
+    const uploadPath = url.substring(uploadsIdx);
+    if (typeof window !== 'undefined') {
+      const port = window.location.port;
+      if (port === '5173' || port === '5174' || port === '5175') return uploadPath;
+      const host = window.location.hostname;
+      if (host === 'localhost' || host === '127.0.0.1') return uploadPath;
+    }
+    return `${BACKEND_BASE}${uploadPath}`;
+  }
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${BACKEND_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
 function getHeaders(): HeadersInit {
   const token = localStorage.getItem('parkshare_customer_token');
   const headers: Record<string, string> = {
@@ -46,8 +67,9 @@ function getHeaders(): HeadersInit {
 }
 
 async function extractErrorMessage(res: Response, fallback: string): Promise<string> {
+  const text = await res.text();
   try {
-    const data = await res.json();
+    const data = JSON.parse(text);
     if (typeof data.detail === 'string') return data.detail;
     if (Array.isArray(data.detail)) {
       return data.detail
@@ -56,6 +78,8 @@ async function extractErrorMessage(res: Response, fallback: string): Promise<str
     }
     if (data.message && typeof data.message === 'string') return data.message;
   } catch {}
+  const plain = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (plain && plain.length < 180) return plain;
   return fallback;
 }
 
@@ -76,7 +100,7 @@ export const api = {
     const res = await safeFetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password, portal: 'customer' }),
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Login failed. Please check your email and password.'));
     return res.json();
@@ -439,6 +463,112 @@ export const api = {
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to create rental reservation'));
+    return res.json();
+  },
+
+  getMyNotifications: async (): Promise<AppNotification[]> => {
+    const res = await fetch(`${API_BASE}/bookings/notifications/my`, { headers: getHeaders() });
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  // Acting Drivers (customer)
+  getDriverPricing: async (): Promise<DriverPricing> => {
+    const res = await fetch(`${API_BASE}/drivers/pricing`);
+    if (!res.ok) throw new Error('Failed to load driver pricing');
+    return res.json();
+  },
+
+  estimateDriverFare: async (data: {
+    start_time: string;
+    end_time: string;
+    car_type: string;
+    pickup_city?: string;
+  }): Promise<DriverFareBreakdown> => {
+    const res = await fetch(`${API_BASE}/drivers/estimate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to estimate fare'));
+    return res.json();
+  },
+
+  getAvailableDrivers: async (params?: {
+    city?: string;
+    transmission?: string;
+    car_type?: string;
+  }): Promise<DriverPublic[]> => {
+    const q = new URLSearchParams();
+    if (params?.city) q.set('city', params.city);
+    if (params?.transmission) q.set('transmission', params.transmission);
+    if (params?.car_type) q.set('car_type', params.car_type);
+    const res = await fetch(`${API_BASE}/drivers/available?${q.toString()}`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  createDriverBooking: async (data: DriverBookingCreate): Promise<DriverBooking> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to request a driver'));
+    return res.json();
+  },
+
+  getMyDriverBookings: async (): Promise<DriverBooking[]> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings/my`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to load driver trips'));
+    return res.json();
+  },
+
+  getDriverBooking: async (bookingId: number): Promise<DriverBooking> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Driver trip not found'));
+    return res.json();
+  },
+
+  cancelDriverBooking: async (bookingId: number, reason?: string): Promise<DriverBooking> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/cancel`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ reason: reason || null }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to cancel trip'));
+    return res.json();
+  },
+
+  createDriverPaymentOrder: async (bookingId: number): Promise<DriverPaymentOrder> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/pay/create-order`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to start payment'));
+    return res.json();
+  },
+
+  verifyDriverPayment: async (
+    bookingId: number,
+    data: { order_id: string; payment_id: string; signature: string }
+  ): Promise<DriverBooking> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/pay/verify`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Payment verification failed'));
+    return res.json();
+  },
+
+  rateDriverTrip: async (bookingId: number, rating: number, comment?: string): Promise<DriverBooking> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/rate`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ rating, comment: comment || null }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to submit rating'));
     return res.json();
   },
 };

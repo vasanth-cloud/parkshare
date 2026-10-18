@@ -1,592 +1,664 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, getFullImageUrl } from '../services/api';
-import { DriverProfile } from '../types';
+import { DriverAdminSummary, DriverBooking, DriverPricing, DriverProfile } from '../types';
 import {
-  Users,
   Search,
   CheckCircle2,
   XCircle,
   Clock,
   ShieldCheck,
   Star,
-  PlusCircle,
   Car,
   Phone,
-  MapPin,
   FileText,
   RotateCcw,
   X,
   AlertTriangle,
-  Award,
   ArrowLeft,
-  ShieldAlert
+  ShieldAlert,
+  BadgeCheck,
+  IndianRupee,
+  History,
+  Sliders,
+  Users,
+  Loader2,
+  Power,
+  ExternalLink,
 } from 'lucide-react';
 
+type Tab = 'drivers' | 'trips' | 'pricing';
+type StatusFilter = 'ALL' | 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'REJECTED';
+
+const fmtINR = (n?: number | null) =>
+  `₹${(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+const fmtDT = (iso?: string | null) =>
+  iso
+    ? new Date(iso).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      })
+    : '—';
+
+const TRIP_STATUS: Record<string, string> = {
+  REQUESTED: 'Searching',
+  DRIVER_ACCEPTED: 'Awaiting payment',
+  CONFIRMED: 'Paid / confirmed',
+  TRIP_STARTED: 'Live',
+  PAYMENT_DUE: 'Balance due',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+  EXPIRED: 'Expired',
+};
+
 export const AdminDriversPage: React.FC = () => {
+  const [tab, setTab] = useState<Tab>('drivers');
+  const [summary, setSummary] = useState<DriverAdminSummary | null>(null);
+
   const [drivers, setDrivers] = useState<DriverProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED'>('ALL');
-  const [transmissionFilter, setTransmissionFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [loadingDrivers, setLoadingDrivers] = useState(true);
+  const [actionId, setActionId] = useState<number | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<DriverProfile | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
-  // New Driver Registration Modal
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newPhone, setNewPhone] = useState('');
-  const [newCity, setNewCity] = useState('Bengaluru');
-  const [newDlNumber, setNewDlNumber] = useState('');
-  const [newExperience, setNewExperience] = useState('5');
-  const [newHourlyRate, setNewHourlyRate] = useState('149');
-  const [newTransmission, setNewTransmission] = useState<string[]>(['Manual', 'Automatic']);
-  const [newLanguages, setNewLanguages] = useState<string[]>(['Kannada', 'English']);
-  const [submittingRegistration, setSubmittingRegistration] = useState(false);
+  const [trips, setTrips] = useState<DriverBooking[]>([]);
+  const [tripStatus, setTripStatus] = useState('ALL');
+  const [loadingTrips, setLoadingTrips] = useState(false);
 
-  const fetchDrivers = async () => {
-    setLoading(true);
+  const [pricing, setPricing] = useState<DriverPricing | null>(null);
+  const [pricingForm, setPricingForm] = useState<Partial<DriverPricing>>({});
+  const [savingPricing, setSavingPricing] = useState(false);
+  const [pricingMsg, setPricingMsg] = useState('');
+  const [error, setError] = useState('');
+
+  const loadSummary = () => api.getDriverAdminSummary().then(setSummary).catch(() => {});
+
+  const loadDrivers = async () => {
+    setLoadingDrivers(true);
     try {
       const data = await api.getDrivers(statusFilter === 'ALL' ? undefined : statusFilter);
       setDrivers(data);
-    } catch (err) {
-      console.error('Failed to load drivers:', err);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load drivers');
     } finally {
-      setLoading(false);
+      setLoadingDrivers(false);
+    }
+  };
+
+  const loadTrips = async () => {
+    setLoadingTrips(true);
+    try {
+      setTrips(await api.getAdminDriverBookings(tripStatus));
+    } catch (err: any) {
+      setError(err.message || 'Failed to load trips');
+    } finally {
+      setLoadingTrips(false);
+    }
+  };
+
+  const loadPricing = async () => {
+    try {
+      const p = await api.getDriverPricing();
+      setPricing(p);
+      setPricingForm(p);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load pricing');
     }
   };
 
   useEffect(() => {
-    fetchDrivers();
+    loadSummary();
+  }, []);
+
+  useEffect(() => {
+    loadDrivers();
   }, [statusFilter]);
 
-  const handleUpdateStatus = async (driverId: string, newStatus: string, reason?: string) => {
-    setActionLoadingId(driverId);
+  useEffect(() => {
+    if (tab === 'trips') loadTrips();
+    if (tab === 'pricing' && !pricing) loadPricing();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, tripStatus]);
+
+  const updateStatus = async (id: number, status: string, reason?: string) => {
+    setActionId(id);
     try {
-      await api.updateDriverStatus(driverId, newStatus, reason);
-      await fetchDrivers();
+      await api.updateDriverStatus(id, status, reason);
+      setRejecting(null);
+      setRejectReason('');
+      await Promise.all([loadDrivers(), loadSummary()]);
     } catch (err: any) {
-      alert(err.message || 'Failed to update driver status');
+      alert(err.message || 'Failed to update driver');
     } finally {
-      setActionLoadingId(null);
+      setActionId(null);
     }
   };
 
-  const handleRegisterDriver = async (e: React.FormEvent) => {
+  const savePricing = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim() || !newPhone.trim() || !newDlNumber.trim()) {
-      alert('Please fill in required driver details');
-      return;
-    }
-    setSubmittingRegistration(true);
+    setSavingPricing(true);
+    setPricingMsg('');
     try {
-      await api.registerDriver({
-        name: newName.trim(),
-        phone: newPhone.trim(),
-        city: newCity.trim(),
-        dlNumber: newDlNumber.trim(),
-        experienceYears: parseInt(newExperience) || 3,
-        hourlyRate: parseFloat(newHourlyRate) || 149.0,
-        transmission: newTransmission,
-        languages: newLanguages,
-      });
-      setIsRegisterModalOpen(false);
-      setNewName('');
-      setNewPhone('');
-      setNewDlNumber('');
-      await fetchDrivers();
+      const body: Partial<DriverPricing> = {
+        hourly_rate: Number(pricingForm.hourly_rate),
+        platform_fee_percent: Number(pricingForm.platform_fee_percent),
+        tax_percent: Number(pricingForm.tax_percent),
+        min_billable_hours: Number(pricingForm.min_billable_hours),
+        night_surcharge_percent: Number(pricingForm.night_surcharge_percent),
+        night_start_hour: Number(pricingForm.night_start_hour),
+        night_end_hour: Number(pricingForm.night_end_hour),
+        outstation_hourly_rate: Number(pricingForm.outstation_hourly_rate),
+        outstation_min_hours: Number(pricingForm.outstation_min_hours),
+        billing_increment_minutes: Number(pricingForm.billing_increment_minutes),
+        car_type_multipliers: pricingForm.car_type_multipliers,
+      };
+      const p = await api.updateDriverPricing(body);
+      setPricing(p);
+      setPricingForm(p);
+      setPricingMsg('Pricing published. New estimates use these rates immediately.');
     } catch (err: any) {
-      alert(err.message || 'Failed to register driver');
+      setError(err.message || 'Failed to save pricing');
     } finally {
-      setSubmittingRegistration(false);
+      setSavingPricing(false);
     }
   };
 
-  // Filtered view
-  const filteredDrivers = drivers.filter((d) => {
+  const filtered = drivers.filter((d) => {
     const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      d.name.toLowerCase().includes(q) ||
-      (d.phone || '').toLowerCase().includes(q) ||
-      (d.city || '').toLowerCase().includes(q) ||
-      (d.dlNumber || '').toLowerCase().includes(q);
-
-    const matchesTransmission =
-      transmissionFilter === 'ALL' || d.transmission.includes(transmissionFilter);
-
-    return matchesSearch && matchesTransmission;
+    if (!q) return true;
+    return (
+      d.full_name.toLowerCase().includes(q) ||
+      d.phone.toLowerCase().includes(q) ||
+      d.city.toLowerCase().includes(q) ||
+      d.dl_number.toLowerCase().includes(q) ||
+      d.aadhaar_number_masked.toLowerCase().includes(q)
+    );
   });
-
-  const totalActive = drivers.filter((d) => d.status === 'ACTIVE').length;
-  const totalPending = drivers.filter((d) => d.status === 'PENDING_APPROVAL').length;
-  const totalSuspended = drivers.filter((d) => d.status === 'SUSPENDED').length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
-      
-      {/* Back to Services Navigation */}
       <div>
         <Link
           to="/"
-          className="inline-flex items-center space-x-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl transition shadow-xs"
+          className="inline-flex items-center space-x-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl transition"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>← Back to Services</span>
+          <span>Back to Services</span>
         </Link>
       </div>
 
-      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="text-2xl">🧑‍✈️</span>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">
-              Acting Drivers Operations Console
-            </h1>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">Acting Drivers Operations</h1>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Certify chauffeurs, moderate driving license credentials, and manage on-demand partner availability
+            Approve KYC, set hourly rates & platform fee, and audit every chauffeur trip.
           </p>
         </div>
-
         <div className="flex items-center space-x-2.5">
           <Link
             to="/disputes?service=drivers"
-            className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition text-xs font-bold flex items-center space-x-1.5 shadow-xs"
-            title="Driver Disputes"
+            className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition text-xs font-bold flex items-center space-x-1.5"
           >
             <ShieldAlert className="w-4 h-4 text-amber-400" />
             <span className="hidden sm:inline">Driver Disputes</span>
           </Link>
-
           <button
-            onClick={() => fetchDrivers()}
+            onClick={() => {
+              loadSummary();
+              if (tab === 'drivers') loadDrivers();
+              if (tab === 'trips') loadTrips();
+              if (tab === 'pricing') loadPricing();
+            }}
             className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition text-xs font-bold flex items-center space-x-1"
-            title="Refresh Directory"
           >
             <RotateCcw className="w-4 h-4" />
             <span className="hidden sm:inline">Refresh</span>
           </button>
+        </div>
+      </div>
 
-          <button
-            onClick={() => setIsRegisterModalOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition flex items-center space-x-1.5 shadow-sm"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>+ Register Acting Driver</span>
+      {error && (
+        <div className="flex items-start gap-2 bg-rose-950/50 border border-rose-800 text-rose-200 text-xs font-bold px-3.5 py-2.5 rounded-xl">
+          <AlertTriangle className="w-4 h-4 mt-0.5" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError('')}>
+            <X className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      )}
 
-      {/* Metric Highlights Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-1">
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Registered</span>
-          <div className="text-2xl font-black text-white">{drivers.length}</div>
-          <span className="text-[10px] text-slate-500 font-medium">Chauffeur fleet</span>
+      {summary && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          <Metric label="Drivers" value={String(summary.total_drivers)} sub={`${summary.pending_drivers} pending`} />
+          <Metric label="Active / online" value={`${summary.active_drivers}`} sub={`${summary.online_drivers} online`} accent="emerald" />
+          <Metric label="Open requests" value={String(summary.open_requests)} accent="amber" />
+          <Metric label="Live trips" value={String(summary.live_trips)} accent="cyan" />
+          <Metric label="Gross collected" value={fmtINR(summary.gross_collected)} accent="indigo" />
+          <Metric label="Platform fee" value={fmtINR(summary.platform_commission)} sub={`payouts ${fmtINR(summary.driver_payouts)}`} />
         </div>
+      )}
 
-        <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-1">
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Active & Dispatched</span>
-          <div className="text-2xl font-black text-emerald-400">{totalActive}</div>
-          <span className="text-[10px] text-emerald-500 font-medium">Ready for on-demand trips</span>
-        </div>
-
-        <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-1">
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Pending Review</span>
-          <div className="text-2xl font-black text-amber-400">{totalPending}</div>
-          <span className="text-[10px] text-amber-500 font-medium">Awaiting background check</span>
-        </div>
-
-        <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-1">
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Suspended</span>
-          <div className="text-2xl font-black text-rose-400">{totalSuspended}</div>
-          <span className="text-[10px] text-slate-500 font-medium">Blocked from bookings</span>
-        </div>
-      </div>
-
-      {/* Filter & Search Bar */}
-      <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        {/* Status Pills */}
-        <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl text-xs font-bold border border-slate-800 overflow-x-auto">
-          {(['ALL', 'ACTIVE', 'PENDING_APPROVAL', 'SUSPENDED'] as const).map((s) => (
+      <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-2xl border border-slate-800">
+        {(
+          [
+            { id: 'drivers', label: 'Drivers', icon: Users },
+            { id: 'trips', label: 'Trip history', icon: History },
+            { id: 'pricing', label: 'Pricing', icon: Sliders },
+          ] as { id: Tab; label: string; icon: any }[]
+        ).map((t) => {
+          const Icon = t.icon;
+          const on = tab === t.id;
+          return (
             <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
-                statusFilter === s
-                  ? 'bg-indigo-600 text-white font-extrabold shadow-xs'
-                  : 'text-slate-400 hover:text-white'
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-black ${
+                on ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
-              {s === 'ALL' && 'All Drivers'}
-              {s === 'ACTIVE' && `Active (${totalActive})`}
-              {s === 'PENDING_APPROVAL' && `Pending (${totalPending})`}
-              {s === 'SUSPENDED' && `Suspended (${totalSuspended})`}
+              <Icon className="w-3.5 h-3.5" /> {t.label}
             </button>
-          ))}
-        </div>
-
-        {/* Transmission & Text Search */}
-        <div className="flex items-center space-x-2 flex-1 md:max-w-md">
-          <select
-            value={transmissionFilter}
-            onChange={(e) => setTransmissionFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-bold px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          >
-            <option value="ALL">Any Transmission</option>
-            <option value="Manual">Manual</option>
-            <option value="Automatic">Automatic</option>
-            <option value="EV">EV / Electric</option>
-          </select>
-
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Search driver name, phone, city, DL..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-            />
-          </div>
-        </div>
+          );
+        })}
       </div>
 
-      {/* Drivers List Table / Cards */}
-      {loading ? (
-        <div className="text-center py-16 text-slate-500 text-xs font-semibold">
-          Loading driver partner fleet...
-        </div>
-      ) : filteredDrivers.length === 0 ? (
-        <div className="bg-slate-900 rounded-3xl p-10 text-center border border-slate-800 space-y-3">
-          <span className="text-4xl block">🧑‍✈️</span>
-          <h3 className="text-base font-bold text-white">No Acting Drivers Found</h3>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            {searchQuery
-              ? `No drivers match "${searchQuery}". Try modifying your filter.`
-              : 'No drivers registered under this category yet.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredDrivers.map((driver) => {
-            const isActive = driver.status === 'ACTIVE';
-            const isPending = driver.status === 'PENDING_APPROVAL';
-            const isSuspended = driver.status === 'SUSPENDED';
+      {tab === 'drivers' && (
+        <>
+          <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl text-xs font-bold border border-slate-800 overflow-x-auto">
+              {(['ALL', 'PENDING_APPROVAL', 'ACTIVE', 'SUSPENDED', 'REJECTED'] as StatusFilter[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`px-3 py-1.5 rounded-lg whitespace-nowrap ${
+                    statusFilter === s ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {s === 'PENDING_APPROVAL' ? 'Pending' : s.charAt(0) + s.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+            <div className="relative flex-1 md:max-w-md">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search name, phone, city, DL, Aadhaar…"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
 
-            return (
-              <div
-                key={driver.id}
-                className="bg-slate-900 rounded-3xl border border-slate-800 hover:border-indigo-500/50 transition-all p-5 space-y-4 shadow-sm flex flex-col justify-between"
+          {loadingDrivers ? (
+            <div className="text-center py-16 text-slate-500 text-xs font-semibold">Loading chauffeur directory…</div>
+          ) : filtered.length === 0 ? (
+            <Empty title="No acting drivers found" body={searchQuery ? `No drivers match “${searchQuery}”.` : 'Partners register from the host app. New applications appear here for KYC review.'} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((d) => (
+                <DriverCard
+                  key={d.id}
+                  d={d}
+                  busy={actionId === d.id}
+                  onApprove={() => updateStatus(d.id, 'ACTIVE')}
+                  onSuspend={() => updateStatus(d.id, 'SUSPENDED', 'Temporarily paused by admin')}
+                  onReject={() => {
+                    setRejecting(d);
+                    setRejectReason('');
+                  }}
+                  onReactivate={() => updateStatus(d.id, 'ACTIVE')}
+                  onPreview={setPreviewUrl}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'trips' && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 w-fit text-xs font-bold">
+            {['ALL', 'REQUESTED', 'CONFIRMED', 'TRIP_STARTED', 'PAYMENT_DUE', 'COMPLETED', 'CANCELLED'].map((s) => (
+              <button
+                key={s}
+                onClick={() => setTripStatus(s)}
+                className={`px-3 py-1.5 rounded-lg ${tripStatus === s ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
               >
-                {/* Driver Top Row */}
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center space-x-3 min-w-0">
-                      <img
-                        src={getFullImageUrl(driver.photo) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'}
-                        alt={driver.name}
-                        className="w-12 h-12 rounded-2xl object-cover border-2 border-indigo-500/30 flex-shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <div className="flex items-center space-x-1.5">
-                          <h3 className="text-sm font-black text-white truncate" title={driver.name}>
-                            {driver.name}
-                          </h3>
-                        </div>
-                        <span className="text-[10px] font-bold text-indigo-400 block mt-0.5">
-                          {driver.badge || 'Certified Chauffeur'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Status Pill */}
-                    <div>
-                      {isActive && (
-                        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          <span>Active</span>
-                        </span>
-                      )}
-                      {isPending && (
-                        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800">
-                          <Clock className="w-3 h-3 text-amber-400" />
-                          <span>Under Review</span>
-                        </span>
-                      )}
-                      {isSuspended && (
-                        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-950 text-rose-400 border border-rose-800">
-                          <AlertTriangle className="w-3 h-3 text-rose-400" />
-                          <span>Suspended</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Contact & Location Details */}
-                  <div className="bg-slate-950/70 p-3 rounded-2xl space-y-1.5 text-xs border border-slate-800/80">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 flex items-center space-x-1.5">
-                        <Phone className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Phone:</span>
-                      </span>
-                      <span className="font-mono font-bold text-slate-200">{driver.phone || '+91 98450 XXXXX'}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 flex items-center space-x-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                        <span>City:</span>
-                      </span>
-                      <span className="font-bold text-slate-200">{driver.city || 'Bengaluru'}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 flex items-center space-x-1.5">
-                        <FileText className="w-3.5 h-3.5 text-slate-500" />
-                        <span>DL No:</span>
-                      </span>
-                      <span className="font-mono text-[11px] font-bold text-indigo-300">
-                        {driver.dlNumber || 'KA01 20180004921'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Skills & Experience Tags */}
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Experience:</span>
-                      <span className="font-bold text-slate-200">{driver.experienceYears} Years</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Rate:</span>
-                      <span className="font-black text-emerald-400">₹{driver.hourlyRate}/hr</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Rating & Trips:</span>
-                      <span className="font-bold text-amber-400 flex items-center space-x-1">
-                        <Star className="w-3 h-3 fill-amber-400" />
-                        <span>{driver.rating}</span>
-                        <span className="text-slate-500">({driver.trips} trips)</span>
-                      </span>
-                    </div>
-
-                    <div className="pt-1.5 flex flex-wrap gap-1">
-                      {driver.transmission.map((t) => (
-                        <span
-                          key={t}
-                          className="bg-indigo-950/60 text-indigo-300 border border-indigo-800/60 text-[10px] font-bold px-2 py-0.5 rounded-lg"
-                        >
-                          🚗 {t}
-                        </span>
-                      ))}
-                      {driver.languages.map((l) => (
-                        <span
-                          key={l}
-                          className="bg-slate-800 text-slate-300 text-[10px] font-medium px-2 py-0.5 rounded-lg"
-                        >
-                          🗣️ {l}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status Action Buttons */}
-                <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
-                  {!isActive && (
-                    <button
-                      type="button"
-                      disabled={actionLoadingId === driver.id}
-                      onClick={() => handleUpdateStatus(driver.id, 'ACTIVE')}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1 shadow-xs cursor-pointer"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{actionLoadingId === driver.id ? 'Updating...' : 'Approve & Activate'}</span>
-                    </button>
-                  )}
-
-                  {isActive && (
-                    <button
-                      type="button"
-                      disabled={actionLoadingId === driver.id}
-                      onClick={() => handleUpdateStatus(driver.id, 'SUSPENDED', 'Temporarily paused by admin')}
-                      className="flex-1 bg-slate-800 hover:bg-rose-950/60 hover:text-rose-400 hover:border-rose-800 text-slate-300 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1 border border-slate-700 cursor-pointer"
-                    >
-                      <XCircle className="w-3.5 h-3.5" />
-                      <span>{actionLoadingId === driver.id ? 'Updating...' : 'Suspend Driver'}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                {s === 'ALL' ? 'All' : TRIP_STATUS[s] || s}
+              </button>
+            ))}
+          </div>
+          {loadingTrips ? (
+            <p className="text-xs text-slate-500 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading trips…
+            </p>
+          ) : trips.length === 0 ? (
+            <Empty title="No trips yet" body="Acting-driver bookings will list here with fare, OTPs and payout status." />
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-slate-800">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-900 text-slate-400 uppercase text-[10px] tracking-wider">
+                  <tr>
+                    {['Ref', 'Status', 'City', 'Schedule', 'Car', 'Customer', 'Driver', 'Fare', 'Paid', 'Payout'].map((h) => (
+                      <th key={h} className="text-left px-3 py-2.5 font-bold">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {trips.map((b) => (
+                    <tr key={b.id} className="border-t border-slate-800 bg-slate-950/40">
+                      <td className="px-3 py-2.5 font-mono font-black text-indigo-300">{b.booking_reference}</td>
+                      <td className="px-3 py-2.5">{TRIP_STATUS[b.status] || b.status}</td>
+                      <td className="px-3 py-2.5">{b.pickup_city}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {fmtDT(b.start_time)}
+                        <div className="text-slate-500">{b.estimated_hours} hrs</div>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {b.car_type} · {b.transmission}
+                        <div className="text-slate-500">{b.seater}-seater</div>
+                      </td>
+                      <td className="px-3 py-2.5">{b.customer?.full_name || `#${b.customer_id}`}</td>
+                      <td className="px-3 py-2.5">{b.driver?.display_name || '—'}</td>
+                      <td className="px-3 py-2.5 font-bold">{fmtINR(b.final_total ?? b.estimated_total)}</td>
+                      <td className="px-3 py-2.5">{fmtINR(b.amount_paid)}</td>
+                      <td className="px-3 py-2.5 text-emerald-400">{fmtINR(b.driver_earning)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Register Driver Partner Modal */}
-      {isRegisterModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center space-x-2">
-                <span className="text-xl">🧑‍✈️</span>
-                <h3 className="text-base font-black text-white">Register Acting Driver Partner</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRegisterModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleRegisterDriver} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-300 uppercase">
-                  Driver Full Legal Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Anand Kumar"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300 uppercase">
-                    Mobile Phone *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="+91 98450 12345"
-                    value={newPhone}
-                    onChange={(e) => setNewPhone(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300 uppercase">
-                    Operating City *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Bengaluru"
-                    value={newCity}
-                    onChange={(e) => setNewCity(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300 uppercase">
-                    Driving License No. *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="KA01 20180004921"
-                    value={newDlNumber}
-                    onChange={(e) => setNewDlNumber(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300 uppercase">
-                    Experience (Years)
-                  </label>
+      {tab === 'pricing' && pricingForm && (
+        <form onSubmit={savePricing} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5 max-w-3xl">
+          <div>
+            <h2 className="text-sm font-black flex items-center gap-1.5">
+              <IndianRupee className="w-4 h-4 text-indigo-400" /> Platform-controlled chauffeur pricing
+            </h2>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Drivers cannot set rates. These numbers power the customer estimate, the advance payment, and overtime settlement.
+            </p>
+          </div>
+          {pricingMsg && <p className="text-xs font-bold text-emerald-400">{pricingMsg}</p>}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <Num label="Hourly rate ₹" value={pricingForm.hourly_rate} onChange={(v) => setPricingForm({ ...pricingForm, hourly_rate: v })} />
+            <Num label="Platform fee %" value={pricingForm.platform_fee_percent} onChange={(v) => setPricingForm({ ...pricingForm, platform_fee_percent: v })} />
+            <Num label="GST %" value={pricingForm.tax_percent} onChange={(v) => setPricingForm({ ...pricingForm, tax_percent: v })} />
+            <Num label="Min billable hours" value={pricingForm.min_billable_hours} onChange={(v) => setPricingForm({ ...pricingForm, min_billable_hours: v })} />
+            <Num label="Billing increment (min)" value={pricingForm.billing_increment_minutes} onChange={(v) => setPricingForm({ ...pricingForm, billing_increment_minutes: v })} />
+            <Num label="Night surcharge %" value={pricingForm.night_surcharge_percent} onChange={(v) => setPricingForm({ ...pricingForm, night_surcharge_percent: v })} />
+            <Num label="Night starts (hour)" value={pricingForm.night_start_hour} onChange={(v) => setPricingForm({ ...pricingForm, night_start_hour: v })} />
+            <Num label="Night ends (hour)" value={pricingForm.night_end_hour} onChange={(v) => setPricingForm({ ...pricingForm, night_end_hour: v })} />
+            <Num label="Outstation ₹/hr" value={pricingForm.outstation_hourly_rate} onChange={(v) => setPricingForm({ ...pricingForm, outstation_hourly_rate: v })} />
+            <Num label="Outstation min hours" value={pricingForm.outstation_min_hours} onChange={(v) => setPricingForm({ ...pricingForm, outstation_min_hours: v })} />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase text-slate-400 mb-2">Car type multipliers</p>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {Object.entries(pricingForm.car_type_multipliers || {}).map(([k, v]) => (
+                <label key={k} className="text-[11px] space-y-1">
+                  <span className="text-slate-400 font-bold">{k}</span>
                   <input
                     type="number"
-                    min="1"
-                    max="40"
-                    value={newExperience}
-                    onChange={(e) => setNewExperience(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                    step="0.05"
+                    min="0.5"
+                    value={v}
+                    onChange={(e) =>
+                      setPricingForm({
+                        ...pricingForm,
+                        car_type_multipliers: { ...(pricingForm.car_type_multipliers || {}), [k]: Number(e.target.value) },
+                      })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold"
                   />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-300 uppercase">
-                  Hourly Rate (₹/hr)
                 </label>
-                <input
-                  type="number"
-                  min="99"
-                  max="1000"
-                  value={newHourlyRate}
-                  onChange={(e) => setNewHourlyRate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-                />
-              </div>
+              ))}
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={savingPricing}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs px-5 py-3 rounded-xl disabled:opacity-60"
+          >
+            {savingPricing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            Save pricing
+          </button>
+        </form>
+      )}
 
-              {/* Transmission Competencies */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-300 uppercase">
-                  Transmission Types Competent In
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {['Manual', 'Automatic', 'EV', 'Luxury SUV'].map((t) => {
-                    const checked = newTransmission.includes(t);
-                    return (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => {
-                          if (checked) {
-                            setNewTransmission(newTransmission.filter((x) => x !== t));
-                          } else {
-                            setNewTransmission([...newTransmission, t]);
-                          }
-                        }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
-                          checked
-                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs'
-                            : 'bg-slate-950 text-slate-400 border-slate-800'
-                        }`}
-                      >
-                        {checked ? '✓ ' : '+ '} {t}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setIsRegisterModalOpen(false)}
-                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={submittingRegistration}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-md disabled:opacity-50"
-                >
-                  {submittingRegistration ? 'Registering...' : 'Register Chauffeur'}
-                </button>
-              </div>
-            </form>
+      {rejecting && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-3">
+            <h3 className="text-sm font-black">Reject {rejecting.full_name}?</h3>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+              placeholder="Reason shown to the driver"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setRejecting(null)} className="flex-1 py-2 rounded-xl bg-slate-800 text-xs font-bold">
+                Cancel
+              </button>
+              <button
+                onClick={() => updateStatus(rejecting.id, 'REJECTED', rejectReason || 'Rejected by admin')}
+                className="flex-1 py-2 rounded-xl bg-rose-600 text-white text-xs font-black"
+              >
+                Reject
+              </button>
+            </div>
           </div>
         </div>
       )}
 
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setPreviewUrl(null)}>
+          <img src={previewUrl} alt="document" className="max-h-[85vh] max-w-full rounded-2xl border border-slate-700" />
+        </div>
+      )}
     </div>
+  );
+};
+
+const Metric: React.FC<{ label: string; value: string; sub?: string; accent?: string }> = ({ label, value, sub, accent }) => {
+  const color =
+    accent === 'emerald'
+      ? 'text-emerald-400'
+      : accent === 'amber'
+      ? 'text-amber-400'
+      : accent === 'cyan'
+      ? 'text-cyan-400'
+      : accent === 'indigo'
+      ? 'text-indigo-300'
+      : 'text-white';
+  return (
+    <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-1">
+      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{label}</span>
+      <div className={`text-xl font-black ${color}`}>{value}</div>
+      {sub && <span className="text-[10px] text-slate-500 font-medium">{sub}</span>}
+    </div>
+  );
+};
+
+const Empty: React.FC<{ title: string; body: string }> = ({ title, body }) => (
+  <div className="bg-slate-900 rounded-3xl p-10 text-center border border-slate-800 space-y-3">
+    <h3 className="text-base font-bold text-white">{title}</h3>
+    <p className="text-xs text-slate-400 max-w-sm mx-auto">{body}</p>
+  </div>
+);
+
+const Num: React.FC<{ label: string; value?: number; onChange: (v: number) => void }> = ({ label, value, onChange }) => (
+  <label className="text-[11px] space-y-1 block">
+    <span className="text-slate-400 font-bold">{label}</span>
+    <input
+      type="number"
+      step="any"
+      value={value ?? ''}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold"
+    />
+  </label>
+);
+
+const DriverCard: React.FC<{
+  d: DriverProfile;
+  busy: boolean;
+  onApprove: () => void;
+  onSuspend: () => void;
+  onReject: () => void;
+  onReactivate: () => void;
+  onPreview: (url: string) => void;
+}> = ({ d, busy, onApprove, onSuspend, onReject, onReactivate, onPreview }) => {
+  const isActive = d.status === 'ACTIVE';
+  const isPending = d.status === 'PENDING_APPROVAL';
+  const isSuspended = d.status === 'SUSPENDED';
+  const isRejected = d.status === 'REJECTED';
+  return (
+    <div className="bg-slate-900 rounded-3xl border border-slate-800 hover:border-indigo-500/50 transition-all p-5 space-y-4 flex flex-col">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center space-x-3 min-w-0">
+          <img
+            src={getFullImageUrl(d.photo_url || '') || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'}
+            alt={d.full_name}
+            className="w-12 h-12 rounded-2xl object-cover border-2 border-indigo-500/30"
+          />
+          <div className="min-w-0">
+            <h3 className="text-sm font-black text-white truncate">{d.full_name}</h3>
+            <p className="text-[10px] text-indigo-400 font-bold">
+              {d.city}
+              {d.service_area ? ` · ${d.service_area}` : ''}
+            </p>
+          </div>
+        </div>
+        {isActive && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">
+            <span className={`w-1.5 h-1.5 rounded-full ${d.is_available ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+            {d.is_available ? 'Online' : 'Offline'}
+          </span>
+        )}
+        {isPending && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800">
+            <Clock className="w-3 h-3" /> Review
+          </span>
+        )}
+        {isSuspended && (
+          <span className="text-[10px] font-bold bg-rose-950 text-rose-400 border border-rose-800 px-2 py-0.5 rounded-full">Suspended</span>
+        )}
+        {isRejected && (
+          <span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full">Rejected</span>
+        )}
+      </div>
+
+      <div className="bg-slate-950/70 p-3 rounded-2xl space-y-1.5 text-xs border border-slate-800/80">
+        <Row icon={<Phone className="w-3.5 h-3.5" />} label="Phone" value={d.phone} />
+        <Row icon={<FileText className="w-3.5 h-3.5" />} label="DL" value={d.dl_number} extra={d.dl_verified ? 'verified' : ''} />
+        <Row icon={<ShieldCheck className="w-3.5 h-3.5" />} label="Aadhaar" value={d.aadhaar_number_masked} extra={d.aadhaar_verified ? 'verified' : ''} />
+        <Row icon={<Star className="w-3.5 h-3.5" />} label="Rating" value={`${d.rating.toFixed(1)} · ${d.total_trips} trips · ${fmtINR(d.total_earnings)}`} />
+        <Row icon={<Car className="w-3.5 h-3.5" />} label="Skills" value={`${d.transmissions.join(', ')} · ${d.vehicle_categories.join(', ')}`} />
+        {d.kyc_provider && (
+          <p className="text-[10px] text-slate-500 flex items-center gap-1 pt-1">
+            <BadgeCheck className="w-3 h-3 text-emerald-400" /> {d.kyc_provider}
+          </p>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        {d.dl_document_url && (
+          <DocBtn
+            label="Licence"
+            url={d.dl_document_url}
+            onPreview={onPreview}
+          />
+        )}
+        {d.aadhaar_document_url && (
+          <DocBtn
+            label="Aadhaar"
+            url={d.aadhaar_document_url}
+            onPreview={onPreview}
+          />
+        )}
+      </div>
+
+      {d.rejection_reason && (
+        <p className="text-[11px] text-rose-300">Reason: {d.rejection_reason}</p>
+      )}
+
+      <div className="pt-3 border-t border-slate-800 flex items-center gap-2 mt-auto">
+        {(isPending || isRejected) && (
+          <button
+            disabled={busy}
+            onClick={onApprove}
+            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1"
+          >
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+            Approve
+          </button>
+        )}
+        {isPending && (
+          <button disabled={busy} onClick={onReject} className="px-3 py-2 rounded-xl bg-slate-800 text-rose-300 text-xs font-bold">
+            Reject
+          </button>
+        )}
+        {isActive && (
+          <button
+            disabled={busy}
+            onClick={onSuspend}
+            className="flex-1 bg-slate-800 hover:bg-rose-950/60 text-slate-300 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 border border-slate-700"
+          >
+            <XCircle className="w-3.5 h-3.5" /> Suspend
+          </button>
+        )}
+        {isSuspended && (
+          <button
+            disabled={busy}
+            onClick={onReactivate}
+            className="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1"
+          >
+            <Power className="w-3.5 h-3.5" /> Reactivate
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const Row: React.FC<{ icon: React.ReactNode; label: string; value: string; extra?: string }> = ({ icon, label, value, extra }) => (
+  <div className="flex items-center justify-between gap-2">
+    <span className="text-slate-400 flex items-center gap-1.5">
+      {icon} {label}
+    </span>
+    <span className="font-bold text-slate-200 text-right truncate">
+      {value}
+      {extra && <span className="ml-1 text-emerald-400 text-[10px]">{extra}</span>}
+    </span>
+  </div>
+);
+
+const DocBtn: React.FC<{ label: string; url: string; onPreview: (u: string) => void }> = ({ label, url, onPreview }) => {
+  const full = getFullImageUrl(url);
+  const isPdf = url.toLowerCase().endsWith('.pdf');
+  return (
+    <button
+      type="button"
+      onClick={() => (isPdf ? window.open(full, '_blank') : onPreview(full))}
+      className="flex-1 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] font-bold text-indigo-300 flex items-center justify-center gap-1"
+    >
+      <ExternalLink className="w-3 h-3" /> {label}
+    </button>
   );
 };

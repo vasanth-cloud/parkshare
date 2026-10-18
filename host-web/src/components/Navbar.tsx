@@ -50,7 +50,7 @@ export const Navbar: React.FC = () => {
               </div>
             </Link>
             <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              🏢 Partner Mode
+               Partner Mode
             </span>
           </div>
 
@@ -95,18 +95,16 @@ export const Navbar: React.FC = () => {
                           onClick={() => setShowManageDropdown(false)}
                           className="flex items-center space-x-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
                         >
-                          <span className="text-base">🅿️</span>
                           <div className="flex flex-col">
                             <span className="font-bold">Parking Bays</span>
                             <span className="text-[10px] text-gray-400">View & edit listings</span>
                           </div>
                         </Link>
                         <Link
-                          to="/register/driver"
+                          to="/driver"
                           onClick={() => setShowManageDropdown(false)}
                           className="flex items-center space-x-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
                         >
-                          <span className="text-base">🧑‍✈️</span>
                           <div className="flex flex-col">
                             <span className="font-bold">Acting Driver</span>
                             <span className="text-[10px] text-gray-400">Manage chauffeur gig</span>
@@ -117,7 +115,6 @@ export const Navbar: React.FC = () => {
                           onClick={() => setShowManageDropdown(false)}
                           className="flex items-center space-x-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
                         >
-                          <span className="text-base">✨</span>
                           <div className="flex flex-col">
                             <span className="font-bold">Car Spa Partner</span>
                             <span className="text-[10px] text-gray-400">Mobile & bay wash</span>
@@ -128,7 +125,6 @@ export const Navbar: React.FC = () => {
                           onClick={() => setShowManageDropdown(false)}
                           className="flex items-center space-x-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
                         >
-                          <span className="text-base">🚗</span>
                           <div className="flex flex-col">
                             <span className="font-bold">Rental Fleet</span>
                             <span className="text-[10px] text-gray-400">List cars & bikes</span>

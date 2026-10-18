@@ -33,13 +33,16 @@ class User(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    # Relationships
+    # Relationships. Host parking profiles live on the hosts table, not here.
     roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
     vehicles = relationship("Vehicle", back_populates="user", cascade="all, delete-orphan")
-    host_profile = relationship("HostProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     bookings = relationship("Booking", back_populates="user")
     reviews = relationship("Review", back_populates="user")
     favorites = relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
+
+    @property
+    def host_profile(self):
+        return None
 
 class UserRole(Base):
     __tablename__ = "user_roles"
@@ -54,7 +57,7 @@ class HostProfile(Base):
     __tablename__ = "host_profiles"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("hosts.id", ondelete="CASCADE"), unique=True, nullable=False)
     legal_name = Column(String(255), nullable=True)
     business_name = Column(String(255), nullable=True)
     bio = Column(Text, nullable=True)
@@ -74,15 +77,24 @@ class HostProfile(Base):
     reliability_score = Column(Float, default=100.0)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    user = relationship("User", back_populates="host_profile")
+    host_account = relationship(
+        "Host",
+        back_populates="host_profile",
+        foreign_keys=[user_id],
+        primaryjoin="HostProfile.user_id==Host.id",
+    )
     listings = relationship("ParkingListing", back_populates="host", cascade="all, delete-orphan")
+
+    @property
+    def user(self):
+        return self.host_account
 
     @property
     def full_name(self) -> str:
         if self.legal_name:
             return self.legal_name
-        if self.user and self.user.full_name:
-            return self.user.full_name
+        if self.host_account and self.host_account.full_name:
+            return self.host_account.full_name
         return "Host"
 
     @property
@@ -103,3 +115,7 @@ class Vehicle(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="vehicles")
+
+
+# Register host and admin tables whenever the user models are imported.
+from app.models.account import Host, Admin  # noqa: E402,F401

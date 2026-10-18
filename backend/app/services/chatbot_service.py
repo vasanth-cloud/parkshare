@@ -176,29 +176,29 @@ class ChatbotService:
         if matched:
             matched_ids = [m["id"] for m in matched]
             reply_lines = [
-                f"🚗 Great news! We found **{len(matched)} available parking spot(s)** matching your request:\n"
+                f"Great news! We found **{len(matched)} available parking spot(s)** matching your request:\n"
             ]
             for m in matched:
                 amenities = []
                 if m["is_covered"]:
                     amenities.append("Covered")
                 if m["has_ev_charging"]:
-                    amenities.append("EV Charging ⚡")
+                    amenities.append("EV Charging")
                 if m["has_cctv"]:
-                    amenities.append("CCTV Security 🛡️")
+                    amenities.append("CCTV Security")
                 amenity_str = " • ".join(amenities) if amenities else "Open Parking"
 
                 dist_m = 150 + ((m['id'] * 73) % 4) * 100
                 reply_lines.append(
                     f"• **{m['title']}** — ~{dist_m} m away ({m['area']})\n"
-                    f"  💰 ₹{int(m['hourly_rate_inr'])}/hr | ₹{int(m['daily_rate_inr'])}/day\n"
-                    f"  ✨ Features: {amenity_str}\n"
+                    f"₹{int(m['hourly_rate_inr'])}/hr | ₹{int(m['daily_rate_inr'])}/day\n"
+                    f"  Features: {amenity_str}\n"
                 )
-            reply_lines.append("🔒 *Exact address and turn-by-turn GPS navigation unlock after payment confirmation.*")
+            reply_lines.append("*Exact address and turn-by-turn GPS navigation unlock after payment confirmation.*")
             return "\n".join(reply_lines), matched_ids
 
         return (
-            "Hello! I'm **ParkBot**, your ParkCo assistant. 🚗\n\n"
+            "Hello! I'm **ParkBot**, your ParkCo assistant. \n\n"
             "I can help you find parking spots near any destination like **Whitefield**, **BTM Layout**, or anywhere across the city.\n"
             "Try asking: *'I am going to Whitefield and need parking space'* or *'Show me EV charging parking'*!",
             []

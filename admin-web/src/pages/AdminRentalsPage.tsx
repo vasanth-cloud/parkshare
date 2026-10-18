@@ -93,7 +93,6 @@ export const AdminRentalsPage: React.FC = () => {
             </Link>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-xl">🚗</span>
                 <h1 className="text-lg font-black tracking-tight text-white">
                   Self-Drive Fleet & Vehicle Moderation
                 </h1>
@@ -228,7 +227,6 @@ export const AdminRentalsPage: React.FC = () => {
           </div>
         ) : filteredVehicles.length === 0 ? (
           <div className="py-16 text-center bg-slate-900 border border-slate-800 rounded-3xl p-8 space-y-2">
-            <span className="text-3xl block">🔍</span>
             <h3 className="text-sm font-black text-white">No Vehicles Match Filters</h3>
             <p className="text-xs text-slate-400">Try adjusting your status or vehicle type filters.</p>
           </div>

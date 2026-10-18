@@ -22,6 +22,8 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    # customer | host | admin. Each app sends its own portal so login reads only that table.
+    portal: Optional[str] = None
 
 class ProfilePhotoUpdate(BaseModel):
     profile_photo_url: str

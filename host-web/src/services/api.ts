@@ -1,4 +1,7 @@
-import { User, ParkingListing, Booking, HostSummary, VerificationStatus, DriverProfile, CarSpaCenter, Review, RentalPartnerVehicle, RcVerificationResult } from '../types';
+import {
+  User, ParkingListing, Booking, HostSummary, VerificationStatus, CarSpaCenter, Review, RentalPartnerVehicle, RcVerificationResult,
+  DriverProfile, DriverRegistrationPayload, DriverEarnings, DriverPricing, DriverBooking,
+} from '../types';
 
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
@@ -92,7 +95,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, portal: 'host' }),
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Login failed'));
     return res.json();
@@ -102,7 +105,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, role: 'HOST' }),
+      body: JSON.stringify({ ...data, role: 'HOST', portal: 'host' }),
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Registration failed'));
     return res.json();
@@ -354,7 +357,7 @@ export const api = {
   },
 
   // Acting Drivers Partner APIs
-  registerDriver: async (data: any): Promise<DriverProfile> => {
+  registerDriver: async (data: DriverRegistrationPayload): Promise<DriverProfile> => {
     const res = await fetch(`${API_BASE}/drivers/register`, {
       method: 'POST',
       headers: getHeaders(),
@@ -364,9 +367,84 @@ export const api = {
     return res.json();
   },
 
-  getDrivers: async (): Promise<DriverProfile[]> => {
-    const res = await fetch(`${API_BASE}/drivers/all`, { headers: getHeaders() });
-    if (!res.ok) throw new Error('Failed to load drivers directory');
+  /** Returns null when the logged-in user has not registered as a driver yet. */
+  getMyDriverProfile: async (): Promise<DriverProfile | null> => {
+    const res = await fetch(`${API_BASE}/drivers/me`, { headers: getHeaders() });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to load driver profile'));
+    return res.json();
+  },
+
+  setDriverAvailability: async (is_available: boolean): Promise<DriverProfile> => {
+    const res = await fetch(`${API_BASE}/drivers/me/availability`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ is_available }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to update availability'));
+    return res.json();
+  },
+
+  getDriverEarnings: async (): Promise<DriverEarnings> => {
+    const res = await fetch(`${API_BASE}/drivers/me/earnings`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to load earnings'));
+    return res.json();
+  },
+
+  getDriverPricing: async (): Promise<DriverPricing> => {
+    const res = await fetch(`${API_BASE}/drivers/pricing`);
+    if (!res.ok) throw new Error('Failed to load driver pricing');
+    return res.json();
+  },
+
+  getDriverOpenRequests: async (): Promise<DriverBooking[]> => {
+    const res = await fetch(`${API_BASE}/drivers/me/requests`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to load trip requests'));
+    return res.json();
+  },
+
+  getDriverTrips: async (): Promise<DriverBooking[]> => {
+    const res = await fetch(`${API_BASE}/drivers/me/trips`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to load trips'));
+    return res.json();
+  },
+
+  acceptDriverRequest: async (bookingId: number): Promise<DriverBooking> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/accept`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to accept request'));
+    return res.json();
+  },
+
+  releaseDriverRequest: async (bookingId: number, reason?: string): Promise<DriverBooking> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/release`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ reason: reason || null }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to release trip'));
+    return res.json();
+  },
+
+  startDriverTrip: async (bookingId: number, otp: string): Promise<DriverBooking> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/start`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ otp }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to start trip'));
+    return res.json();
+  },
+
+  endDriverTrip: async (bookingId: number, otp: string): Promise<DriverBooking> => {
+    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/end`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ otp }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to end trip'));
     return res.json();
   },
 

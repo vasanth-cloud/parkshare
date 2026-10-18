@@ -43,22 +43,22 @@ export const Navbar: React.FC = () => {
             {/* Dynamic Service Scope Badge */}
             {currentService === 'parking' && (
               <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
-                🅿️ Parking Service
+                 Parking Service
               </span>
             )}
             {currentService === 'drivers' && (
               <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800">
-                🧑‍✈️ Acting Drivers Fleet
+                 Acting Drivers Fleet
               </span>
             )}
             {currentService === 'car-spa' && (
               <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800">
-                ✨ Car Spa Operations
+                Car Spa Operations
               </span>
             )}
             {currentService === 'rentals' && (
               <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-950 text-amber-300 border border-amber-800">
-                🚗 Fleet Rentals
+                 Fleet Rentals
               </span>
             )}
             {currentService === 'general' && (
@@ -115,7 +115,6 @@ export const Navbar: React.FC = () => {
                         location.pathname === '/drivers' ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-indigo-400'
                       }`}
                     >
-                      <span className="text-base leading-none">🧑‍✈️</span>
                       <span>Acting Drivers</span>
                     </Link>
 
@@ -140,7 +139,6 @@ export const Navbar: React.FC = () => {
                         location.pathname === '/car-spas' ? 'text-cyan-400 font-bold' : 'text-slate-300 hover:text-cyan-400'
                       }`}
                     >
-                      <span className="text-base leading-none">✨</span>
                       <span>Car Spas</span>
                     </Link>
 
@@ -165,7 +163,6 @@ export const Navbar: React.FC = () => {
                         location.pathname === '/rentals' ? 'text-amber-400 font-bold' : 'text-slate-300 hover:text-amber-400'
                       }`}
                     >
-                      <span className="text-base leading-none">🚗</span>
                       <span>Fleet Approvals</span>
                     </Link>
 

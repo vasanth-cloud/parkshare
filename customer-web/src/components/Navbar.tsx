@@ -49,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                 <span>ParkCo</span>
               </span>
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
-                <span>🚗 Driver Mode</span>
+                <span>Driver Mode</span>
               </span>
             </div>
           </Link>
@@ -58,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
         {/* Desktop Navigation Links */}
         <div className="hidden md:flex items-center space-x-8 text-xs font-bold tracking-wide">
           <Link to="/" className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-            <span>🅿️ Find Parking</span>
+            <span>Find Parking</span>
           </Link>
 
           <Link
@@ -70,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
             }`}
           >
             <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>✨ Services</span>
+            <span>Services</span>
           </Link>
 
           <Link
@@ -78,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
             className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-2"
           >
             <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>📋 Bookings</span>
+            <span>Bookings</span>
           </Link>
 
           <Link
@@ -86,11 +86,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
             className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-2"
           >
             <Car className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>🚗 Vehicles</span>
+            <span>Vehicles</span>
           </Link>
 
           <Link to="/profile" className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-            <span>👤 Profile</span>
+            <span>Profile</span>
           </Link>
         </div>
 
@@ -134,7 +134,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                   onClick={() => setShowManageDropdown(false)}
                   className="flex items-center space-x-3 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition rounded-lg mx-1"
                 >
-                  <span className="text-xl flex-shrink-0">🅿️</span>
                   <div className="flex flex-col">
                     <span className="font-bold">Find Parking</span>
                     <span className="text-[10px] text-gray-400">Live GPS radar & driveway booking</span>
@@ -146,7 +145,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                   onClick={() => setShowManageDropdown(false)}
                   className="flex items-center space-x-3 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition rounded-lg mx-1"
                 >
-                  <span className="text-xl flex-shrink-0">🧑‍✈️</span>
                   <div className="flex flex-col">
                     <span className="font-bold">Acting Drivers</span>
                     <span className="text-[10px] text-gray-400">Verified personal chauffeurs</span>
@@ -158,7 +156,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                   onClick={() => setShowManageDropdown(false)}
                   className="flex items-center space-x-3 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition rounded-lg mx-1"
                 >
-                  <span className="text-xl flex-shrink-0">✨</span>
                   <div className="flex flex-col">
                     <span className="font-bold">Car Spa & Detailing</span>
                     <span className="text-[10px] text-gray-400">Waterless eco wash at bay or door</span>
@@ -170,7 +167,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                   onClick={() => setShowManageDropdown(false)}
                   className="flex items-center space-x-3 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition rounded-lg mx-1"
                 >
-                  <span className="text-xl flex-shrink-0">🚗</span>
                   <div className="flex flex-col">
                     <span className="font-bold">Self-Drive Rentals</span>
                     <span className="text-[10px] text-gray-400">Zero deposit cars, SUVs & bikes</span>
@@ -188,7 +184,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                   onClick={() => setShowManageDropdown(false)}
                   className="flex items-center space-x-3 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition rounded-lg mx-1"
                 >
-                  <span className="text-xl flex-shrink-0">🚗</span>
                   <div className="flex flex-col">
                     <span className="font-bold">My Vehicles</span>
                     <span className="text-[10px] text-gray-400">Manage garage & HSRP plates</span>
@@ -200,7 +195,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                   onClick={() => setShowManageDropdown(false)}
                   className="flex items-center space-x-3 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition rounded-lg mx-1"
                 >
-                  <span className="text-xl flex-shrink-0">📋</span>
                   <div className="flex flex-col">
                     <span className="font-bold">Active Passes & Trips</span>
                     <span className="text-[10px] text-gray-400">Gate PIN passes & trip history</span>

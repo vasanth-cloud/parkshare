@@ -55,7 +55,7 @@ export const DriverAuthPage: React.FC = () => {
           <Car className="w-9 h-9" />
         </div>
         <span className="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-400 text-[11px] font-black uppercase tracking-wider rounded-full border border-emerald-500/30">
-          🚗 ParkShare Driver App
+           ParkShare Driver App
         </span>
         <h1 className="text-3xl font-black tracking-tight text-white">Find & Book Parking</h1>
         <p className="text-xs text-slate-400 font-medium">Discover nearby spaces, reserve in seconds, and park stress-free.</p>

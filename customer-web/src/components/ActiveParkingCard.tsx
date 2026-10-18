@@ -17,14 +17,14 @@ import {
 } from 'lucide-react';
 
 const PRESET_REVIEW_TAGS = [
-  '🛡️ Safe & Secure',
-  '🚗 Easy Gate Access',
-  '🤝 Helpful Host',
-  '🅿️ Spacious Spot',
-  '💡 Well Lit & Clean',
-  '⚡ Smooth Checkout',
-  '📍 Accurate Location',
-  '🔒 24/7 Security'
+  'Safe & Secure',
+  'Easy Gate Access',
+  'Helpful Host',
+  'Spacious Spot',
+  'Well Lit & Clean',
+  'Smooth Checkout',
+  'Accurate Location',
+  '24/7 Security'
 ];
 
 export const ActiveParkingCard: React.FC<{
@@ -43,7 +43,7 @@ export const ActiveParkingCard: React.FC<{
   // Post-trip Review Modal state
   const [showInternalReviewModal, setShowInternalReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
-  const [selectedTags, setSelectedTags] = useState<string[]>(['🛡️ Safe & Secure', '🚗 Easy Gate Access']);
+  const [selectedTags, setSelectedTags] = useState<string[]>(['Safe & Secure','Easy Gate Access']);
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
@@ -169,7 +169,7 @@ export const ActiveParkingCard: React.FC<{
         rating: reviewRating,
         comment: finalComment || undefined,
       });
-      alert('🎉 Review submitted! Thank you for rating this space.');
+      alert('Review submitted! Thank you for rating this space.');
       setShowInternalReviewModal(false);
       onRefresh();
     } catch (err: any) {
@@ -219,7 +219,6 @@ export const ActiveParkingCard: React.FC<{
       {/* Header with Lifecycle Progress Pills */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div className="flex items-center space-x-3">
-          <span className="w-3 h-3 rounded-full bg-blue-400 animate-ping"></span>
           <div>
             <span className="text-xs font-mono font-bold text-blue-400 block tracking-wider uppercase">
               RESERVATION #{booking.booking_reference}
@@ -237,7 +236,7 @@ export const ActiveParkingCard: React.FC<{
           )}
           {isParkingActive && (
             <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-              Parking Active ✅
+              Parking Active
             </span>
           )}
           {isCollectionRequested && (
@@ -247,7 +246,7 @@ export const ActiveParkingCard: React.FC<{
           )}
           {isCompleted && (
             <span className="bg-blue-500/20 text-blue-300 border border-blue-400/40 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-              Trip Completed ✅
+              Trip Completed
             </span>
           )}
         </div>
@@ -340,7 +339,7 @@ export const ActiveParkingCard: React.FC<{
               className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white font-black py-4 px-4 rounded-2xl text-sm transition shadow-lg shadow-blue-500/30 flex items-center justify-center space-x-2 cursor-pointer border-2 border-blue-400"
             >
               <QrCode className="w-5 h-5 text-cyan-300" />
-              <span>🎟️ Show Gate Pass & 4-Digit PIN</span>
+              <span>Show Gate Pass & 4-Digit PIN</span>
             </button>
 
             {/* Quick Secondary Actions */}
@@ -408,7 +407,7 @@ export const ActiveParkingCard: React.FC<{
               className="w-full bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black py-4 px-6 rounded-2xl text-sm transition shadow-xl shadow-rose-900/30 flex items-center justify-center space-x-2 hover:scale-[1.01] cursor-pointer border border-rose-400"
             >
               <Square className="w-4 h-4 fill-white" />
-              <span>🛑 End Trip / Checkout</span>
+              <span>End Trip / Checkout</span>
             </button>
 
             {/* Supporting Quick Actions */}
@@ -497,7 +496,7 @@ export const ActiveParkingCard: React.FC<{
               className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black py-3.5 px-6 rounded-2xl text-xs transition shadow-xl flex items-center justify-center space-x-2 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>{loadingAction ? 'Verifying OTP...' : '✅ Verify Owner OTP & Complete Trip'}</span>
+              <span>{loadingAction ?'Verifying OTP...':'Verify Owner OTP & Complete Trip'}</span>
             </button>
 
             <a
@@ -519,7 +518,7 @@ export const ActiveParkingCard: React.FC<{
           <div className="w-12 h-12 bg-blue-500/20 text-cyan-400 rounded-2xl flex items-center justify-center mx-auto">
             <CheckCircle className="w-6 h-6" />
           </div>
-          <h3 className="text-lg font-black text-white">Trip Completed • Vehicle Checked Out ✅</h3>
+          <h3 className="text-lg font-black text-white">Trip Completed • Vehicle Checked Out</h3>
           <p className="text-xs text-slate-300 max-w-md mx-auto">
             Vehicle checkout completed and verified with Owner OTP.
             <strong className="block text-emerald-300 mt-1">The parking space is now freed and active for other drivers.</strong>
@@ -675,7 +674,6 @@ export const ActiveParkingCard: React.FC<{
           <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative border border-slate-200 dark:border-slate-800 text-left">
             <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center space-x-2">
-                <span className="text-xl">🏁</span>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 dark:text-white">Trip Completed!</h3>
                   <p className="text-[10px] text-slate-400">Rate & review {listingTitle}</p>
@@ -712,11 +710,11 @@ export const ActiveParkingCard: React.FC<{
                 ))}
               </div>
               <span className="text-[11px] font-extrabold text-amber-500">
-                {reviewRating === 5 && 'Outstanding Experience! 🌟'}
-                {reviewRating === 4 && 'Very Good Space 👍'}
-                {reviewRating === 3 && 'Good Parking 🙂'}
-                {reviewRating === 2 && 'Could Be Better 😐'}
-                {reviewRating === 1 && 'Poor Experience 😞'}
+                {reviewRating === 5 && 'Outstanding Experience!'}
+                {reviewRating === 4 &&'Very Good Space'}
+                {reviewRating === 3 &&'Good Parking'}
+                {reviewRating === 2 &&'Could Be Better'}
+                {reviewRating === 1 &&'Poor Experience'}
               </span>
             </div>
 

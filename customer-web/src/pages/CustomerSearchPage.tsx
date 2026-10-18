@@ -121,7 +121,7 @@ export const CustomerSearchPage: React.FC = () => {
           <span>← Back to Services</span>
         </Link>
         <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-          🅿️ Parking Radar & Spaces
+           Parking Radar & Spaces
         </span>
       </div>
 
@@ -158,7 +158,7 @@ export const CustomerSearchPage: React.FC = () => {
               </div>
             </div>
             <span className="bg-blue-600 text-white font-extrabold px-2.5 py-1 rounded-lg text-[10px] shadow-xs self-end sm:self-auto">
-              📍 GPS Active
+               GPS Active
             </span>
           </div>
         )}

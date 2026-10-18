@@ -72,7 +72,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
   // Dynamic parking hotspots derived from active listings + live GPS position
   const dynamicHotspots = useMemo(() => {
     const list: Array<{ label: string; area: string; coords?: [number, number] }> = [
-      { label: '📍 Near Me', area: '', coords: currentCoords || undefined },
+      { label:'Near Me', area:'', coords: currentCoords || undefined },
     ];
     const seenAreas = new Set<string>();
     listings.forEach((item) => {
@@ -178,7 +178,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
       await reverseGeocode(lat, lng);
       setIsLocating(false);
       if (!isAuto) {
-        setLocationSuccessMsg('📍 Live position locked • Showing nearby parking');
+        setLocationSuccessMsg('Live position locked • Showing nearby parking');
         setTimeout(() => setLocationSuccessMsg(null), 3500);
       }
     };
@@ -389,7 +389,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
               ? 'bg-emerald-600 text-white border-white ring-4 ring-emerald-400/50 font-black'
               : 'bg-slate-900 text-white border-slate-700/80 backdrop-blur-md font-bold'
           }">
-            <span class="${isSelected ? 'text-white' : 'text-emerald-400'} font-black text-[11px]">🅿️ ${letter}</span>
+            <span class="${isSelected ?'text-white':'text-emerald-400'} font-black text-[11px]">${letter}</span>
             <span class="text-[11px] font-extrabold text-emerald-300">• ${distStr}</span>
             <span class="text-[11px] font-bold opacity-90">₹${price}</span>
           </div>
@@ -481,8 +481,6 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
           >
             <div className="flex items-center space-x-2.5 min-w-0">
               <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
               <div className="min-w-0">
                 <div className="flex items-center space-x-1.5">
@@ -785,7 +783,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
                       : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  ⚡ EV
+                   EV
                 </button>
                 <button
                   type="button"
@@ -855,7 +853,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         <span className="absolute top-1 left-1 bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black px-1.5 py-0.5 rounded-md">
-                          🅿️ {letter}
+                           {letter}
                         </span>
                         <span className="absolute bottom-1 right-1 bg-emerald-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shadow-xs">
                           {formatApproxDistance(dist)}
@@ -877,8 +875,8 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
                         <div className="flex items-center justify-between text-[10px] pt-0.5">
                           <span className={`font-bold ${spot.available_spaces === 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
                             {spot.available_spaces !== undefined
-                              ? (spot.available_spaces === 0 ? '🔴 Full' : `🟢 ${spot.available_spaces} left`)
-                              : '🟢 Available'}
+                              ? (spot.available_spaces === 0 ?'Full':`${spot.available_spaces} left`)
+                              :'Available'}
                           </span>
                         </div>
                       </div>

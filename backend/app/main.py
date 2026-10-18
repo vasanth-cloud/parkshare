@@ -146,7 +146,7 @@ def privacy_policy():
             <h2>5. Account and Data Deletion Rights</h2>
             <p>In full compliance with Google Play's User Data and Account Deletion policies, you have the right to request the permanent deletion of your account and all associated personal data at any time.</p>
             <p>You can request account deletion directly through our dedicated web portal: <br>
-            👉 <a href="/delete-account" style="font-size: 16px;"><strong>Click here to visit our Account & Data Deletion Page (/delete-account)</strong></a></p>
+             <a href="/delete-account"style="font-size: 16px;"><strong>Click here to visit our Account & Data Deletion Page (/delete-account)</strong></a></p>
             <p>Alternatively, you may email us directly at <a href="mailto:support@parkshare.app">support@parkshare.app</a> with the subject line <em>"Account Deletion Request - ParkCo"</em>. Requests are verified and completed within 7 to 30 days.</p>
 
             <h2>6. Children's Privacy</h2>
@@ -252,7 +252,7 @@ def privacy_policy_partner():
             <h2>5. Host Account and Data Deletion Rights</h2>
             <p>In full adherence to Google Play's User Data and Account Deletion policies, hosts may permanently delete their account and associated property listings at any time.</p>
             <p>You can initiate account and data deletion directly through our web portal: <br>
-            👉 <a href="/delete-account" style="font-size: 16px;"><strong>Click here to visit the Account & Data Deletion Portal (/delete-account)</strong></a></p>
+             <a href="/delete-account"style="font-size: 16px;"><strong>Click here to visit the Account & Data Deletion Portal (/delete-account)</strong></a></p>
             <p>Alternatively, you may email us directly at <a href="mailto:support@parkshare.app">support@parkshare.app</a> with the subject line <em>"Account Deletion Request - ParkCo Partner"</em>. Verified account deletion requests are processed and confirmed within 7 to 30 days.</p>
 
             <h2>6. Children's Privacy</h2>
