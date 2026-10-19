@@ -490,19 +490,18 @@ export const BottomNav: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setShowProfileDrawer(false);
-                        navigate('/register/driver');
+                        navigate('/driver');
                       }}
                       className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 hover:border-indigo-400 text-left transition group"
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-lg">🧑‍✈️</span>
                         <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-200/80 dark:bg-indigo-900/80 text-indigo-900 dark:text-indigo-200 px-1.5 py-0.5 rounded">
                           Driver
                         </span>
                       </div>
                       <div className="text-xs font-black text-gray-900 dark:text-white">Acting Driver</div>
                       <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5 leading-tight">
-                        Register as certified chauffeur partner
+                        Go online and accept chauffeur trips
                       </p>
                     </button>
 
@@ -516,7 +515,6 @@ export const BottomNav: React.FC = () => {
                       className="p-3 rounded-2xl bg-cyan-50/70 dark:bg-cyan-950/40 border border-cyan-200/80 dark:border-cyan-800/60 hover:border-cyan-400 text-left transition group"
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-lg">✨</span>
                         <span className="text-[9px] font-black uppercase tracking-wider bg-cyan-200/80 dark:bg-cyan-900/80 text-cyan-900 dark:text-cyan-200 px-1.5 py-0.5 rounded">
                           Car Spa
                         </span>

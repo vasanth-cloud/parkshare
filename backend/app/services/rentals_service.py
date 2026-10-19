@@ -194,6 +194,9 @@ SAMPLE_FLEET: List[RentalVehicleSchema] = [
     )
 ]
 
+# Partner-registered vehicles only. The demo fleet is not shown.
+SAMPLE_FLEET.clear()
+
 SAMPLE_RENTAL_BOOKINGS: List[RentalBookingOut] = []
 
 class RentalsService:
@@ -280,8 +283,7 @@ class RentalsService:
         # Find vehicle
         vehicle = next((v for v in SAMPLE_FLEET if v.id == data.vehicleId), None)
         if not vehicle:
-            # Fallback to first vehicle
-            vehicle = SAMPLE_FLEET[0]
+            raise ValueError("That rental vehicle is not available")
 
         # Calculate estimated fare (default 24h daily rate)
         base_fare = vehicle.dailyRate

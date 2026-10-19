@@ -173,7 +173,7 @@ export const RectifyListingModal: React.FC<Props> = ({
     // Check physical location verification
     if (!locationProof || !locationProof.is_location_verified) {
       setCurrentStep(2);
-      setError("Physical presence proof required: Please complete the '📍 Verify Parking Location' step.");
+      setError("Physical presence proof required: Please complete the'Verify Parking Location'step.");
       return;
     }
 
@@ -549,7 +549,7 @@ export const RectifyListingModal: React.FC<Props> = ({
               </div>
 
               <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100 text-[11px] text-emerald-900 flex items-center justify-between">
-                <span>⚡ Monthly passes attract verified long-term corporate commuters.</span>
+                <span>Monthly passes attract verified long-term corporate commuters.</span>
                 <span className="font-bold text-emerald-700">Guaranteed Recurring Income</span>
               </div>
             </div>

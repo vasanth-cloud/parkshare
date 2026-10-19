@@ -570,7 +570,7 @@ export const CustomerProfilePage: React.FC = () => {
 
             <div className="flex items-center space-x-2">
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                {parkCoins} 🪙
+                {parkCoins}
               </span>
               <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${expandedSection === 'rewards' ? 'rotate-180' : ''}`} />
             </div>
@@ -591,10 +591,10 @@ export const CustomerProfilePage: React.FC = () => {
                     <span className="text-xs font-bold text-slate-500">Coins (₹{parkCoins} value)</span>
                   </div>
                   <span className="text-[10px] text-slate-400 block mt-0.5">
-                    🥈 Silver Tier • Auto-applies at checkout
+                     Silver Tier • Auto-applies at checkout
                   </span>
                 </div>
-                <div className="text-3xl">🪙</div>
+                <div className="text-3xl"></div>
               </div>
 
               {/* Promo Vouchers */}
@@ -891,7 +891,7 @@ export const CustomerProfilePage: React.FC = () => {
                     <div className="space-y-0.5 pr-2">
                       <div className="flex items-center space-x-1.5">
                         <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
-                          {addr.tag === 'Home' ? '🏠 Home' : addr.tag === 'Office' ? '🏢 Office' : '📍 ' + addr.tag}
+                          {addr.tag ==='Home'?'Home': addr.tag ==='Office'?'Office':''+ addr.tag}
                         </span>
                         <span className="text-xs font-bold text-slate-900 dark:text-white">{addr.label}</span>
                         {addr.isDefault && (

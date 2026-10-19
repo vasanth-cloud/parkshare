@@ -1,562 +1,848 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import {
+  DriverBooking,
+  DriverFareBreakdown,
+  DriverPricing,
+  Vehicle,
+} from '../types';
 import {
   ShieldCheck,
-  Star,
   Clock,
-  Car,
-  MapPin,
-  Calendar,
-  CheckCircle2,
-  ChevronRight,
   ArrowLeft,
-  Phone,
-  Shield,
-  Award,
-  Zap,
-  Navigation,
+  ChevronDown,
+  ChevronRight,
   Sparkles,
-  UserCheck,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  LocateFixed,
+  MapPin,
+  IndianRupee,
+  Moon,
+  Lock,
 } from 'lucide-react';
 
-interface DriverProfile {
+const CAR_TYPES = [
+  { id: 'HATCHBACK', label: 'Hatchback', hint: 'Swift, i20' },
+  { id: 'SEDAN', label: 'Sedan', hint: 'City, Verna' },
+  { id: 'SUV', label: 'SUV / MUV', hint: 'Creta, Innova' },
+  { id: 'LUXURY', label: 'Luxury', hint: 'BMW, Merc' },
+  { id: 'VAN', label: 'Van', hint: 'Traveller' },
+];
+
+const SEATERS = [4, 5, 6, 7, 8, 9];
+
+const inputCls =
+  'w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500';
+
+const fmtINR = (n?: number | null) =>
+  `₹${(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+function toLocalInputValue(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function localToIso(local: string) {
+  const d = new Date(local);
+  if (Number.isNaN(d.getTime())) throw new Error('Invalid date/time');
+  return d.toISOString();
+}
+
+function mapVehicleType(t?: string): string {
+  if (t === 'SUV') return 'SUV';
+  if (t === 'VAN') return 'VAN';
+  return 'SEDAN';
+}
+
+async function cityFromCoords(latitude: number, longitude: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const city = String(data.city || data.locality || '').trim();
+      if (city) return city;
+    }
+  } catch {
+    // Try the second provider below.
+  }
+
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const address = data?.address || {};
+      const city = address.city || address.town || address.village || address.municipality || address.county || '';
+      if (city) return String(city).trim();
+    }
+  } catch {
+    // Leave the city field for the customer to type.
+  }
+  return null;
+}
+
+type PlaceHit = {
   id: string;
+  title: string;
+  subtitle: string;
+  city: string;
+  lat: number;
+  lng: number;
+};
+
+async function searchPlaces(
+  query: string,
+  bias?: { city?: string; lat?: number | null; lng?: number | null }
+): Promise<PlaceHit[]> {
+  const trimmed = query.trim();
+  const city = (bias?.city || '').trim();
+  const q = city && !trimmed.toLowerCase().includes(city.toLowerCase()) ? `${trimmed}, ${city}` : trimmed;
+  const params = new URLSearchParams({ q, limit: '6', lang: 'en' });
+  if (bias?.lat != null && bias?.lng != null) {
+    params.set('lat', String(bias.lat));
+    params.set('lon', String(bias.lng));
+  }
+  const res = await fetch(`https://photon.komoot.io/api/?${params.toString()}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.features || [])
+    .map((feature: any, index: number) => {
+      const place = feature.properties || {};
+      const title = [place.name, place.street].filter(Boolean).join(', ') || place.locality || place.city || 'Location';
+      const subtitle = [place.locality, place.district, place.city, place.state].filter(Boolean).join(', ');
+      const lat = Number(feature.geometry?.coordinates?.[1]);
+      const lng = Number(feature.geometry?.coordinates?.[0]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      return {
+        id: `${place.osm_id || index}-${title}`,
+        title,
+        subtitle: subtitle || title,
+        city: String(place.city || '').trim(),
+        lat,
+        lng,
+      } as PlaceHit;
+    })
+    .filter(Boolean) as PlaceHit[];
+}
+
+function PlaceSuggestInput({
+  label,
+  value,
+  onChange,
+  onPick,
+  placeholder,
+  required,
+  biasCity,
+  biasLat,
+  biasLng,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  onPick: (place: PlaceHit) => void;
+  placeholder: string;
+  required?: boolean;
+  biasCity?: string;
+  biasLat?: number | null;
+  biasLng?: number | null;
+}) {
+  const [hits, setHits] = useState<PlaceHit[]>([]);
+  const [open, setOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const typed = useRef(false);
+  const requestId = useRef(0);
+
+  useEffect(() => {
+    if (!typed.current) return;
+    const query = value.trim();
+    if (query.length < 2) {
+      setHits([]);
+      setOpen(false);
+      setSearching(false);
+      return;
+    }
+
+    const current = ++requestId.current;
+    setSearching(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const places = await searchPlaces(query, { city: biasCity, lat: biasLat, lng: biasLng });
+        if (current !== requestId.current) return;
+        setHits(places);
+        setOpen(places.length > 0);
+      } catch {
+        if (current !== requestId.current) return;
+        setHits([]);
+        setOpen(false);
+      } finally {
+        if (current === requestId.current) setSearching(false);
+      }
+    }, 280);
+
+    return () => window.clearTimeout(timer);
+  }, [value, biasCity, biasLat, biasLng]);
+
+  return (
+    <div className="space-y-1 relative">
+      <label className="text-[11px] font-bold uppercase text-slate-500">{label}</label>
+      <input
+        required={required}
+        value={value}
+        onChange={(e) => {
+          typed.current = true;
+          onChange(e.target.value);
+        }}
+        onFocus={() => {
+          if (hits.length > 0) setOpen(true);
+        }}
+        onBlur={() => {
+          window.setTimeout(() => setOpen(false), 150);
+        }}
+        placeholder={placeholder}
+        autoComplete="off"
+        className={inputCls}
+      />
+      {searching && (
+        <Loader2 className="w-3.5 h-3.5 animate-spin absolute right-3 top-8 text-slate-400" />
+      )}
+      {open && hits.length > 0 && (
+        <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden max-h-56 overflow-y-auto">
+          {hits.map((place) => (
+            <button
+              key={place.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                typed.current = false;
+                requestId.current += 1;
+                setOpen(false);
+                setHits([]);
+                onPick(place);
+              }}
+              className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 last:border-0"
+            >
+              <span className="flex items-start gap-2">
+                <MapPin className="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-slate-900 dark:text-white truncate">{place.title}</span>
+                  <span className="block text-[10px] text-slate-500 truncate">{place.subtitle}</span>
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type KnownCar = {
+  key: string;
   name: string;
-  photo: string;
-  rating: number;
-  trips: number;
-  experienceYears: number;
-  transmission: string[];
-  languages: string[];
-  badge: string;
-  eta: string;
-  hourlyRate: number;
+  registration: string;
+  vehicleId?: number;
+};
+
+function knownCarsFromHistory(vehicles: Vehicle[], trips: DriverBooking[]): KnownCar[] {
+  const byKey = new Map<string, KnownCar>();
+  const remember = (name: string, registration: string, vehicleId?: number) => {
+    const cleanName = name.trim().replace(/\s+/g, ' ');
+    const plate = registration.trim().toUpperCase().replace(/\s+/g, '');
+    if (!cleanName) return;
+    const key = `${cleanName.toLowerCase()}|${plate}`;
+    byKey.set(key, { key, name: cleanName, registration: plate, vehicleId });
+  };
+
+  // Older trips first so a newer booking, then a saved vehicle, wins the same name and plate.
+  [...trips].reverse().forEach((trip) => {
+    if (trip.car_make_model) remember(trip.car_make_model, trip.car_registration || '');
+  });
+  vehicles.forEach((vehicle) => {
+    remember([vehicle.make, vehicle.model].filter(Boolean).join(' '), vehicle.registration_number || '', vehicle.id);
+  });
+  return [...byKey.values()];
+}
+
+function CarNameField({
+  value,
+  cars,
+  onNameChange,
+  onPick,
+}: {
+  value: string;
+  cars: KnownCar[];
+  onNameChange: (name: string) => void;
+  onPick: (car: KnownCar) => void;
+}) {
+  const query = value.trim().toLowerCase();
+  const matches = cars.filter((car) => !query || car.name.toLowerCase().includes(query));
+
+  return (
+    <div className="space-y-1">
+      <label className="text-[11px] font-bold uppercase text-slate-500">Make / model</label>
+      <div className="relative">
+        <input
+          value={value}
+          onChange={(e) => onNameChange(e.target.value)}
+          placeholder="e.g. Hyundai Creta"
+          autoComplete="off"
+          className={`${inputCls} pr-8`}
+        />
+        <ChevronDown className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 ${matches.length > 0 ? 'rotate-180' : ''}`} />
+      </div>
+      {matches.length > 0 && (
+        <ul className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden max-h-56 overflow-y-auto">
+          {matches.map((car) => {
+            const selected = car.name.toLowerCase() === query;
+            return (
+              <li key={car.key}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onPick(car);
+                  }}
+                  className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left border-b border-slate-100 dark:border-slate-800 last:border-0 ${
+                    selected ? 'bg-indigo-50 dark:bg-slate-800' : 'hover:bg-indigo-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold text-slate-900 dark:text-white truncate">{car.name}</span>
+                    <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400"></span>
+                  </span>
+                  {car.registration && (
+                    <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-300 shrink-0">{car.registration}</span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 export const ActingDriversPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
-  const initialPickup = searchParams.get('pickup') || '';
+  const [pricing, setPricing] = useState<DriverPricing | null>(null);
+  const [estimate, setEstimate] = useState<DriverFareBreakdown | null>(null);
+  const [estimating, setEstimating] = useState(false);
+  const [estimateErr, setEstimateErr] = useState('');
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [pastTrips, setPastTrips] = useState<DriverBooking[]>([]);
 
-  // Dynamic drivers from backend
-  const [drivers, setDrivers] = useState<DriverProfile[]>([]);
-  const [loadingDrivers, setLoadingDrivers] = useState(true);
+  const [pickupAddress, setPickupAddress] = useState(searchParams.get('pickup') || '');
+  const [pickupCity, setPickupCity] = useState(searchParams.get('city') || '');
+  const [dropAddress, setDropAddress] = useState('');
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [locating, setLocating] = useState(false);
 
-  // Booking form state
-  const [tripType, setTripType] = useState<'CITY' | 'NIGHT' | 'OUTSTATION' | 'VALET'>('CITY');
-  const [transmission, setTransmission] = useState<'ANY' | 'MANUAL' | 'AUTOMATIC'>('AUTOMATIC');
-  const [pickupLocation, setPickupLocation] = useState(initialPickup);
-  const [durationHours, setDurationHours] = useState(2);
-  const [bookingDate, setBookingDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [bookingTime, setBookingTime] = useState('18:00');
-  const [contactPhone, setContactPhone] = useState('');
-  const [selectedDriver, setSelectedDriver] = useState<DriverProfile | null>(null);
+  const nowPlus = (mins: number) => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() + mins, 0, 0);
+    return d;
+  };
+  const [startLocal, setStartLocal] = useState(() => toLocalInputValue(nowPlus(30)));
+  const [endLocal, setEndLocal] = useState(() => toLocalInputValue(nowPlus(30 + 180)));
 
-  // Modal / Confirmed state
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [confirmedBooking, setConfirmedBooking] = useState<any | null>(null);
+  const [carType, setCarType] = useState('SEDAN');
+  const [transmission, setTransmission] = useState<'MANUAL' | 'AUTOMATIC'>('AUTOMATIC');
+  const [seater, setSeater] = useState(5);
+  const [makeModel, setMakeModel] = useState('');
+  const [registration, setRegistration] = useState('');
+  const [notes, setNotes] = useState('');
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | ''>('');
+
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    const fetchDrivers = async () => {
-      setLoadingDrivers(true);
+    api.getDriverPricing().then(setPricing).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    api.getVehicles().then(setVehicles).catch(() => {});
+    api.getMyDriverBookings().then(setPastTrips).catch(() => {});
+  }, [user]);
+
+  const previousCars = useMemo(() => knownCarsFromHistory(vehicles, pastTrips), [vehicles, pastTrips]);
+
+  // Fill the plate when a saved name is already typed and the trip history arrives afterwards.
+  useEffect(() => {
+    const name = makeModel.trim().toLowerCase();
+    if (!name) return;
+    const matches = previousCars.filter(
+      (car) => car.registration && car.name.toLowerCase() === name
+    );
+    const plates = [...new Set(matches.map((car) => car.registration))];
+    if (plates.length === 1) {
+      setRegistration((current) => current || plates[0]);
+    }
+  }, [previousCars, makeModel]);
+
+  // Live estimate whenever window / car / city changes
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setEstimating(true);
+      setEstimateErr('');
       try {
-        const queryParams = new URLSearchParams();
-        const cityParam = searchParams.get('city');
-        if (cityParam) {
-          queryParams.set('city', cityParam);
+        const data = await api.estimateDriverFare({
+          start_time: localToIso(startLocal),
+          end_time: localToIso(endLocal),
+          car_type: carType,
+          pickup_city: pickupCity.trim() || undefined,
+        });
+        if (!cancelled) setEstimate(data);
+      } catch (err: any) {
+        if (!cancelled) {
+          setEstimate(null);
+          setEstimateErr(err.message || 'Could not estimate fare');
         }
-        if (transmission !== 'ANY') {
-          queryParams.set('transmission', transmission === 'AUTOMATIC' ? 'Automatic' : 'Manual');
-        }
-        const res = await fetch(`/api/v1/drivers/available?${queryParams.toString()}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) setDrivers(Array.isArray(data) ? data : []);
-        } else {
-          if (isMounted) setDrivers([]);
-        }
-      } catch (err) {
-        if (isMounted) setDrivers([]);
       } finally {
-        if (isMounted) setLoadingDrivers(false);
+        if (!cancelled) setEstimating(false);
       }
     };
-    fetchDrivers();
+    const t = window.setTimeout(run, 350);
     return () => {
-      isMounted = false;
+      cancelled = true;
+      window.clearTimeout(t);
     };
-  }, [transmission]);
+  }, [startLocal, endLocal, carType, pickupCity]);
 
-  // Pricing calculations
-  const baseRates = {
-    CITY: 299, // 2 hours included
-    NIGHT: 399, // safe night party drop
-    OUTSTATION: 1199, // full day
-    VALET: 199, // drop & park in ParkCo space
+  const applyVehicle = (id: number | '') => {
+    setSelectedVehicleId(id);
+    if (id === '') return;
+    const v = vehicles.find((x) => x.id === id);
+    if (!v) return;
+    setCarType(mapVehicleType(v.vehicle_type));
+    setRegistration(v.registration_number || '');
+    setMakeModel([v.make, v.model].filter(Boolean).join(' '));
   };
 
-  const calculateTotal = () => {
-    const base = baseRates[tripType];
-    const extraHours = Math.max(0, durationHours - 2);
-    const extraRate = tripType === 'OUTSTATION' ? 150 : 99;
-    return base + extraHours * extraRate;
+  const applyKnownCar = (car: KnownCar) => {
+    setMakeModel(car.name);
+    if (car.registration) setRegistration(car.registration);
+    if (car.vehicleId) {
+      const saved = vehicles.find((vehicle) => vehicle.id === car.vehicleId);
+      if (saved) {
+        setSelectedVehicleId(saved.id);
+        setCarType(mapVehicleType(saved.vehicle_type));
+        return;
+      }
+    }
+    setSelectedVehicleId('');
   };
 
-  const handleBookNow = (driver?: DriverProfile) => {
-    setIsSubmitting(true);
-    setTimeout(() => {
-      const assigned = driver || selectedDriver || (drivers.length > 0 ? drivers[0] : null);
-      const newBooking = {
-        bookingId: `DRV-${Math.floor(100000 + Math.random() * 900000)}`,
-        driver: assigned,
-        tripType,
-        pickupLocation,
-        durationHours,
-        totalFare: calculateTotal(),
-        otp: Math.floor(1000 + Math.random() * 9000),
-        status: 'CONFIRMED',
-        createdAt: new Date().toISOString(),
-      };
-      try {
-        const prev = JSON.parse(localStorage.getItem('parkshare_driver_bookings') || '[]');
-        localStorage.setItem('parkshare_driver_bookings', JSON.stringify([newBooking, ...prev]));
-      } catch {}
-      setConfirmedBooking(newBooking);
-      setIsSubmitting(false);
-    }, 600);
+  const onMakeModelChange = (name: string) => {
+    setMakeModel(name);
+    const matches = previousCars.filter(
+      (car) => car.registration && car.name.toLowerCase() === name.trim().toLowerCase()
+    );
+    const plates = [...new Set(matches.map((car) => car.registration))];
+    if (plates.length === 1) {
+      setRegistration(plates[0]);
+      setSelectedVehicleId(matches[0].vehicleId || '');
+    } else {
+      setSelectedVehicleId('');
+    }
+  };
+
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported on this device.');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const latitude = Number(pos.coords.latitude.toFixed(6));
+        const longitude = Number(pos.coords.longitude.toFixed(6));
+        setLat(latitude);
+        setLng(longitude);
+        const city = await cityFromCoords(latitude, longitude);
+        if (city) {
+          setPickupCity(city);
+          setError('');
+        } else {
+          setError('Location saved, but the city could not be detected. Please type it.');
+        }
+        setLocating(false);
+      },
+      () => {
+        setError('Could not read your location. You can still type the address.');
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const hoursPreview = useMemo(() => {
+    const s = new Date(startLocal).getTime();
+    const e = new Date(endLocal).getTime();
+    if (!s || !e || e <= s) return 0;
+    return (e - s) / 36e5;
+  }, [startLocal, endLocal]);
+
+  const handleRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    if (pickupAddress.trim().length < 3) {
+      setError('Enter a pickup address.');
+      return;
+    }
+    if (pickupCity.trim().length < 2) {
+      setError('Enter the city so nearby drivers can see the request.');
+      return;
+    }
+    if (hoursPreview <= 0) {
+      setError('End time must be after the start time.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const booking = await api.createDriverBooking({
+        pickup_address: pickupAddress.trim(),
+        pickup_city: pickupCity.trim(),
+        pickup_latitude: lat,
+        pickup_longitude: lng,
+        drop_address: dropAddress.trim() || null,
+        start_time: localToIso(startLocal),
+        end_time: localToIso(endLocal),
+        car_type: carType,
+        transmission,
+        seater,
+        car_make_model: makeModel.trim() || null,
+        car_registration: registration.trim() || null,
+        notes: notes.trim() || null,
+      });
+      navigate(`/drivers/trips/${booking.id}`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to request a driver');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-20">
-      
-      {/* Top Header Navigation */}
       <div className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center space-x-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 transition"
+            className="flex items-center space-x-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 transition"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
-          <div className="flex items-center space-x-2">
-            <span className="text-xs font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-indigo-500" />
-              ParkCo Mobility
-            </span>
-          </div>
+          <Link
+            to="/drivers/trips"
+            className="text-xs font-black text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            My driver trips
+          </Link>
         </div>
       </div>
 
-      {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-b from-indigo-950 via-slate-900 to-slate-950 text-white py-10 px-4">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:16px_16px]" />
-        
         <div className="relative max-w-5xl mx-auto space-y-4">
           <div className="inline-flex items-center space-x-2 bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 px-3 py-1 rounded-full text-xs font-extrabold">
             <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-            <span>100% Police Verified • Professional Chauffeurs</span>
+            <span>KYC-verified chauffeurs · OTP-secured trips</span>
           </div>
-
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
-              On-Demand <span className="bg-gradient-to-r from-indigo-400 to-cyan-300 bg-clip-text text-transparent">Acting Drivers</span> For Your Car
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
-              Relax in the passenger seat while certified chauffeurs drive your personal vehicle. Perfect for city errands, late night return from parties, highway trips, or parking coordination.
-            </p>
-          </div>
-
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-3 gap-2 pt-2 max-w-md">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-2.5 text-center">
-              <span className="block text-base sm:text-lg font-black text-white">10 Mins</span>
-              <span className="text-[10px] text-slate-400 font-medium">Avg Pickup</span>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-2.5 text-center">
-              <span className="block text-base sm:text-lg font-black text-amber-400">4.92 ★</span>
-              <span className="text-[10px] text-slate-400 font-medium">Rating (8k+ trips)</span>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-2.5 text-center">
-              <span className="block text-base sm:text-lg font-black text-emerald-400">₹0 Surge</span>
-              <span className="text-[10px] text-slate-400 font-medium">Flat Rates</span>
-            </div>
-          </div>
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
+            Book an <span className="bg-gradient-to-r from-indigo-400 to-cyan-300 bg-clip-text text-transparent">Acting Driver</span> for your car
+          </h1>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Left Column: Interactive Booking Widget */}
-        <div className="lg:col-span-7 space-y-5">
+        <form onSubmit={handleRequest} className="lg:col-span-7 space-y-5">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <h2 className="text-base font-black text-slate-900 dark:text-white">Book an Acting Driver</h2>
-                <p className="text-xs text-slate-500">Select your ride type & customize details</p>
-              </div>
-              <span className="text-xs font-black bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-xl">
-                Active & Verified Drivers
-              </span>
+            <div>
+              <h2 className="text-base font-black">Trip details</h2>
+              <p className="text-xs text-slate-500"></p>
             </div>
 
-            {/* Trip Type Selector */}
-            <div className="space-y-2">
-              <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500">1. Trip Category</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: 'CITY', label: 'City Ride', desc: 'From ₹299 (2 hrs)', icon: Car },
-                  { id: 'NIGHT', label: 'Night Safe', desc: 'Party drop • ₹399', icon: Zap },
-                  { id: 'OUTSTATION', label: 'Outstation', desc: 'Full Day • ₹1,199', icon: Navigation },
-                  { id: 'VALET', label: 'Park Assist', desc: 'Drop & Park • ₹199', icon: MapPin },
-                ].map((type) => {
-                  const Icon = type.icon;
-                  const isSelected = tripType === type.id;
+            {error && (
+              <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs font-bold px-3.5 py-2.5 rounded-xl">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {error}
+              </div>
+            )}
+
+            <PlaceSuggestInput
+              label="Pickup address *"
+              required
+              value={pickupAddress}
+              onChange={setPickupAddress}
+              biasCity={pickupCity}
+              biasLat={lat}
+              biasLng={lng}
+              placeholder="Building, street, landmark"
+              onPick={async (place) => {
+                setPickupAddress(place.subtitle && place.subtitle !== place.title ? `${place.title}, ${place.subtitle}` : place.title);
+                setLat(Number(place.lat.toFixed(6)));
+                setLng(Number(place.lng.toFixed(6)));
+                const city = place.city || (await cityFromCoords(place.lat, place.lng));
+                if (city) setPickupCity(city);
+                setError('');
+              }}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase text-slate-500">City *</label>
+                <input
+                  required
+                  value={pickupCity}
+                  onChange={(e) => setPickupCity(e.target.value)}
+                  placeholder="e.g. Bengaluru"
+                  className={inputCls}
+                />
+              </div>
+              <PlaceSuggestInput
+                label="Drop (optional)"
+                value={dropAddress}
+                onChange={setDropAddress}
+                biasCity={pickupCity}
+                biasLat={lat}
+                biasLng={lng}
+                placeholder="Area, street, or landmark"
+                onPick={(place) => {
+                  setDropAddress(place.subtitle && place.subtitle !== place.title ? `${place.title}, ${place.subtitle}` : place.title);
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={useMyLocation}
+              disabled={locating}
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400"
+            >
+              {locating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
+              {locating
+                ? 'Detecting your city...'
+                : lat && lng && pickupCity
+                  ? `Using ${pickupCity}`
+                  : 'Use my current location'}
+            </button>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase text-slate-500">From *</label>
+                <input type="datetime-local" value={startLocal} onChange={(e) => setStartLocal(e.target.value)} className={inputCls} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase text-slate-500">To *</label>
+                <input type="datetime-local" value={endLocal} onChange={(e) => setEndLocal(e.target.value)} className={inputCls} />
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-400 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {hoursPreview > 0 ? `${hoursPreview.toFixed(1)} hrs selected` : 'End must be after start'}
+              {pricing ? ` · billed in ${pricing.billing_increment_minutes}-min slots, min ${pricing.min_billable_hours} hrs` : ''}
+            </p>
+
+            {vehicles.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase text-slate-500">Saved vehicle (optional)</label>
+                <select
+                  value={selectedVehicleId}
+                  onChange={(e) => applyVehicle(e.target.value ? Number(e.target.value) : '')}
+                  className={inputCls}
+                >
+                  <option value="">Enter car details manually</option>
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.registration_number} · {v.vehicle_type}
+                      {v.make ? ` · ${v.make}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className="text-[11px] font-bold uppercase text-slate-500">Car type *</label>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-1.5">
+                {CAR_TYPES.map((c) => {
+                  const on = carType === c.id;
                   return (
                     <button
-                      key={type.id}
+                      key={c.id}
                       type="button"
-                      onClick={() => setTripType(type.id as any)}
-                      className={`p-3 rounded-2xl border text-left transition active:scale-95 cursor-pointer ${
-                        isSelected
-                          ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 ring-2 ring-indigo-500/30'
-                          : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100'
+                      onClick={() => setCarType(c.id)}
+                      className={`p-2.5 rounded-2xl border text-left ${
+                        on
+                          ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-800 dark:text-indigo-200'
+                          : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 mb-1.5 ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
-                      <div className="text-xs font-black">{type.label}</div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{type.desc}</div>
+                      <span className="block text-[11px] font-black">{c.label}</span>
+                      <span className="block text-[10px] opacity-60">{c.hint}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Car Transmission Preference */}
-            <div className="space-y-2">
-              <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500">2. Your Car Transmission</label>
-              <div className="flex items-center space-x-2">
-                {[
-                  { id: 'AUTOMATIC', label: 'Automatic / AMT / DCT' },
-                  { id: 'MANUAL', label: 'Manual' },
-                  { id: 'ANY', label: 'Either / Any' },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setTransmission(t.id as any)}
-                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                      transmission === t.id
-                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
-                        : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Pickup Location & Time Details */}
-            <div className="space-y-3">
-              <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500">3. Trip Schedule & Location</label>
-              
-              <div className="space-y-2">
-                <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-2xl px-3.5 py-2.5 space-x-2 border border-slate-200 dark:border-slate-700">
-                  <MapPin className="w-4 h-4 text-rose-500 flex-shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="Enter pickup address or landmark"
-                    value={pickupLocation}
-                    onChange={(e) => setPickupLocation(e.target.value)}
-                    className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
-                  />
-                </div>
-
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase text-slate-500">Transmission *</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-2xl px-3 py-2 space-x-2 border border-slate-200 dark:border-slate-700">
-                    <Calendar className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                    <input
-                      type="date"
-                      value={bookingDate}
-                      onChange={(e) => setBookingDate(e.target.value)}
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white focus:outline-none"
-                    />
-                  </div>
-                  <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-2xl px-3 py-2 space-x-2 border border-slate-200 dark:border-slate-700">
-                    <Clock className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                    <input
-                      type="time"
-                      value={bookingTime}
-                      onChange={(e) => setBookingTime(e.target.value)}
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {tripType !== 'OUTSTATION' && (
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Expected Duration:</span>
-                  <div className="flex items-center space-x-2">
-                    {[2, 4, 6, 8].map((hrs) => (
-                      <button
-                        key={hrs}
-                        type="button"
-                        onClick={() => setDurationHours(hrs)}
-                        className={`px-3 py-1 rounded-xl text-xs font-black transition cursor-pointer ${
-                          durationHours === hrs
-                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                        }`}
-                      >
-                        {hrs} hrs
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Pricing Summary & Action */}
-            <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">Estimated Total</span>
-                <div className="flex items-baseline space-x-1">
-                  <span className="text-2xl font-black text-slate-900 dark:text-white">₹{calculateTotal()}</span>
-                  <span className="text-xs text-slate-500 font-medium">({durationHours} hrs flat)</span>
-                </div>
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">✓ Zero advance required • Pay after drive</span>
-              </div>
-
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => handleBookNow()}
-                className="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-black text-xs px-6 py-3 rounded-2xl shadow-lg shadow-indigo-600/30 transition flex items-center space-x-2 cursor-pointer disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Confirm Driver</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Safety & Trust Badges */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center space-x-2.5">
-              <Shield className="w-5 h-5 text-indigo-500 flex-shrink-0" />
-              <div>
-                <h4 className="text-xs font-black">₹5 Lakh Cover</h4>
-                <p className="text-[10px] text-slate-500">Free trip insurance</p>
-              </div>
-            </div>
-            <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center space-x-2.5">
-              <UserCheck className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-              <div>
-                <h4 className="text-xs font-black">Verified IDs</h4>
-                <p className="text-[10px] text-slate-500">Aadhaar + DL check</p>
-              </div>
-            </div>
-            <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center space-x-2.5 col-span-2 sm:col-span-1">
-              <Award className="w-5 h-5 text-amber-500 flex-shrink-0" />
-              <div>
-                <h4 className="text-xs font-black">5+ Yrs Exper.</h4>
-                <p className="text-[10px] text-slate-500">Smooth car handling</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Available Verified Drivers */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Available Drivers Around You</span>
-            </h3>
-            <span className="text-[11px] font-bold text-slate-500">
-              {loadingDrivers ? 'Checking...' : `Nearby (${drivers.length})`}
-            </span>
-          </div>
-
-          {loadingDrivers ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center space-y-3">
-              <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-xs text-slate-500 font-bold">Scanning for verified acting drivers...</p>
-            </div>
-          ) : drivers.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 text-center space-y-3 shadow-xs">
-              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-500 rounded-2xl flex items-center justify-center mx-auto">
-                <Car className="w-6 h-6" />
-              </div>
-              <h4 className="text-xs font-black text-slate-900 dark:text-white">No Acting Drivers Registered Yet</h4>
-              <p className="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
-                As drivers register through the ParkCo Partner Portal or Host Dashboard, verified chauffeurs will appear here.
-              </p>
-              <div className="pt-1">
-                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1 rounded-full">
-                  <Sparkles className="w-3 h-3" />
-                  Realtime Registry Ready
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {drivers.map((driver) => (
-                <div
-                  key={driver.id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-xs space-y-3 hover:border-indigo-400 transition"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={driver.photo}
-                        alt={driver.name}
-                        className="w-12 h-12 rounded-2xl object-cover border-2 border-indigo-500/20"
-                      />
-                      <div>
-                        <div className="flex items-center space-x-1.5">
-                          <h4 className="text-xs font-black text-slate-900 dark:text-white">{driver.name}</h4>
-                          <span className="text-[9px] font-extrabold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.2 rounded">
-                            {driver.badge}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2 mt-0.5 text-[11px] text-slate-500">
-                          <span className="flex items-center text-amber-500 font-bold">
-                            <Star className="w-3 h-3 fill-amber-500 mr-0.5" />
-                            {driver.rating}
-                          </span>
-                          <span>• {driver.trips} trips</span>
-                          <span>• {driver.experienceYears} yrs exp</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
-                      {driver.eta}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] border-t border-slate-100 dark:border-slate-800 pt-2.5">
-                    <div className="flex items-center space-x-1 text-slate-500 text-[10px]">
-                      <span>Drives:</span>
-                      <strong className="text-slate-700 dark:text-slate-300">{driver.transmission.join(', ')}</strong>
-                    </div>
-
+                  {(['MANUAL', 'AUTOMATIC'] as const).map((t) => (
                     <button
+                      key={t}
                       type="button"
-                      onClick={() => {
-                        setSelectedDriver(driver);
-                        handleBookNow(driver);
-                      }}
-                      className="text-xs font-black text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 flex items-center space-x-1 cursor-pointer"
+                      onClick={() => setTransmission(t)}
+                      className={`py-2.5 rounded-xl text-[11px] font-black border ${
+                        transmission === t
+                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent'
+                          : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                      }`}
                     >
-                      <span>Request Now</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      {t === 'MANUAL' ? 'Manual' : 'Automatic'}
                     </button>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase text-slate-500">Seater</label>
+                <select value={seater} onChange={(e) => setSeater(Number(e.target.value))} className={inputCls}>
+                  {SEATERS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}-seater
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          )}
 
-          {/* ParkCo Synergy Card */}
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-3xl p-4 shadow-md space-y-2">
-            <div className="flex items-center space-x-2">
-              <MapPin className="w-4 h-4 text-emerald-200" />
-              <h4 className="text-xs font-black">ParkCo Seamless Handover</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <CarNameField
+                value={makeModel}
+                cars={previousCars}
+                onNameChange={onMakeModelChange}
+                onPick={applyKnownCar}
+              />
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase text-slate-500">Registration</label>
+                <input
+                  value={registration}
+                  onChange={(e) => setRegistration(e.target.value.toUpperCase())}
+                  placeholder="KA01AB1234"
+                  className={`${inputCls} font-mono uppercase`}
+                />
+              </div>
             </div>
-            <p className="text-[11px] text-emerald-50 leading-relaxed">
-              Have your driver drop you off and park your car safely inside any reserved ParkCo spot with digital OTP handover!
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold uppercase text-slate-500">Notes for the driver</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                placeholder="Gate code, basement parking, kids in the back…"
+                className={`${inputCls} font-medium`}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-lg shadow-indigo-600/30 disabled:opacity-60"
+            >
+              {submitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : !user ? (
+                <Lock className="w-4 h-4" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              {!user
+                ? 'Sign in to request a driver'
+                : estimate
+                ? `Request driver · ${fmtINR(estimate.total)}`
+                : 'Request driver'}
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <p className="text-center text-[10px] text-slate-400">
             </p>
           </div>
-        </div>
-      </div>
+        </form>
 
-      {/* Confirmation Success Modal */}
-      {confirmedBooking && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
-            <div className="text-center space-y-1">
-              <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <h3 className="text-base font-black text-slate-900 dark:text-white">Driver Dispatched!</h3>
-              <p className="text-xs text-slate-500">Booking Ref: {confirmedBooking.bookingId}</p>
+        {/* Estimate + drivers sidebar */}
+        <aside className="lg:col-span-5 space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3 sticky top-20">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black flex items-center gap-1.5">
+                <IndianRupee className="w-4 h-4 text-indigo-500" /> Fare estimate
+              </h3>
+              {estimating && <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />}
             </div>
-
-            <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 space-y-2.5">
-              {confirmedBooking.driver ? (
-                <div className="flex items-center space-x-3">
-                  <img
-                    src={confirmedBooking.driver.photo}
-                    alt={confirmedBooking.driver.name}
-                    className="w-10 h-10 rounded-xl object-cover"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-xs font-black truncate">{confirmedBooking.driver.name}</h4>
-                    <p className="text-[10px] text-slate-500">{confirmedBooking.driver.eta || 'Arriving in ~8 mins'}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-slate-400 block">Trip OTP</span>
-                    <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 tracking-wider">
-                      {confirmedBooking.otp}
+            {estimateErr && <p className="text-[11px] text-red-600 font-bold">{estimateErr}</p>}
+            {estimate ? (
+              <ul className="text-xs space-y-1.5">
+                <li className="flex justify-between">
+                  <span className="text-slate-500">Billable hours</span>
+                  <span className="font-bold">{estimate.billable_hours} hrs</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="text-slate-500">
+                    {fmtINR(estimate.hourly_rate)} × {estimate.car_multiplier} ({estimate.car_type.toLowerCase()})
+                  </span>
+                  <span className="font-bold">{fmtINR(estimate.effective_hourly_rate)}/hr</span>
+                </li>
+                {estimate.night_hours > 0 && (
+                  <li className="flex justify-between text-indigo-600 dark:text-indigo-300">
+                    <span className="flex items-center gap-1">
+                      <Moon className="w-3 h-3" /> Night {estimate.night_hours} hrs
                     </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xs font-black text-slate-900 dark:text-white">Driver Broadcasted</h4>
-                    <p className="text-[10px] text-slate-500">Matching nearest verified driver</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-slate-400 block">Trip OTP</span>
-                    <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 tracking-wider">
-                      {confirmedBooking.otp}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-500">Estimated Total:</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-black">₹{confirmedBooking.totalFare}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                onClick={() => setConfirmedBooking(null)}
-                className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs py-2.5 rounded-xl transition cursor-pointer"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfirmedBooking(null);
-                  navigate('/bookings');
-                }}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs py-2.5 rounded-xl transition cursor-pointer"
-              >
-                View Status
-              </button>
-            </div>
+                    <span className="font-bold">+{fmtINR(estimate.night_surcharge)}</span>
+                  </li>
+                )}
+                <li className="flex justify-between">
+                  <span className="text-slate-500">Driver fee</span>
+                  <span className="font-bold">{fmtINR(estimate.driver_fee)}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="text-slate-500">Platform fee ({estimate.platform_fee_percent}%)</span>
+                  <span className="font-bold">{fmtINR(estimate.platform_fee)}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="text-slate-500">GST ({estimate.tax_percent}%)</span>
+                  <span className="font-bold">{fmtINR(estimate.tax)}</span>
+                </li>
+                <li className="flex justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-base">
+                  <span className="font-black">You'll pay</span>
+                  <span className="font-black text-indigo-600 dark:text-indigo-300">{fmtINR(estimate.total)}</span>
+                </li>
+              </ul>
+            ) : (
+              <p className="text-xs text-slate-400">Pick a valid time window to see the fare.</p>
+            )}
+            <p className="text-[10px] text-slate-400">
+            </p>
           </div>
-        </div>
-      )}
 
+        </aside>
+      </div>
     </div>
   );
 };

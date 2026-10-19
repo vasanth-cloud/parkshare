@@ -730,12 +730,12 @@ export const HostAuthPage: React.FC = () => {
                           disabled={isPhoneVerified}
                           className="h-10 pl-2.5 pr-6 bg-gray-50/80 border border-gray-200/90 rounded-xl text-xs font-bold text-gray-800 focus:bg-white focus:border-[#0f8b5f] focus:outline-none appearance-none cursor-pointer disabled:bg-gray-100"
                         >
-                          <option value="+91">🇮🇳 +91</option>
-                          <option value="+1">🇺🇸 +1</option>
-                          <option value="+44">🇬🇧 +44</option>
-                          <option value="+971">🇦🇪 +971</option>
-                          <option value="+65">🇸🇬 +65</option>
-                          <option value="+61">🇦🇺 +61</option>
+                          <option value="+91">+91</option>
+                          <option value="+1">+1</option>
+                          <option value="+44">+44</option>
+                          <option value="+971">+971</option>
+                          <option value="+65">+65</option>
+                          <option value="+61">+61</option>
                         </select>
                         <span className="absolute right-2 top-3 pointer-events-none text-[9px] text-gray-400">▼</span>
                       </div>

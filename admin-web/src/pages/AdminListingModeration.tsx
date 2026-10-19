@@ -95,21 +95,21 @@ export const AdminListingModeration: React.FC = () => {
   const getAngleInfo = (caption?: string) => {
     const c = (caption || '').toUpperCase();
     if (c.includes('ENTRANCE') || c.includes('ROAD')) {
-      return { icon: '🛣️', label: 'Entrance from Road', badge: 'bg-blue-950/80 text-blue-300 border-blue-800' };
+      return { icon:'', label:'Entrance from Road', badge:'bg-blue-950/80 text-blue-300 border-blue-800'};
     }
     if (c.includes('SLOT') || c.includes('PARKING')) {
-      return { icon: '🅿️', label: 'Actual Parking Slot', badge: 'bg-emerald-950/80 text-emerald-300 border-emerald-800' };
+      return { icon:'', label:'Actual Parking Slot', badge:'bg-emerald-950/80 text-emerald-300 border-emerald-800'};
     }
     if (c.includes('SURROUNDING') || c.includes('WIDE') || c.includes('ACCESS')) {
-      return { icon: '🌐', label: 'Surroundings & Access', badge: 'bg-purple-950/80 text-purple-300 border-purple-800' };
+      return { icon:'', label:'Surroundings & Access', badge:'bg-purple-950/80 text-purple-300 border-purple-800'};
     }
     if (c.includes('ROOF') || c.includes('CLEARANCE') || c.includes('HEIGHT')) {
-      return { icon: '📏', label: 'Roof / Height Clearance', badge: 'bg-amber-950/80 text-amber-300 border-amber-800' };
+      return { icon:'', label:'Roof / Height Clearance', badge:'bg-amber-950/80 text-amber-300 border-amber-800'};
     }
     if (c.includes('GATE') || c.includes('BARRIER')) {
-      return { icon: '🚪', label: 'Gate / Entry Area', badge: 'bg-cyan-950/80 text-cyan-300 border-cyan-800' };
+      return { icon:'', label:'Gate / Entry Area', badge:'bg-cyan-950/80 text-cyan-300 border-cyan-800'};
     }
-    return { icon: '📷', label: caption || 'Space Photo', badge: 'bg-slate-800 text-slate-300 border-slate-700' };
+    return { icon:'', label: caption ||'Space Photo', badge:'bg-slate-800 text-slate-300 border-slate-700'};
   };
 
   const findPhoto = (images: ListingImage[] | undefined, keywords: string[]) => {
@@ -452,7 +452,7 @@ export const AdminListingModeration: React.FC = () => {
                                       {l.title}
                                     </div>
                                     <div className="text-[11px] text-slate-400 flex items-center space-x-1 mt-0.5">
-                                      <span className="text-slate-500 font-mono">📷 {photosCount} photos</span>
+                                      <span className="text-slate-500 font-mono">{photosCount} photos</span>
                                       <span>•</span>
                                       <span>{formatParkingType(l.parking_type)}</span>
                                     </div>
@@ -573,7 +573,7 @@ export const AdminListingModeration: React.FC = () => {
                               </div>
                             )}
                             <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-xs text-[10px] font-mono text-emerald-400 font-bold border border-emerald-900/50">
-                              📷 {photosCount}
+                               {photosCount}
                             </span>
                           </div>
 
@@ -966,7 +966,7 @@ export const AdminListingModeration: React.FC = () => {
                         {l.verification_photo_url && (
                           <div className="pt-2 border-t border-slate-900">
                             <div className="text-[11px] text-slate-400 font-mono mb-1.5 flex items-center justify-between">
-                              <span>📍 Live On-Site Photo Proof:</span>
+                              <span>Live On-Site Photo Proof:</span>
                               <span className="text-[10px] text-emerald-400">Tamper-Proof Watermark</span>
                             </div>
                             <div

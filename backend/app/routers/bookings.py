@@ -21,7 +21,7 @@ from app.schemas.booking import (
 )
 from app.services.booking_service import BookingService
 from app.services.listing_service import ListingService
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user, account_kind
 from app.models.user import User, HostProfile
 from app.models.booking import Booking, BookingStatusEnum, ParkingSession, VerificationMethodEnum, Notification
 
@@ -201,7 +201,7 @@ def mark_driver_arrived(
         host_user_id = booking.listing.host.user_id
         notif = Notification(
             user_id=host_user_id,
-            title="🚗 Driver Arrived at Location",
+            title="Driver Arrived at Location",
             message=f"Driver for booking #{booking.booking_reference} has arrived and is conducting vehicle inspection.",
             notification_type="DRIVER_ARRIVED"
         )
@@ -257,7 +257,7 @@ def submit_odometer_inspection(
         host_user_id = booking.listing.host.user_id
         notif = Notification(
             user_id=host_user_id,
-            title="🔑 Key Handover Pending",
+            title="Key Handover Pending",
             message=f"Driver #{booking.booking_reference} submitted {int(data.odometer_reading):,} KM odometer inspection. Please collect the key and confirm.",
             notification_type="KEY_HANDOVER_PENDING"
         )
@@ -319,7 +319,7 @@ def confirm_key_received(
     # Notify Parker
     notif = Notification(
         user_id=booking.user_id,
-        title="✅ Vehicle Key Received & Parking Active",
+        title="Vehicle Key Received & Parking Active",
         message=f"Host has confirmed key receipt for booking #{booking.booking_reference}. Your vehicle is safely parked.",
         notification_type="PARKING_ACTIVE"
     )
@@ -360,7 +360,7 @@ def request_vehicle_collection(
         host_user_id = booking.listing.host.user_id
         notif = Notification(
             user_id=host_user_id,
-            title="🚗 Driver Requested Vehicle Collection",
+            title="Driver Requested Vehicle Collection",
             message=f"Driver for booking #{booking.booking_reference} has arrived to collect their vehicle. Please verify driver and provide Release OTP.",
             notification_type="VEHICLE_COLLECTION_REQUESTED"
         )
@@ -527,7 +527,7 @@ def verify_release_otp(
         host_user_id = booking.listing.host.user_id
         notif = Notification(
             user_id=host_user_id,
-            title="🏁 Vehicle Released & Trip Completed",
+            title="Vehicle Released & Trip Completed",
             message=f"Driver for booking #{booking.booking_reference} successfully verified OTP. Vehicle handed over and trip marked completed.",
             notification_type="COMPLETED"
         )
@@ -665,7 +665,7 @@ def end_parking(
             host_user_id = booking.listing.host.user_id
             notif = Notification(
                 user_id=host_user_id,
-                title="🏁 Vehicle Released & Trip Completed",
+                title="Vehicle Released & Trip Completed",
                 message=f"Driver for booking #{booking.booking_reference} verified Owner OTP. Vehicle released and trip marked completed.",
                 notification_type="COMPLETED"
             )
@@ -701,7 +701,7 @@ def end_parking(
             host_user_id = booking.listing.host.user_id
             notif = Notification(
                 user_id=host_user_id,
-                title="🚗 Driver Requested to End Parking",
+                title="Driver Requested to End Parking",
                 message=f"Driver for booking #{booking.booking_reference} has requested to End Parking. Please provide the 6-digit release OTP to the driver to complete the checkout.",
                 notification_type="VEHICLE_COLLECTION_REQUESTED"
             )
@@ -753,7 +753,10 @@ def get_my_notifications(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return db.query(Notification).filter(Notification.user_id == current_user.id).order_by(Notification.created_at.desc()).all()
+    return db.query(Notification).filter(
+        Notification.user_id == current_user.id,
+        Notification.account_type == account_kind(current_user),
+    ).order_by(Notification.created_at.desc()).all()
 
 
 @router.post("/{booking_id}/request-refund", response_model=BookingOut)

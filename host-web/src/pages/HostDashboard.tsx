@@ -195,7 +195,7 @@ export const HostDashboard: React.FC = () => {
         b.status === 'VEHICLE_COLLECTION_REQUESTED'
     ).length
   );
-  const ratingDisplay = summary && summary.rating > 0 ? `${summary.rating.toFixed(1)} ⭐` : '0.0 ⭐';
+  const ratingDisplay = summary && summary.rating > 0 ?`${summary.rating.toFixed(1)}`:'0.0';
 
   const renderStatusBadge = (status: string) => {
     switch (status) {
@@ -376,7 +376,6 @@ export const HostDashboard: React.FC = () => {
               <div>
                 <h2 className="text-base sm:text-lg font-black text-white flex items-center space-x-2">
                   <span>Active Parkings & End Trip Checkout</span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
                 </h2>
                 <p className="text-xs text-emerald-200/80">
                   Generate secure 6-digit checkout OTPs for drivers departing your parking spaces.
@@ -429,7 +428,7 @@ export const HostDashboard: React.FC = () => {
                           </span>
                           {isCollectionStage ? (
                             <span className="bg-amber-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
-                              🚨 End Trip Requested
+                               End Trip Requested
                             </span>
                           ) : (
                             <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
@@ -453,7 +452,7 @@ export const HostDashboard: React.FC = () => {
                               href={`tel:${b.user.phone_number}`}
                               className="text-emerald-400 font-bold hover:underline"
                             >
-                              📞 {b.user.phone_number}
+                               {b.user.phone_number}
                             </a>
                           )}
                         </div>
@@ -478,7 +477,7 @@ export const HostDashboard: React.FC = () => {
                               disabled={otpLoadingId === b.id}
                               className="text-[10px] text-amber-400 hover:text-white underline mt-1 block mx-auto cursor-pointer font-bold"
                             >
-                              🔄 Regenerate OTP
+                               Regenerate OTP
                             </button>
                           </div>
                         ) : (
@@ -488,7 +487,7 @@ export const HostDashboard: React.FC = () => {
                             disabled={otpLoadingId === b.id}
                             className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black px-5 py-3 rounded-2xl text-xs transition shadow-lg flex items-center justify-center space-x-2 hover:scale-[1.02] cursor-pointer"
                           >
-                            <span>{otpLoadingId === b.id ? 'Generating...' : '🔐 Generate End Trip OTP'}</span>
+                            <span>{otpLoadingId === b.id ?'Generating...':'Generate End Trip OTP'}</span>
                           </button>
                         )}
                       </div>
@@ -686,7 +685,7 @@ export const HostDashboard: React.FC = () => {
                           ) : (
                             <div className="flex flex-col items-center justify-center text-emerald-700 dark:text-emerald-400">
                               <Car className="w-7 h-7" />
-                              <span className="text-[8px] font-black tracking-wider uppercase mt-0.5">🅿️ SPACE</span>
+                              <span className="text-[8px] font-black tracking-wider uppercase mt-0.5">SPACE</span>
                             </div>
                           )}
                           <span className="absolute bottom-1 right-1 text-[9px] font-black bg-black/60 text-white px-1.5 py-0.2 rounded backdrop-blur-xs">
@@ -1067,7 +1066,6 @@ export const HostDashboard: React.FC = () => {
                 <p className="text-xs text-gray-400 text-center py-6">Loading reviews...</p>
               ) : spaceReviews.length === 0 ? (
                 <div className="text-center py-8 space-y-1">
-                  <span className="text-2xl block">🅿️</span>
                   <p className="text-xs font-bold text-gray-700 dark:text-gray-300">No driver reviews yet</p>
                   <p className="text-[11px] text-gray-400">Reviews left by drivers after ending their trips will appear here.</p>
                 </div>

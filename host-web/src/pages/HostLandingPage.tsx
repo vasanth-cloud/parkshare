@@ -34,7 +34,7 @@ export const HostLandingPage: React.FC = () => {
               to="/auth"
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-7 py-3 rounded-xl transition shadow-lg flex items-center space-x-2 text-sm"
             >
-              <span>🅿️ Register as Parking Host</span>
+              <span>Register as Parking Host</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 
@@ -42,7 +42,7 @@ export const HostLandingPage: React.FC = () => {
               to="/register/driver"
               className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-7 py-3 rounded-xl transition shadow-lg flex items-center space-x-2 text-sm"
             >
-              <span>🧑‍✈️ Register as Acting Driver</span>
+              <span>Register as Acting Driver</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 
@@ -50,7 +50,7 @@ export const HostLandingPage: React.FC = () => {
               to="/register/car-spa"
               className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-7 py-3 rounded-xl transition shadow-lg flex items-center space-x-2 text-sm"
             >
-              <span>✨ Register Car Spa Partner</span>
+              <span>Register Car Spa Partner</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -74,7 +74,7 @@ export const HostLandingPage: React.FC = () => {
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-emerald-200/80 hover:border-emerald-500 transition-all space-y-4 flex flex-col justify-between">
             <div className="space-y-3">
               <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-3xl border border-emerald-100">
-                🅿️
+                
               </div>
               <h3 className="text-lg font-black text-gray-900">Parking Space Host</h3>
               <p className="text-gray-600 text-xs leading-relaxed">
@@ -107,7 +107,7 @@ export const HostLandingPage: React.FC = () => {
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-indigo-200/80 hover:border-indigo-500 transition-all space-y-4 flex flex-col justify-between ring-2 ring-indigo-500/10">
             <div className="space-y-3">
               <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-3xl border border-indigo-100">
-                🧑‍✈️
+                
               </div>
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-black text-gray-900">Acting Driver Partner</h3>
@@ -145,7 +145,6 @@ export const HostLandingPage: React.FC = () => {
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-cyan-200/80 hover:border-cyan-500 transition-all space-y-4 flex flex-col justify-between">
             <div className="space-y-3">
               <div className="w-14 h-14 bg-cyan-50 rounded-2xl flex items-center justify-center text-3xl border border-cyan-100">
-                ✨
               </div>
               <h3 className="text-lg font-black text-gray-900">Car Spa & Wash Partner</h3>
               <p className="text-gray-600 text-xs leading-relaxed">

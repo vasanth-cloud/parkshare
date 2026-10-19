@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.core.database import SessionLocal, Base, engine, run_migrations
 from app.core.security import hash_password
 from app.models.user import User, UserRole, UserRoleEnum, HostProfile, Vehicle, VehicleTypeEnum
+from app.models.account import Host, Admin
 from app.models.listing import ParkingListing, ParkingListingImage, ParkingAvailability, PricingRule, ParkingTypeEnum, ListingStatusEnum, BookingModeEnum
 from app.models.booking import Booking, BookingStatusEnum, ParkingSession, VerificationMethodEnum
 from app.models.payment import Payment, PaymentStatusEnum, PaymentProviderEnum
@@ -19,11 +20,11 @@ def seed_db():
     db = SessionLocal()
 
     try:
-        # 1. Admin User
-        admin = db.query(User).filter(User.email == "avasanth081@gmail.com").first()
+        # 1. Admin account lives in admins, not users
+        admin = db.query(Admin).filter(Admin.email == "avasanth081@gmail.com").first()
         if not admin:
             print("Creating Admin account: avasanth081@gmail.com / Vasanth@123")
-            admin = User(
+            admin = Admin(
                 email="avasanth081@gmail.com",
                 hashed_password=hash_password("Vasanth@123"),
                 full_name="Platform Administrator",
@@ -34,16 +35,12 @@ def seed_db():
             db.add(admin)
             db.commit()
             db.refresh(admin)
-            db.add(UserRole(user_id=admin.id, role=UserRoleEnum.ADMIN))
-            db.add(UserRole(user_id=admin.id, role=UserRoleEnum.HOST))
-            db.add(UserRole(user_id=admin.id, role=UserRoleEnum.PARKER))
-            db.commit()
 
-        # 2. Host User
-        host_user = db.query(User).filter(User.email == "host@parkshare.com").first()
+        # 2. Host account lives in hosts. host_profiles.user_id points at hosts.id
+        host_user = db.query(Host).filter(Host.email == "host@parkshare.com").first()
         if not host_user:
             print("Creating Host account: host@parkshare.com / Host@123")
-            host_user = User(
+            host_user = Host(
                 email="host@parkshare.com",
                 hashed_password=hash_password("Host@123"),
                 full_name="Rajesh Sharma (Host)",
@@ -55,9 +52,6 @@ def seed_db():
             db.commit()
             db.refresh(host_user)
 
-            db.add(UserRole(user_id=host_user.id, role=UserRoleEnum.HOST))
-            db.add(UserRole(user_id=host_user.id, role=UserRoleEnum.PARKER))
-            
             host_profile = HostProfile(
                 user_id=host_user.id,
                 business_name="Rajesh Private Driveways",

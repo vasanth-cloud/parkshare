@@ -1,19 +1,19 @@
-# 🚗 ParkShare Services Development Guide
+# ParkShare Services Development Guide
 
 Welcome! This guide is designed for collaborators developing the **Acting Drivers Platform** and **Car Spa & Detailing Platform** within the ParkShare ecosystem.
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 The platform is structured into modular services:
-1. **🅿️ Parking System** *(Complete)*: Map radar, driveway booking, spot verification, host payouts.
-2. **🧑‍✈️ Acting Drivers Platform** *(Ready for your implementation)*: On-demand certified chauffeurs.
-3. **✨ Car Spa & Detailing Platform** *(Ready for your implementation)*: Doorstep & in-bay eco car wash/detailing.
+1. ** Parking System** *(Complete)*: Map radar, driveway booking, spot verification, host payouts.
+2. ** Acting Drivers Platform** *(Ready for your implementation)*: On-demand certified chauffeurs.
+3. **Car Spa & Detailing Platform** *(Ready for your implementation)*: Doorstep & in-bay eco car wash/detailing.
 
 ---
 
-## 📁 Where Your Code Lives
+## Where Your Code Lives
 
 ### 1. Frontend (`customer-web`)
 
@@ -63,7 +63,7 @@ backend/app/
 
 ---
 
-## 🚀 How to Run Locally
+## How to Run Locally
 
 ### Start Backend API:
 ```bash
@@ -81,7 +81,7 @@ npm run dev
 
 ---
 
-## 🛠️ Step-by-Step: Adding New Features
+## Step-by-Step: Adding New Features
 
 ### Adding a Driver Feature (e.g., Driver Live Location or Rating):
 1. **Schema**: Add fields in `backend/app/schemas/driver.py`.

@@ -8,7 +8,6 @@ import {
   LogOut,
   X,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   DollarSign,
   ArrowRight
@@ -35,7 +34,7 @@ export const HostServicesHomePage: React.FC = () => {
       shortTitle: 'Parking Host',
       subtitle: 'Monetize driveways, garages & bays',
       badge: 'Driveways & Garages',
-      iconText: '🅿️',
+      iconText:'',
       route: '/dashboard',
       actionText: 'Manage Spaces',
       theme: {
@@ -51,8 +50,8 @@ export const HostServicesHomePage: React.FC = () => {
       shortTitle: 'Acting Driver',
       subtitle: 'Drive customer cars for city & outstation trips',
       badge: 'Chauffeur Gigs',
-      iconText: '🧑‍✈️',
-      route: '/register/driver',
+      iconText:'',
+      route: '/driver',
       actionText: 'Driver Gigs',
       theme: {
         border: 'border-indigo-500/30 hover:border-indigo-500',
@@ -67,7 +66,7 @@ export const HostServicesHomePage: React.FC = () => {
       shortTitle: 'Car Spa',
       subtitle: 'Doorstep waterless wash & foam detailing',
       badge: 'Wash & Detailing',
-      iconText: '✨',
+      iconText: '',
       route: '/register/car-spa',
       actionText: 'Wash Partner',
       theme: {
@@ -83,7 +82,7 @@ export const HostServicesHomePage: React.FC = () => {
       shortTitle: 'Self-Drive Fleet',
       subtitle: 'List your idle cars or bikes for self-drive',
       badge: 'Vehicle Fleet',
-      iconText: '🚗',
+      iconText:'',
       route: '/register/rental',
       actionText: 'Host Vehicles',
       theme: {
@@ -121,7 +120,7 @@ export const HostServicesHomePage: React.FC = () => {
     const q = searchQuery.toLowerCase().trim();
     if (q.includes('driver') || q.includes('chauffeur') || q.includes('acting')) {
       setSearchError('');
-      navigate('/register/driver');
+      navigate('/driver');
     } else if (q.includes('spa') || q.includes('wash') || q.includes('clean') || q.includes('detail')) {
       setSearchError('');
       navigate('/register/car-spa');
@@ -202,7 +201,6 @@ export const HostServicesHomePage: React.FC = () => {
       {isNewUser && (
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-3 shadow-md flex items-center justify-between animate-in fade-in slide-in-from-top duration-300">
           <div className="flex items-center space-x-2.5 max-w-2xl mx-auto w-full">
-            <span className="text-xl">🎉</span>
             <div className="min-w-0">
               <span className="text-xs font-black block leading-tight">
                 Welcome to ParkCo Partner Network!
@@ -223,7 +221,7 @@ export const HostServicesHomePage: React.FC = () => {
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
                 <span>{user ? `Hello, ${user.full_name?.split(' ')[0]}` : 'Welcome Partner'}</span>
-                <span>👋</span>
+                <span></span>
               </div>
               <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                 Partner Services Hub

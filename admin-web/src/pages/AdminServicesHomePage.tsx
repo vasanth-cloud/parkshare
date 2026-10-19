@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Search,
-  ChevronRight,
   LogOut,
   X,
   LayoutDashboard,
   ShieldAlert,
   Users,
-  ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -26,7 +24,7 @@ export const AdminServicesHomePage: React.FC = () => {
       shortTitle: 'Parking Approvals',
       subtitle: 'Physical GPS verification, space approvals & radar bays',
       badge: 'Spaces & Moderation',
-      iconText: '🅿️',
+      iconText:'',
       route: '/approvals',
       actionText: 'Moderate Spaces',
       features: ['Geo-Fenced GPS Verification', 'Multi-Angle Photos', 'Physical Dossier Audit'],
@@ -43,7 +41,7 @@ export const AdminServicesHomePage: React.FC = () => {
       shortTitle: 'Acting Drivers',
       subtitle: 'Chauffeur verification, DL checks, gearbox eligibility & dispatch',
       badge: 'Fleet & Dispatch',
-      iconText: '🧑‍✈️',
+      iconText:'',
       route: '/drivers',
       actionText: 'Manage Drivers',
       features: ['Driving License OCR & KYC', 'Manual & Automatic Badges', 'Real-Time Dispatch'],
@@ -60,7 +58,7 @@ export const AdminServicesHomePage: React.FC = () => {
       shortTitle: 'Car Spas',
       subtitle: 'Doorstep mobile vans, workshop bays, packages & slot scheduling',
       badge: 'Bays & Detailers',
-      iconText: '✨',
+      iconText: '',
       route: '/car-spas',
       actionText: 'Manage Car Spas',
       features: ['Doorstep & In-Bay Centers', 'Eco-Wash Capacity', 'Custom Detailing Packages'],
@@ -77,7 +75,7 @@ export const AdminServicesHomePage: React.FC = () => {
       shortTitle: 'Fleet Rentals',
       subtitle: 'Audit car & bike partner listings, RC documents, tariffs & status',
       badge: 'Vehicle Fleet',
-      iconText: '🚗',
+      iconText:'',
       route: '/rentals',
       actionText: 'Manage Fleets',
       features: ['RC & Insurance Audit', 'Cars, SUVs & Smart EVs', 'Zero-Deposit Control'],
@@ -203,7 +201,6 @@ export const AdminServicesHomePage: React.FC = () => {
             Platform Services Console
           </h1>
           <p className="text-xs text-slate-400 max-w-xl">
-            Choose a service below to moderate space applications, verify acting drivers, or supervise car spa centers.
           </p>
         </div>
 
@@ -280,7 +277,7 @@ export const AdminServicesHomePage: React.FC = () => {
         {filteredServices.length === 0 ? (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-3 shadow-md animate-in fade-in">
             <div className="w-14 h-14 bg-amber-950/40 text-amber-400 rounded-2xl flex items-center justify-center mx-auto text-2xl border border-amber-800/60">
-              🔍
+              
             </div>
             <div>
               <h3 className="text-base font-black text-white">
@@ -324,71 +321,12 @@ export const AdminServicesHomePage: React.FC = () => {
                 </button>
               ))}
             </div>
-
-            {/* 2. Detailed Service Operations Cards */}
-            <div className="space-y-3.5 pt-2">
-              {filteredServices.map((srv) => (
-                <div
-                  key={srv.id}
-                  onClick={() => navigate(srv.route)}
-                  className={`bg-slate-900 rounded-3xl p-5 border ${srv.theme.border} shadow-md hover:shadow-xl transition-all duration-200 cursor-pointer group active:scale-[0.99]`}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-start space-x-4 min-w-0">
-                      <div
-                        className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform ${srv.theme.iconBg}`}
-                      >
-                        {srv.iconText}
-                      </div>
-                      <div className="min-w-0 space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="text-base font-black text-white tracking-tight truncate">
-                            {srv.title}
-                          </h3>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border hidden sm:inline-block ${srv.theme.badgeBg}`}>
-                            {srv.badge}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 leading-relaxed">
-                          {srv.subtitle}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {srv.features.map((feat, idx) => (
-                            <span
-                              key={idx}
-                              className="text-[10px] font-semibold bg-slate-950 text-slate-400 px-2 py-0.5 rounded-lg border border-slate-800"
-                            >
-                              {feat}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end sm:justify-center pl-2 flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(srv.route);
-                        }}
-                        className={`px-4 py-2 rounded-xl text-xs font-black ${srv.theme.button} flex items-center space-x-1.5 shadow-sm transition active:scale-95 cursor-pointer`}
-                      >
-                        <span>{srv.actionText}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </>
         )}
 
         {/* 3. System Utilities Strip (Overview, Disputes, Users) */}
         <div className="bg-slate-900/80 rounded-3xl p-4 border border-slate-800/80 mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           <div className="flex items-center space-x-2 text-slate-400 text-center sm:text-left">
-            <span className="text-base">⚙️</span>
             <div>
               <span className="font-bold text-slate-200">System Utilities: </span>
               <span className="text-slate-400">Financial KPIs, Disputes & User Directories</span>

@@ -149,7 +149,6 @@ export const AdminDisputesPage: React.FC = () => {
           {service === 'parking' && (
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-xl">🅿️</span>
                 <h1 className="text-2xl font-extrabold text-white flex items-center space-x-2">
                   <ShieldAlert className="w-6 h-6 text-emerald-500" />
                   <span>Parking Space Disputes & Reports</span>
@@ -164,7 +163,6 @@ export const AdminDisputesPage: React.FC = () => {
           {service === 'drivers' && (
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-xl">🧑‍✈️</span>
                 <h1 className="text-2xl font-extrabold text-white flex items-center space-x-2">
                   <ShieldAlert className="w-6 h-6 text-indigo-500" />
                   <span>Acting Driver Disputes & Reports</span>
@@ -179,7 +177,6 @@ export const AdminDisputesPage: React.FC = () => {
           {service === 'car-spa' && (
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-xl">✨</span>
                 <h1 className="text-2xl font-extrabold text-white flex items-center space-x-2">
                   <ShieldAlert className="w-6 h-6 text-cyan-500" />
                   <span>Car Spa & Detailing Disputes & Reports</span>

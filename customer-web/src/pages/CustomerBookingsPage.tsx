@@ -22,14 +22,14 @@ import { ActiveParkingCard } from '../components/ActiveParkingCard';
 import { GooglePaySuccessCelebration, CelebrationData } from '../components/GooglePaySuccessCelebration';
 
 const PRESET_REVIEW_TAGS = [
-  '🛡️ Safe & Secure',
-  '🚗 Easy Gate Access',
-  '🤝 Helpful Host',
-  '🅿️ Spacious Spot',
-  '💡 Well Lit & Clean',
-  '⚡ Smooth Checkout',
-  '📍 Accurate Location',
-  '🔒 24/7 Security'
+  'Safe & Secure',
+  'Easy Gate Access',
+  'Helpful Host',
+  'Spacious Spot',
+  'Well Lit & Clean',
+  'Smooth Checkout',
+  'Accurate Location',
+  '24/7 Security'
 ];
 
 export const CustomerBookingsPage: React.FC = () => {
@@ -50,7 +50,7 @@ export const CustomerBookingsPage: React.FC = () => {
   // Post-Trip Rate & Review Modal State
   const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
   const [reviewRating, setReviewRating] = useState<number>(5);
-  const [selectedTags, setSelectedTags] = useState<string[]>(['🛡️ Safe & Secure', '🚗 Easy Gate Access']);
+  const [selectedTags, setSelectedTags] = useState<string[]>(['Safe & Secure','Easy Gate Access']);
   const [reviewComment, setReviewComment] = useState<string>('');
   const [submittingReview, setSubmittingReview] = useState<boolean>(false);
 
@@ -210,7 +210,7 @@ export const CustomerBookingsPage: React.FC = () => {
         rating: reviewRating,
         comment: finalComment || undefined,
       });
-      alert('🎉 Review submitted successfully! It is now visible on the parking space page.');
+      alert('Review submitted successfully! It is now visible on the parking space page.');
       setReviewBooking(null);
       fetchBookings();
     } catch (err: any) {
@@ -257,18 +257,25 @@ export const CustomerBookingsPage: React.FC = () => {
               Bookings & Passes
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Your active parking passes and reservation history
             </p>
           </div>
         </div>
 
         {/* Action Link on Top Right */}
-        <Link
-          to="/"
-          className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-0.5"
-        >
-          <span>+ Find Spots</span>
-        </Link>
+        <div className="flex flex-col items-end gap-0.5">
+          <Link
+            to="/"
+            className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-0.5"
+          >
+            <span>+ Find Spots</span>
+          </Link>
+          <Link
+            to="/drivers/trips"
+            className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            Acting driver trips
+          </Link>
+        </div>
       </div>
 
       {/* 2. Active vs History Switcher */}
@@ -377,7 +384,7 @@ export const CustomerBookingsPage: React.FC = () => {
                           });
                           setReviewBooking(completedBooking);
                           setReviewRating(5);
-                          setSelectedTags(['🛡️ Safe & Secure', '🚗 Easy Gate Access']);
+                          setSelectedTags(['Safe & Secure','Easy Gate Access']);
                           setReviewComment('');
                           fetchBookings(false);
                         }}
@@ -388,7 +395,7 @@ export const CustomerBookingsPage: React.FC = () => {
               ) : (
                 <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-200/90 dark:border-slate-800 space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto text-2xl">
-                    🅿️
+                    
                   </div>
                   <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
                     No Active Parking Passes
@@ -469,7 +476,7 @@ export const CustomerBookingsPage: React.FC = () => {
                             onClick={() => {
                               setReviewBooking(b);
                               setReviewRating(5);
-                              setSelectedTags(['🛡️ Safe & Secure', '🚗 Easy Gate Access']);
+                              setSelectedTags(['Safe & Secure','Easy Gate Access']);
                               setReviewComment('');
                             }}
                             className="w-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
@@ -485,13 +492,12 @@ export const CustomerBookingsPage: React.FC = () => {
               ) : (
                 <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-200/90 dark:border-slate-800 space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto text-2xl">
-                    📜
+                    
                   </div>
                   <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
                     No Past Bookings
                   </h3>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                    Your completed parking sessions and receipts will appear here once finished.
                   </p>
                 </div>
               )}
@@ -638,7 +644,6 @@ export const CustomerBookingsPage: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 text-left">
             <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center space-x-2">
-                <span className="text-xl">⭐</span>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 dark:text-white">Rate Your Experience</h3>
                   <p className="text-[10px] text-slate-400">
@@ -670,11 +675,11 @@ export const CustomerBookingsPage: React.FC = () => {
                 ))}
               </div>
               <span className="text-[11px] font-extrabold text-amber-500">
-                {reviewRating === 5 && 'Outstanding Experience! 🌟'}
-                {reviewRating === 4 && 'Very Good Space 👍'}
-                {reviewRating === 3 && 'Good Parking 🙂'}
-                {reviewRating === 2 && 'Could Be Better 😐'}
-                {reviewRating === 1 && 'Poor Experience 😞'}
+                {reviewRating === 5 && 'Outstanding Experience!'}
+                {reviewRating === 4 &&'Very Good Space'}
+                {reviewRating === 3 &&'Good Parking'}
+                {reviewRating === 2 &&'Could Be Better'}
+                {reviewRating === 1 &&'Poor Experience'}
               </span>
             </div>
 

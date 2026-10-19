@@ -36,7 +36,7 @@ export const PHOTO_SLOTS: PhotoSlotDef[] = [
     title: 'Road Entrance',
     badgeTitle: 'Required',
     shortDesc: 'Entry from public road',
-    icon: '🛣️',
+    icon:'',
     isMandatory: () => true,
   },
   {
@@ -45,7 +45,7 @@ export const PHOTO_SLOTS: PhotoSlotDef[] = [
     title: 'Parking Slot',
     badgeTitle: 'Required',
     shortDesc: 'Exact parking bay',
-    icon: '🅿️',
+    icon:'',
     isMandatory: () => true,
   },
   {
@@ -54,7 +54,7 @@ export const PHOTO_SLOTS: PhotoSlotDef[] = [
     title: 'Surroundings',
     badgeTitle: 'Required',
     shortDesc: 'Driveway & turning room',
-    icon: '🌐',
+    icon:'',
     isMandatory: () => true,
   },
   {
@@ -63,7 +63,7 @@ export const PHOTO_SLOTS: PhotoSlotDef[] = [
     title: 'Roof Clearance',
     badgeTitle: 'Covered',
     shortDesc: 'Ceiling & height limit',
-    icon: '📏',
+    icon:'',
     isMandatory: (s) => s.isCovered || s.isIndoor || s.parkingType === 'COVERED_PARKING' || s.parkingType === 'GARAGE',
   },
   {
@@ -72,7 +72,7 @@ export const PHOTO_SLOTS: PhotoSlotDef[] = [
     title: 'Gate / Barrier',
     badgeTitle: 'Gated',
     shortDesc: 'Entry gate or booth',
-    icon: '🚪',
+    icon:'',
     isMandatory: (s) => s.hasGatedAccess,
   },
 ];

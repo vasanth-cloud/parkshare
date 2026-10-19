@@ -164,7 +164,7 @@ export const LandingPage: React.FC = () => {
                   ) : (
                     <Navigation className="w-4 h-4 text-emerald-400 fill-emerald-400" />
                   )}
-                  <span>📍 Nearby Me</span>
+                  <span>Nearby Me</span>
                 </button>
               </div>
             </form>

@@ -1,8 +1,8 @@
-# ✨ Car Spa & Detailing Frontend Module
+# Car Spa & Detailing Frontend Module
 
 Welcome to the **Car Spa & Detailing Module**! This modular directory is designated for developing the doorstep & in-bay car washing, detailing, and steam cleaning platform.
 
-## 📁 Directory Structure
+## Directory Structure
 ```
 car-spa/
 ├── services/
@@ -14,7 +14,7 @@ car-spa/
 └── README.md             # This guide
 ```
 
-## 🚀 Quickstart for Developers
+## Quickstart for Developers
 1. **Packages & Types**: Add detailing packages and vehicle categories in `types/index.ts`.
 2. **API Layer**: Connect your backend endpoints in `services/spaApi.ts`.
 3. **UI Page**: Build out user journeys inside `CarSpaPage.tsx`.

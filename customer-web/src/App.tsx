@@ -15,6 +15,8 @@ import { CustomerBookingsPage } from './pages/CustomerBookingsPage';
 import { CustomerVehiclesPage } from './pages/CustomerVehiclesPage';
 import { CustomerProfilePage } from './pages/CustomerProfilePage';
 import { ActingDriversPage } from './pages/ActingDriversPage';
+import { DriverTripPage } from './pages/DriverTripPage';
+import { MyDriverTripsPage } from './pages/MyDriverTripsPage';
 import { CarSpaPage } from './pages/CarSpaPage';
 import { SelfDriveRentalPage } from './pages/SelfDriveRentalPage';
 
@@ -91,6 +93,22 @@ export const AppContent: React.FC = () => {
           <Route path="/profile" element={<CustomerProfilePage />} />
           <Route path="/services/drivers" element={<ActingDriversPage />} />
           <Route path="/drivers" element={<ActingDriversPage />} />
+          <Route
+            path="/drivers/trips"
+            element={
+              <ProtectedRoute>
+                <MyDriverTripsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/drivers/trips/:id"
+            element={
+              <ProtectedRoute>
+                <DriverTripPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/services/car-spa" element={<CarSpaPage />} />
           <Route path="/car-spa" element={<CarSpaPage />} />
           <Route path="/services/rentals" element={<SelfDriveRentalPage />} />

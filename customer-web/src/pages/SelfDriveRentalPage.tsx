@@ -170,7 +170,6 @@ export const SelfDriveRentalPage: React.FC = () => {
             </button>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-xl">🚗</span>
                 <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
                   Self-Drive Cars & Bikes
                 </h1>
@@ -342,7 +341,6 @@ export const SelfDriveRentalPage: React.FC = () => {
           </div>
         ) : filteredVehicles.length === 0 ? (
           <div className="py-16 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 space-y-4">
-            <span className="text-4xl block">🔍</span>
             <h3 className="text-base font-black text-slate-800 dark:text-slate-200">
               No Vehicles Found Matching Your Criteria
             </h3>

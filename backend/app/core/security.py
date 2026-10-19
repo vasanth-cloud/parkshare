@@ -17,7 +17,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     except Exception:
         return False
 
-def create_access_token(subject: Union[str, Any], roles: list[str], expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(subject: Union[str, Any], roles: list[str], portal: str = "customer", expires_delta: Optional[timedelta] = None) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -27,12 +27,13 @@ def create_access_token(subject: Union[str, Any], roles: list[str], expires_delt
         "exp": expire,
         "sub": str(subject),
         "roles": roles,
+        "portal": portal,
         "type": "access"
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-def create_refresh_token(subject: Union[str, Any], expires_delta: Optional[timedelta] = None) -> str:
+def create_refresh_token(subject: Union[str, Any], portal: str = "customer", expires_delta: Optional[timedelta] = None) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -41,6 +42,7 @@ def create_refresh_token(subject: Union[str, Any], expires_delta: Optional[timed
     to_encode = {
         "exp": expire,
         "sub": str(subject),
+        "portal": portal,
         "type": "refresh"
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)

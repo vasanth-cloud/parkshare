@@ -1,48 +1,20 @@
-import { DriverProfile, DriverBookingRequest, DriverBookingResponse } from '../types';
-
-const API_BASE = '/api/v1/drivers';
+import { api } from '../../../services/api';
+import { DriverBooking, DriverBookingCreate, DriverPublic } from '../../../types';
 
 /**
- * Acting Drivers API client
- * Use this service to interact with the backend Acting Drivers endpoints.
+ * Thin wrapper around the real ParkCo acting-driver APIs.
+ * Kept so any leftover module imports continue to work.
  */
 export const driverApi = {
-  /**
-   * Fetch available drivers around a specific city/location
-   */
-  async getAvailableDrivers(params?: { city?: string; transmission?: string }): Promise<DriverProfile[]> {
-    try {
-      const query = new URLSearchParams(params as any).toString();
-      const res = await fetch(`${API_BASE}/available?${query}`);
-      if (!res.ok) throw new Error('Failed to fetch available drivers');
-      return await res.json();
-    } catch (err) {
-      console.warn('Could not fetch drivers from API:', err);
-      return [];
-    }
+  getAvailableDrivers(params?: { city?: string; transmission?: string; car_type?: string }): Promise<DriverPublic[]> {
+    return api.getAvailableDrivers(params);
   },
 
-  /**
-   * Create a new driver booking
-   */
-  async createBooking(data: DriverBookingRequest): Promise<DriverBookingResponse> {
-    const res = await fetch(`${API_BASE}/book`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to book driver');
-    }
-    return await res.json();
+  createBooking(data: DriverBookingCreate): Promise<DriverBooking> {
+    return api.createDriverBooking(data);
   },
 
-  /**
-   * Get booking status by ID
-   */
-  async getBookingStatus(bookingId: string): Promise<DriverBookingResponse> {
-    const res = await fetch(`${API_BASE}/bookings/${bookingId}`);
-    if (!res.ok) throw new Error('Booking not found');
-    return await res.json();
+  getBookingStatus(bookingId: number | string): Promise<DriverBooking> {
+    return api.getDriverBooking(Number(bookingId));
   },
 };

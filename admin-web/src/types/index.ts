@@ -12,6 +12,7 @@ export interface User {
   email_verified?: boolean;
   is_identity_verified?: boolean;
   roles: UserRole[];
+  account?: 'customer' | 'host' | 'admin';
   created_at: string;
 }
 
@@ -154,25 +155,102 @@ export interface Dispute {
   listing_title?: string;
 }
 
+export type DriverStatus = 'ACTIVE' | 'PENDING_APPROVAL' | 'REJECTED' | 'SUSPENDED';
+
 export interface DriverProfile {
-  id: string;
-  name: string;
-  photo: string;
-  rating: number;
-  trips: number;
-  experienceYears: number;
-  transmission: string[];
+  id: number;
+  user_id: number;
+  full_name: string;
+  phone: string;
+  email?: string | null;
+  photo_url?: string | null;
+  city: string;
+  service_area?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  service_radius_km: number;
+  dl_number: string;
+  dl_expiry_date?: string | null;
+  dl_document_url?: string | null;
+  dl_verified: boolean;
+  aadhaar_number_masked: string;
+  aadhaar_document_url?: string | null;
+  aadhaar_verified: boolean;
+  kyc_provider?: string | null;
+  kyc_verified_at?: string | null;
+  experience_years: number;
+  transmissions: string[];
+  vehicle_categories: string[];
   languages: string[];
-  badge: string;
-  eta: string;
-  hourlyRate: number;
-  isAvailable: boolean;
-  phone?: string;
-  city?: string;
-  dlNumber?: string;
-  status: 'ACTIVE' | 'PENDING_APPROVAL' | 'REJECTED' | 'SUSPENDED';
-  rejectionReason?: string;
-  createdAt?: string;
+  trip_types: string[];
+  status: DriverStatus;
+  rejection_reason?: string | null;
+  is_available: boolean;
+  approved_at?: string | null;
+  rating: number;
+  rating_count: number;
+  total_trips: number;
+  total_earnings: number;
+  created_at: string;
+}
+
+export interface DriverAdminSummary {
+  total_drivers: number;
+  active_drivers: number;
+  pending_drivers: number;
+  suspended_drivers: number;
+  online_drivers: number;
+  total_bookings: number;
+  open_requests: number;
+  live_trips: number;
+  completed_trips: number;
+  gross_collected: number;
+  platform_commission: number;
+  driver_payouts: number;
+}
+
+export interface DriverPricing {
+  hourly_rate: number;
+  platform_fee_percent: number;
+  tax_percent: number;
+  min_billable_hours: number;
+  night_surcharge_percent: number;
+  night_start_hour: number;
+  night_end_hour: number;
+  outstation_hourly_rate: number;
+  outstation_min_hours: number;
+  car_type_multipliers: Record<string, number>;
+  billing_increment_minutes: number;
+  updated_at?: string | null;
+}
+
+export interface DriverBooking {
+  id: number;
+  booking_reference: string;
+  customer_id: number;
+  driver_id?: number | null;
+  status: string;
+  pickup_address: string;
+  pickup_city: string;
+  drop_address?: string | null;
+  start_time: string;
+  end_time: string;
+  trip_type: string;
+  car_type: string;
+  transmission: string;
+  seater: number;
+  car_make_model?: string | null;
+  estimated_hours: number;
+  estimated_total: number;
+  final_total?: number | null;
+  amount_paid: number;
+  balance_due: number;
+  driver_earning: number;
+  overtime_hours: number;
+  billable_hours?: number | null;
+  customer?: { id: number; full_name: string; phone_number?: string | null } | null;
+  driver?: { id: number; display_name: string; city: string } | null;
+  created_at: string;
 }
 
 export interface CarSpaCenter {

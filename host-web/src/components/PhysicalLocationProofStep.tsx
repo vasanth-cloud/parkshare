@@ -186,7 +186,7 @@ export const PhysicalLocationProofStep: React.FC<Props> = ({
 
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 15px sans-serif';
-    ctx.fillText(`📍 PARKSHARE PHYSICAL LOCATION PROOF`, 16, h - 30);
+    ctx.fillText(`PARKSHARE PHYSICAL LOCATION PROOF`, 16, h - 30);
 
     ctx.fillStyle = '#cbd5e1';
     ctx.font = '11px monospace';

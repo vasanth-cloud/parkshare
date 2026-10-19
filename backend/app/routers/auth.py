@@ -5,6 +5,7 @@ from app.schemas.user import UserRegister, UserLogin, Token, UserOut, HostProfil
 from app.services.auth_service import AuthService
 from app.dependencies.auth import get_current_user
 from app.models.user import User, HostProfile
+from app.models.account import Host, Admin
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -78,17 +79,10 @@ def update_profile_photo(
 
 @router.api_route("/claim-admin", methods=["GET", "POST"])
 def claim_admin(db: Session = Depends(get_db)):
-    from app.models.user import User, UserRole, UserRoleEnum
-    user = db.query(User).filter(User.email == "avasanth081@gmail.com").first()
-    if not user:
-        return {"status": "error", "message": "User avasanth081@gmail.com not found"}
-    has_admin = any(r.role == UserRoleEnum.ADMIN for r in user.roles)
-    if not has_admin:
-        db.add(UserRole(user_id=user.id, role=UserRoleEnum.ADMIN))
-        db.commit()
-        db.refresh(user)
-        return {"status": "success", "message": "ADMIN role granted successfully", "roles": [r.role.value if hasattr(r.role, 'value') else str(r.role) for r in user.roles]}
-    return {"status": "already_admin", "message": "User already has ADMIN role", "roles": [r.role.value if hasattr(r.role, 'value') else str(r.role) for r in user.roles]}
+    admin = db.query(Admin).filter(Admin.email == "avasanth081@gmail.com").first()
+    if not admin:
+        return {"status": "error", "message": "Admin avasanth081@gmail.com not found in the admins table"}
+    return {"status": "already_admin", "message": "Admin account is in the admins table", "roles": ["ADMIN"]}
 
 @router.post("/become-host", response_model=HostProfileOut)
 def become_host(data: HostProfileCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

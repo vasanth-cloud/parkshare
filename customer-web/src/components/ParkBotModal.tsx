@@ -40,7 +40,7 @@ export const ParkBotModal: React.FC<ParkBotModalProps> = ({ isOpen, onClose, ini
     {
       id: 'welcome',
       sender: 'bot',
-      text: "👋 Hi! I'm **ParkBot**, your ParkCo AI parking assistant.\n\nTell me where you're heading (e.g., *'I am going to Whitefield and need parking space'*), or ask about EV charging, pricing, and policies!",
+      text:"Hi! I'm **ParkBot**, your ParkCo AI parking assistant.\n\nTell me where you're heading (e.g., *'I am going to Whitefield and need parking space'*), or ask about EV charging, pricing, and policies!",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -127,7 +127,7 @@ export const ParkBotModal: React.FC<ParkBotModalProps> = ({ isOpen, onClose, ini
       {
         id: 'welcome',
         sender: 'bot',
-        text: "👋 Hi! I'm **ParkBot**, your ParkCo AI parking assistant.\n\nTell me where you're heading (e.g., *'I am going to Whitefield and need parking space'*), or ask about EV charging, pricing, and policies!",
+        text:"Hi! I'm **ParkBot**, your ParkCo AI parking assistant.\n\nTell me where you're heading (e.g., *'I am going to Whitefield and need parking space'*), or ask about EV charging, pricing, and policies!",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       },
     ]);

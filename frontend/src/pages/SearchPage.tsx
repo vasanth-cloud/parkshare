@@ -130,7 +130,7 @@ export const SearchPage: React.FC = () => {
             ) : (
               <Navigation className="w-4 h-4 fill-white text-white" />
             )}
-            <span>{detectingGps ? 'Locating You...' : '📍 Nearby Me (Use Live GPS)'}</span>
+            <span>{detectingGps ?'Locating You...':'Nearby Me (Use Live GPS)'}</span>
           </button>
         </div>
 

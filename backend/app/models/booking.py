@@ -109,7 +109,7 @@ class ParkingSession(Base):
     check_in_time = Column(DateTime, nullable=True)
     check_out_time = Column(DateTime, nullable=True)
     verification_method = Column(Enum(VerificationMethodEnum), nullable=True)
-    verified_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    verified_by_user_id = Column(Integer, nullable=True)
 
     overtime_hours = Column(Float, default=0.0)
     overtime_fee = Column(Float, default=0.0)
@@ -131,7 +131,9 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    # Not a foreign key: the same numeric id can belong to a customer or a host.
+    user_id = Column(Integer, nullable=False, index=True)
+    account_type = Column(String(20), nullable=False, default="customer")
     title = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
     notification_type = Column(String(50), default="HOST_CANCELLED_BOOKING")

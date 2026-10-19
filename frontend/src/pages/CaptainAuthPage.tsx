@@ -171,7 +171,7 @@ export const CaptainAuthPage: React.FC = () => {
           <Zap className="w-9 h-9 fill-slate-950" />
         </div>
         <span className="inline-block px-3 py-1 bg-amber-500/20 text-amber-400 text-[11px] font-black uppercase tracking-wider rounded-full border border-amber-500/30">
-          ⚡ ParkShare Captain App
+           ParkShare Captain App
         </span>
         <h1 className="text-3xl font-black tracking-tight text-white">Earn Money From Your Space</h1>
         <p className="text-xs text-slate-400 font-medium">Turn driveways, apartment bays, or garages into daily passive income.</p>

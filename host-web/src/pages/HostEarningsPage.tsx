@@ -117,7 +117,7 @@ export const HostEarningsPage: React.FC = () => {
           <span>← Back</span>
         </button>
         <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full">
-          💰 Earnings & Payouts
+           Earnings & Payouts
         </span>
       </div>
 
@@ -321,7 +321,7 @@ export const HostEarningsPage: React.FC = () => {
           <div className="bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/80 rounded-2xl p-3 sm:p-4 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-lg font-black text-emerald-800 dark:text-emerald-400 shadow-2xs">
-                ⚡
+                
               </div>
               <div>
                 <span className="text-xs font-extrabold text-emerald-950 dark:text-emerald-200 font-mono block">
@@ -375,7 +375,7 @@ export const HostEarningsPage: React.FC = () => {
         {displayTransactions.length === 0 ? (
           <div className="text-center py-8 px-4 bg-gray-50 dark:bg-slate-850/50 rounded-2xl border border-dashed border-gray-200 dark:border-slate-800 space-y-2">
             <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-base">
-              💳
+              
             </div>
             <h4 className="text-xs font-bold text-gray-800 dark:text-white">No Booking Settlements Yet</h4>
             <p className="text-[11px] text-gray-500 dark:text-slate-400 max-w-xs mx-auto">

@@ -381,7 +381,7 @@ export const HostPinVerificationPage: React.FC = () => {
           <span>← Back</span>
         </button>
         <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full">
-          🚗 Gate Access & Check-In
+           Gate Access & Check-In
         </span>
       </div>
 
@@ -694,7 +694,7 @@ export const HostPinVerificationPage: React.FC = () => {
                   >
                     {isCollection && (
                       <div className="bg-amber-500 text-slate-950 p-2.5 rounded-xl flex items-center justify-between font-black text-xs shadow-xs">
-                        <span>🚨 Driver ready for checkout • Provide Checkout OTP</span>
+                        <span>Driver ready for checkout • Provide Checkout OTP</span>
                         <span className="text-[10px] bg-slate-950 text-amber-300 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
                           Action Needed
                         </span>
@@ -759,7 +759,7 @@ export const HostPinVerificationPage: React.FC = () => {
                               disabled={otpLoadingId === b.id}
                               className="text-[10px] text-emerald-600 dark:text-emerald-400 underline mt-1 block mx-auto cursor-pointer font-bold"
                             >
-                              🔄 Regenerate OTP
+                               Regenerate OTP
                             </button>
                           </div>
                         ) : (
@@ -769,7 +769,7 @@ export const HostPinVerificationPage: React.FC = () => {
                             disabled={otpLoadingId === b.id}
                             className="bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black px-4 py-2.5 rounded-xl text-xs shadow-md flex items-center space-x-2 transition cursor-pointer"
                           >
-                            <span>{otpLoadingId === b.id ? 'Generating...' : '🔐 Generate End Trip OTP'}</span>
+                            <span>{otpLoadingId === b.id ?'Generating...':'Generate End Trip OTP'}</span>
                           </button>
                         )}
                       </div>

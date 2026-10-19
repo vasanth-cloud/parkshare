@@ -29,7 +29,7 @@ export const Navbar: React.FC = () => {
               <span className={`text-[10px] font-extrabold uppercase tracking-wider ${
                 isCaptainRoute ? 'text-amber-400' : 'text-emerald-400'
               }`}>
-                {isCaptainRoute ? '⚡ Captain Mode' : '🚗 Driver Mode'}
+                {isCaptainRoute ?'Captain Mode':'Driver Mode'}
               </span>
             </div>
           </Link>

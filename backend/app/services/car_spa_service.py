@@ -133,48 +133,11 @@ SAMPLE_SPAS: List[CarSpaCenterSchema] = [
     )
 ]
 
-# In-memory car spa bookings registry
-SAMPLE_SPA_BOOKINGS: List[SpaBookingOut] = [
-    SpaBookingOut(
-        bookingId="SPA-719321",
-        package=SAMPLE_PACKAGES[1],  # Signature Foam Wash (₹399)
-        vehicleCategory="SEDAN",
-        locationType="PARKING_BAY",
-        address="Indiranagar Studio Bay 2, Bengaluru",
-        date="2025-02-01",
-        timeSlot="10:00 AM - 11:00 AM",
-        finalPrice=449.0,
-        otp=3912,
-        status="CONFIRMED",
-        createdAt="2025-02-01T09:15:00Z"
-    ),
-    SpaBookingOut(
-        bookingId="SPA-719322",
-        package=SAMPLE_PACKAGES[2],  # Deep Interior Spa & Steam (₹699)
-        vehicleCategory="SUV",
-        locationType="DOORSTEP",
-        address="Prestige Falcon City, Kanakapura Rd, Bengaluru",
-        date="2025-02-02",
-        timeSlot="02:00 PM - 03:30 PM",
-        finalPrice=799.0,
-        otp=6824,
-        status="CONFIRMED",
-        createdAt="2025-02-02T11:45:00Z"
-    ),
-    SpaBookingOut(
-        bookingId="SPA-719323",
-        package=SAMPLE_PACKAGES[3],  # 3M Ceramic Glaze (₹1299)
-        vehicleCategory="SEDAN",
-        locationType="PARKING_BAY",
-        address="HSR Layout Ceramic Bay, Bengaluru",
-        date="2025-02-03",
-        timeSlot="04:00 PM - 06:00 PM",
-        finalPrice=1349.0,
-        otp=8145,
-        status="CONFIRMED",
-        createdAt="2025-02-03T13:20:00Z"
-    )
-]
+# Registered centers only. No demo studios are preloaded.
+SAMPLE_SPAS.clear()
+
+# Appointments created through the app. No demo bookings are preloaded.
+SAMPLE_SPA_BOOKINGS: List[SpaBookingOut] = []
 
 class CarSpaService:
     @staticmethod

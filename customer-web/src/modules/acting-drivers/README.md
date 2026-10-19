@@ -1,8 +1,8 @@
-# 🧑‍✈️ Acting Drivers Frontend Module
+# Acting Drivers Frontend Module
 
 Welcome to the **Acting Drivers Module**! This modular directory is designated for developing the chauffeur & acting driver platform.
 
-## 📁 Directory Structure
+## Directory Structure
 ```
 acting-drivers/
 ├── services/
@@ -14,7 +14,7 @@ acting-drivers/
 └── README.md             # This guide
 ```
 
-## 🚀 Quickstart for Developers
+## Quickstart for Developers
 1. **Types**: Add or update driver fields in `types/index.ts`.
 2. **API Layer**: Connect your backend endpoints in `services/driverApi.ts`.
 3. **UI Page**: Build out user journeys inside `ActingDriversPage.tsx`.

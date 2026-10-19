@@ -27,9 +27,9 @@ export const AdminUserDirectory: React.FC = () => {
     fetchUsers();
   };
 
-  const handleToggleUser = async (id: number) => {
+  const handleToggleUser = async (id: number, account?: string) => {
     try {
-      await api.toggleUserStatus(id);
+      await api.toggleUserStatus(id, account || 'customer');
       fetchUsers();
     } catch (err: any) {
       alert(err.message || 'Action failed');

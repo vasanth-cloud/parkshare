@@ -97,18 +97,210 @@ def run_migrations():
                 except Exception:
                     pass
 
-    # Ensure avasanth081@gmail.com has ADMIN role
-    try:
-        from app.models.user import User, UserRole, UserRoleEnum
-        with SessionLocal() as s:
-            admin_u = s.query(User).filter(User.email == "avasanth081@gmail.com").first()
-            if admin_u:
-                has_admin = any(r.role == UserRoleEnum.ADMIN for r in admin_u.roles)
-                if not has_admin:
-                    s.add(UserRole(user_id=admin_u.id, role=UserRoleEnum.ADMIN))
-                    s.commit()
-    except Exception:
-        pass
+    split_account_tables()
+
+
+def _drop_user_fks(conn, text):
+    """Drop foreign keys that must not keep hosts or admins inside users."""
+    drop_targets = {
+        ("host_profiles", "user_id"),
+        ("acting_driver_profiles", "user_id"),
+        ("notifications", "user_id"),
+        ("disputes", "reporter_id"),
+        ("disputes", "reported_user_id"),
+        ("disputes", "resolved_by_admin_id"),
+        ("parking_sessions", "verified_by_user_id"),
+    }
+    rows = conn.execute(text("""
+        SELECT rel.relname AS table_name, att.attname AS column_name, con.conname
+        FROM pg_constraint con
+        JOIN pg_class rel ON rel.oid = con.conrelid
+        JOIN pg_class frel ON frel.oid = con.confrelid
+        JOIN pg_attribute att ON att.attrelid = rel.oid AND att.attnum = ANY(con.conkey)
+        WHERE con.contype = 'f' AND frel.relname = 'users'
+    """)).fetchall()
+    for table_name, column_name, conname in rows:
+        if (table_name, column_name) in drop_targets:
+            conn.execute(text(f'ALTER TABLE "{table_name}" DROP CONSTRAINT IF EXISTS "{conname}"'))
+
+
+def _has_fk(conn, text, table: str, column: str, ref: str) -> bool:
+    found = conn.execute(text("""
+        SELECT 1
+        FROM pg_constraint con
+        JOIN pg_class rel ON rel.oid = con.conrelid
+        JOIN pg_class frel ON frel.oid = con.confrelid
+        JOIN pg_attribute att ON att.attrelid = rel.oid AND att.attnum = ANY(con.conkey)
+        WHERE con.contype = 'f'
+          AND rel.relname = :table
+          AND att.attname = :column
+          AND frel.relname = :ref
+    """), {"table": table, "column": column, "ref": ref}).first()
+    return found is not None
+
+
+def _accounts_already_split(conn, text) -> bool:
+    """Read-only check so startup does not take table locks on every reload."""
+    if conn.execute(text("SELECT to_regclass('public.hosts')")).scalar() is None:
+        return False
+    if conn.execute(text("SELECT to_regclass('public.admins')")).scalar() is None:
+        return False
+    if conn.execute(text("SELECT to_regclass('public.host_profiles')")).scalar() and not _has_fk(conn, text, "host_profiles", "user_id", "hosts"):
+        return False
+    if conn.execute(text("SELECT to_regclass('public.acting_driver_profiles')")).scalar() and not _has_fk(conn, text, "acting_driver_profiles", "user_id", "hosts"):
+        return False
+    if conn.execute(text("SELECT to_regclass('public.notifications')")).scalar():
+        has_column = conn.execute(text("""
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'notifications' AND column_name = 'account_type'
+        """)).first()
+        if not has_column:
+            return False
+    leftover_role = conn.execute(text(
+        "SELECT 1 FROM user_roles WHERE role::text IN ('HOST', 'ADMIN') LIMIT 1"
+    )).first()
+    if leftover_role:
+        return False
+    stray_admin_host = conn.execute(text("""
+        SELECT 1 FROM hosts h
+        WHERE h.id IN (SELECT id FROM admins)
+          AND NOT EXISTS (SELECT 1 FROM host_profiles hp WHERE hp.user_id = h.id)
+          AND NOT EXISTS (SELECT 1 FROM acting_driver_profiles ad WHERE ad.user_id = h.id)
+        LIMIT 1
+    """)).first()
+    return stray_admin_host is None
+
+
+def split_account_tables():
+    """Copy host and admin logins out of users, then point host-owned rows at hosts."""
+    if is_sqlite:
+        return
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        if _accounts_already_split(conn, text):
+            return
+    with engine.begin() as conn:
+        if conn.execute(text("SELECT to_regclass('public.users')")).scalar() is None:
+            return
+        if conn.execute(text("SELECT to_regclass('public.hosts')")).scalar() is None:
+            return
+        if conn.execute(text("SELECT to_regclass('public.admins')")).scalar() is None:
+            return
+
+        host_match = [
+            "EXISTS (SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role::text = 'HOST')"
+        ]
+        if conn.execute(text("SELECT to_regclass('public.host_profiles')")).scalar():
+            host_match.append("EXISTS (SELECT 1 FROM host_profiles hp WHERE hp.user_id = u.id)")
+        if conn.execute(text("SELECT to_regclass('public.acting_driver_profiles')")).scalar():
+            host_match.append("EXISTS (SELECT 1 FROM acting_driver_profiles ad WHERE ad.user_id = u.id)")
+
+        conn.execute(text(f"""
+            INSERT INTO hosts (
+                id, email, hashed_password, full_name, phone_number, profile_photo_url,
+                is_active, is_verified, phone_verified, email_verified, created_at, updated_at
+            )
+            SELECT
+                u.id, u.email, u.hashed_password, u.full_name, u.phone_number, u.profile_photo_url,
+                COALESCE(u.is_active, TRUE), COALESCE(u.is_verified, FALSE),
+                COALESCE(u.phone_verified, FALSE), COALESCE(u.email_verified, FALSE),
+                COALESCE(u.created_at, NOW()), COALESCE(u.updated_at, NOW())
+            FROM users u
+            WHERE ({' OR '.join(host_match)})
+              AND NOT EXISTS (
+                    SELECT 1 FROM hosts h
+                    WHERE h.id = u.id OR lower(h.email) = lower(u.email)
+              )
+        """))
+
+        conn.execute(text("""
+            INSERT INTO admins (
+                id, email, hashed_password, full_name, phone_number, profile_photo_url,
+                is_active, is_verified, phone_verified, email_verified, created_at, updated_at
+            )
+            SELECT
+                u.id, u.email, u.hashed_password, u.full_name, u.phone_number, u.profile_photo_url,
+                COALESCE(u.is_active, TRUE), COALESCE(u.is_verified, FALSE),
+                COALESCE(u.phone_verified, FALSE), COALESCE(u.email_verified, FALSE),
+                COALESCE(u.created_at, NOW()), COALESCE(u.updated_at, NOW())
+            FROM users u
+            WHERE (
+                EXISTS (SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role::text = 'ADMIN')
+                OR lower(u.email) IN ('avasanth081@gmail.com', 'admin@parkshare.com')
+            )
+              AND NOT EXISTS (
+                    SELECT 1 FROM admins a
+                    WHERE a.id = u.id OR lower(a.email) = lower(u.email)
+              )
+        """))
+
+        _drop_user_fks(conn, text)
+
+        if conn.execute(text("SELECT to_regclass('public.host_profiles')")).scalar() and not _has_fk(conn, text, "host_profiles", "user_id", "hosts"):
+            conn.execute(text("""
+                ALTER TABLE host_profiles
+                ADD CONSTRAINT host_profiles_user_id_fkey
+                FOREIGN KEY (user_id) REFERENCES hosts(id) ON DELETE CASCADE
+            """))
+        if conn.execute(text("SELECT to_regclass('public.acting_driver_profiles')")).scalar() and not _has_fk(conn, text, "acting_driver_profiles", "user_id", "hosts"):
+            conn.execute(text("""
+                ALTER TABLE acting_driver_profiles
+                ADD CONSTRAINT acting_driver_profiles_user_id_fkey
+                FOREIGN KEY (user_id) REFERENCES hosts(id) ON DELETE CASCADE
+            """))
+
+        has_account_type = conn.execute(text("""
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'notifications' AND column_name = 'account_type'
+        """)).first()
+        if not has_account_type:
+            conn.execute(text("ALTER TABLE notifications ADD COLUMN account_type VARCHAR(20)"))
+        conn.execute(text("UPDATE notifications SET account_type = 'customer' WHERE account_type IS NULL"))
+        conn.execute(text("ALTER TABLE notifications ALTER COLUMN account_type SET DEFAULT 'customer'"))
+        conn.execute(text("ALTER TABLE notifications ALTER COLUMN account_type SET NOT NULL"))
+
+        keep_sql = ""
+        for table in ("bookings", "vehicles", "reviews", "favorites", "complaints"):
+            if conn.execute(text("SELECT to_regclass(:name)"), {"name": f"public.{table}"}).scalar():
+                keep_sql += f"\nAND NOT EXISTS (SELECT 1 FROM {table} t WHERE t.user_id = u.id)"
+        if conn.execute(text("SELECT to_regclass('public.acting_driver_bookings')")).scalar():
+            keep_sql += "\nAND NOT EXISTS (SELECT 1 FROM acting_driver_bookings b WHERE b.customer_id = u.id)"
+
+        conn.execute(text(f"""
+            DELETE FROM users u
+            WHERE (
+                u.id IN (SELECT id FROM hosts)
+                OR u.id IN (SELECT id FROM admins)
+            )
+            {keep_sql}
+        """))
+
+        conn.execute(text("DELETE FROM user_roles WHERE role::text IN ('HOST', 'ADMIN')"))
+
+        # An admin who was also given a HOST role should not stay in hosts
+        # unless they actually own a parking profile or a driver profile.
+        conn.execute(text("""
+            DELETE FROM hosts h
+            WHERE h.id IN (SELECT id FROM admins)
+              AND NOT EXISTS (SELECT 1 FROM host_profiles hp WHERE hp.user_id = h.id)
+              AND NOT EXISTS (
+                    SELECT 1 FROM acting_driver_profiles ad WHERE ad.user_id = h.id
+              )
+        """))
+
+        conn.execute(text("""
+            UPDATE notifications n
+            SET account_type = 'host'
+            WHERE n.user_id IN (SELECT id FROM hosts)
+              AND n.user_id NOT IN (SELECT id FROM users)
+        """))
+
+        for table in ("hosts", "admins", "users"):
+            seq = conn.execute(text("SELECT pg_get_serial_sequence(:tbl, 'id')"), {"tbl": table}).scalar()
+            if seq:
+                conn.execute(text(
+                    f"SELECT setval('{seq}', GREATEST(COALESCE((SELECT MAX(id) FROM {table}), 1), 1), true)"
+                ))
 
 def get_db():
     db = SessionLocal()

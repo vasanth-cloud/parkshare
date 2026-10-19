@@ -6,7 +6,6 @@ import {
   ChevronRight,
   ArrowRight,
   ShieldCheck,
-  Sparkles,
   Car,
   Clock,
   Compass,
@@ -49,7 +48,7 @@ export const CustomerServicesHomePage: React.FC = () => {
       title: 'Parking Radar & Spaces',
       subtitle: 'Find & Reserve Driveway Spaces',
       badge: 'Live Radar',
-      iconText: '🅿️',
+      iconText:'',
       route: '/parking',
       description: 'Search nearby verified driveway spots, private gates & secure parking slots with live GPS radar navigation & instant digital gate passes.',
       features: ['Live GPS Radar Map', 'Instant Digital Pass & OTP', 'Zero Surge Pricing'],
@@ -67,10 +66,10 @@ export const CustomerServicesHomePage: React.FC = () => {
       title: 'Acting Drivers Platform',
       subtitle: 'Personal Chauffeur on Demand',
       badge: 'Certified Drivers',
-      iconText: '🧑‍✈️',
+      iconText:'',
       route: '/services/drivers',
       description: 'Certified, background-verified personal chauffeurs to drive your personal car safely for daily city commutes, late-night party returns, or outstation travels.',
-      features: ['Manual & Automatic Certified', 'Night & Outstation Trips', 'Hourly Rates from ₹299'],
+      features: ['Manual & Automatic Certified', 'Night & Outstation Trips', 'Admin-set hourly fare'],
       theme: {
         border: 'border-indigo-500/30 hover:border-indigo-500',
         badgeBg: 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border-indigo-400/20',
@@ -85,7 +84,7 @@ export const CustomerServicesHomePage: React.FC = () => {
       title: 'Car Spa & Detailing',
       subtitle: 'Doorstep & Bay Wash',
       badge: 'Eco Friendly',
-      iconText: '✨',
+      iconText: '',
       route: '/services/car-spa',
       description: 'Professional eco waterless wash, pressure foam bath & interior deep detailing performed at your doorstep or directly at your reserved parking bay.',
       features: ['Doorstep or At Parking Bay', 'Waterless & Foam Treatment', 'Packages from ₹199'],
@@ -103,7 +102,7 @@ export const CustomerServicesHomePage: React.FC = () => {
       title: 'Self-Drive Cars & Bikes',
       subtitle: 'Zero Deposit Hourly & Daily Fleet',
       badge: 'Zero Deposit',
-      iconText: '🚗',
+      iconText:'',
       route: '/services/rentals',
       description: 'Sanitized self-drive cars, SUVs, bikes & smart electric scooters available for hourly or multi-day road trips. Keyless instant OTP unlock.',
       features: ['Cars, SUVs & Electric Scooters', 'Doorstep Drop or Hub Pickup', 'Hourly from ₹49 • Zero Deposit'],
@@ -165,7 +164,6 @@ export const CustomerServicesHomePage: React.FC = () => {
       {isNewUser && (
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-3 shadow-md flex items-center justify-between animate-in fade-in slide-in-from-top duration-300">
           <div className="flex items-center space-x-2.5 max-w-lg mx-auto w-full">
-            <span className="text-xl">🎉</span>
             <div className="min-w-0">
               <span className="text-xs font-black block leading-tight">
                 Welcome to ParkCo!
@@ -187,7 +185,7 @@ export const CustomerServicesHomePage: React.FC = () => {
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
                 <span>{user ? `Hello, ${user.full_name?.split(' ')[0]}` : 'Welcome to ParkCo'}</span>
-                <span>👋</span>
+                <span></span>
               </div>
               <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center space-x-2">
                 <span>All Mobility Services</span>

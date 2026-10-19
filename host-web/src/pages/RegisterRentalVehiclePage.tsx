@@ -321,7 +321,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
 
           <div className="flex items-center space-x-2">
             <span className="text-xs font-black bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
-              <span>🚗</span>
+              <span></span>
               <span>Self-Drive Fleet Portal</span>
             </span>
           </div>

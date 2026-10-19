@@ -429,7 +429,7 @@ export const HostVerificationPage: React.FC = () => {
         profile_photo_url: status.profile_photo_url || profilePhotoUrl,
         full_name: status.legal_name || legalName.trim(),
       });
-      setSuccessMsg('🎉 Host Identity Successfully Verified via DigiLocker / NSDL Automated Engine!');
+      setSuccessMsg('Host Identity Successfully Verified via DigiLocker / NSDL Automated Engine!');
       setShowEditMode(false);
     } catch (err: any) {
       setError(err.message || 'Automated KYC verification failed. Please check your document number.');
@@ -468,7 +468,7 @@ export const HostVerificationPage: React.FC = () => {
             <span>← Back</span>
           </button>
           <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-            🛡️ KYC Verified
+             KYC Verified
           </span>
         </div>
 
@@ -549,8 +549,8 @@ export const HostVerificationPage: React.FC = () => {
                   {verificationStatus.legal_name || 'Verified Parking Host'}
                 </h2>
                 <div className="flex flex-col gap-0.5 text-xs text-emerald-200/80">
-                  <span>📱 {verificationStatus.phone_number || phone || 'Verified Mobile'}</span>
-                  <span>✉️ {verificationStatus.email || email || 'Verified Email'}</span>
+                  <span>{verificationStatus.phone_number || phone ||'Verified Mobile'}</span>
+                  <span>{verificationStatus.email || email ||'Verified Email'}</span>
                 </div>
               </div>
             </div>
@@ -574,7 +574,7 @@ export const HostVerificationPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-emerald-800/60">
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center space-x-3">
               <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
-                ⚡
+                
               </div>
               <div>
                 <p className="text-xs font-bold text-white">Instant Space Go-Live</p>
@@ -584,7 +584,7 @@ export const HostVerificationPage: React.FC = () => {
 
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center space-x-3">
               <div className="w-8 h-8 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-300 font-bold">
-                🛡️
+                
               </div>
               <div>
                 <p className="text-xs font-bold text-white">Verified Trust Badge</p>
@@ -594,7 +594,7 @@ export const HostVerificationPage: React.FC = () => {
 
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center space-x-3">
               <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-300 font-bold">
-                💳
+                
               </div>
               <div>
                 <p className="text-xs font-bold text-white">Direct Automated Payouts</p>
@@ -654,7 +654,7 @@ export const HostVerificationPage: React.FC = () => {
           <span>← Back</span>
         </button>
         <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-          🛡️ Host Identity Verification
+           Host Identity Verification
         </span>
       </div>
 
@@ -1081,15 +1081,15 @@ export const HostVerificationPage: React.FC = () => {
             {/* Photo Guidelines */}
             <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-3.5 flex items-center justify-around text-[11px] text-emerald-900 font-medium">
               <span className="flex items-center space-x-1">
-                <span>💡</span>
+                <span></span>
                 <span>Good Lighting</span>
               </span>
               <span className="flex items-center space-x-1">
-                <span>👤</span>
+                <span></span>
                 <span>Face Centered</span>
               </span>
               <span className="flex items-center space-x-1">
-                <span>👓</span>
+                <span></span>
                 <span>No Sunglasses</span>
               </span>
             </div>
@@ -1143,10 +1143,10 @@ export const HostVerificationPage: React.FC = () => {
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { type: 'AADHAAR', label: 'Aadhaar Card', icon: '🪪' },
-                  { type: 'PAN', label: 'PAN Card', icon: '💳' },
-                  { type: 'DRIVING_LICENCE', label: 'Driving Licence', icon: '🚗' },
-                  { type: 'PASSPORT', label: 'Passport', icon: '✈️' },
+                  { type:'AADHAAR', label:'Aadhaar Card', icon:''},
+                  { type:'PAN', label:'PAN Card', icon:''},
+                  { type:'DRIVING_LICENCE', label:'Driving Licence', icon:''},
+                  { type:'PASSPORT', label:'Passport', icon:''},
                 ].map((item) => {
                   const isSelected = govIdType === item.type;
                   return (
@@ -1274,7 +1274,7 @@ export const HostVerificationPage: React.FC = () => {
 
       {/* Safety & Compliance Footnote */}
       <div className="text-center text-[11px] text-gray-400 space-y-1">
-        <p>🔒 Compliant with UIDAI and RBI identity verification guidelines.</p>
+        <p>Compliant with UIDAI and RBI identity verification guidelines.</p>
         <p>Your personal data is encrypted and securely processed for parking host verification only.</p>
       </div>
 

@@ -1,4 +1,7 @@
-import { User, ParkingListing, AdminStats, Dispute, DriverProfile, CarSpaCenter, RentalVehicle } from '../types';
+import {
+  User, ParkingListing, AdminStats, Dispute, DriverProfile, CarSpaCenter, RentalVehicle,
+  DriverAdminSummary, DriverPricing, DriverBooking,
+} from '../types';
 
 function resolveBackendBase(): string {
   const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
@@ -62,7 +65,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, portal: 'admin' }),
     });
     if (!res.ok) throw new Error((await res.json()).detail || 'Login failed');
     return res.json();
@@ -113,8 +116,8 @@ export const api = {
     return res.json();
   },
 
-  toggleUserStatus: async (user_id: number) => {
-    const res = await fetch(`${API_BASE}/admin/users/${user_id}/toggle-status`, {
+  toggleUserStatus: async (user_id: number, account: string = 'customer') => {
+    const res = await fetch(`${API_BASE}/admin/users/${user_id}/toggle-status?account=${encodeURIComponent(account)}`, {
       method: 'POST',
       headers: getHeaders(),
     });
@@ -162,13 +165,42 @@ export const api = {
     return res.json();
   },
 
-  updateDriverStatus: async (driverId: string, status: string, reason?: string): Promise<DriverProfile> => {
+  updateDriverStatus: async (driverId: number | string, status: string, reason?: string): Promise<DriverProfile> => {
     const res = await fetch(`${API_BASE}/drivers/${driverId}/status`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ status, reason }),
     });
     if (!res.ok) throw new Error((await res.json()).detail || 'Failed to update driver status');
+    return res.json();
+  },
+
+  getDriverAdminSummary: async (): Promise<DriverAdminSummary> => {
+    const res = await fetch(`${API_BASE}/drivers/admin/summary`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load driver summary');
+    return res.json();
+  },
+
+  getAdminDriverBookings: async (status?: string): Promise<DriverBooking[]> => {
+    const q = status && status !== 'ALL' ? `?status=${encodeURIComponent(status)}` : '';
+    const res = await fetch(`${API_BASE}/drivers/admin/bookings${q}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load acting-driver history');
+    return res.json();
+  },
+
+  getDriverPricing: async (): Promise<DriverPricing> => {
+    const res = await fetch(`${API_BASE}/drivers/pricing`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load driver pricing');
+    return res.json();
+  },
+
+  updateDriverPricing: async (data: Partial<DriverPricing>): Promise<DriverPricing> => {
+    const res = await fetch(`${API_BASE}/drivers/admin/pricing`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to update pricing');
     return res.json();
   },
 
