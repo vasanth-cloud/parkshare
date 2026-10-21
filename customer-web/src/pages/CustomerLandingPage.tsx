@@ -119,8 +119,31 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
     }
   };
 
-  // Reverse Geocoding with BigDataCloud + Nominatim
+  // Reverse Geocoding with high-detail Nominatim + BigDataCloud fallback
   const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.address) {
+          const neighborhood = data.address.suburb || data.address.neighbourhood || data.address.residential || data.address.commercial || data.address.subdistrict;
+          const city = data.address.city || data.address.town || data.address.municipality || data.address.state_district;
+          const road = data.address.road || '';
+
+          const primary = [road, neighborhood].filter(Boolean).join(', ') || neighborhood || city;
+          const fullLabel = [primary, city].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ') || data.display_name.split(',').slice(0, 2).join(',');
+
+          setLiveLocationName(fullLabel);
+          if (city) setCity(city);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Nominatim reverse geocode error:', e);
+    }
+
     try {
       const bdcRes = await fetch(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
@@ -140,33 +163,10 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
       console.warn('BDC reverse geocode error:', e);
     }
 
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.address) {
-          const locName = [
-            data.address.suburb || data.address.neighbourhood || data.address.residential,
-            data.address.city || data.address.town || data.address.county,
-          ].filter(Boolean).join(', ') || data.display_name.split(',').slice(0, 2).join(',');
-
-          setLiveLocationName(locName);
-          if (data.address.city || data.address.town) {
-            setCity(data.address.city || data.address.town);
-          }
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('Nominatim reverse geocode error:', e);
-    }
-
     setLiveLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   };
 
-  // Robust live geolocation trigger with high accuracy + IP fallback
+  // Robust live geolocation trigger with high accuracy
   const useCurrentLocation = (isAuto = false) => {
     setIsLocating(true);
 
@@ -184,12 +184,21 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
     };
 
     const tryIpFallback = async () => {
+      // For auto-detect on page load, do not teleport to random ISP gateway if permission was denied
+      if (isAuto) {
+        setIsLocating(false);
+        setLiveLocationName('Bengaluru (Default)');
+        return;
+      }
+
       try {
         const ipRes = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client');
         if (ipRes.ok) {
           const ipData = await ipRes.json();
           if (ipData && ipData.latitude && ipData.longitude) {
             await onCoordsFound(ipData.latitude, ipData.longitude);
+            setLocationSuccessMsg('Approximate network location • Fine-tune on map');
+            setTimeout(() => setLocationSuccessMsg(null), 4000);
             return;
           }
         }
@@ -212,7 +221,7 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
       () => {
         tryIpFallback();
       },
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
   };
 

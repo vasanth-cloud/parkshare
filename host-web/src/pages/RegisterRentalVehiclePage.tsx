@@ -34,7 +34,8 @@ import {
   Users,
   Eye,
   RefreshCw,
-  ShieldAlert
+  ShieldAlert,
+  Sliders
 } from 'lucide-react';
 import { RcVerificationResult } from '../types';
 
@@ -76,6 +77,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
   const [rcVerifiedResult, setRcVerifiedResult] = useState<RcVerificationResult | null>(null);
   const [rcVerifyError, setRcVerifyError] = useState('');
   const [rcVerifySuccess, setRcVerifySuccess] = useState(false);
+  const [showManualSpecsEdit, setShowManualSpecsEdit] = useState(false);
 
   // 3. Vehicle Photos State
   const [photoUrl, setPhotoUrl] = useState(
@@ -84,8 +86,8 @@ export const RegisterRentalVehiclePage: React.FC = () => {
   const [customPhotoPreview, setCustomPhotoPreview] = useState<string | null>(null);
 
   // 4. Tariffs & Rates
-  const [hourlyRate, setHourlyRate] = useState('149');
-  const [dailyRate, setDailyRate] = useState('1999');
+  const [hourlyRate, setHourlyRate] = useState('189');
+  const [dailyRate, setDailyRate] = useState('2499');
   const [securityDeposit, setSecurityDeposit] = useState('0');
 
   // 5. Hub Location & Handover
@@ -160,20 +162,36 @@ export const RegisterRentalVehiclePage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Model-to-Photo Matcher Helper
+  const getPresetPhotoForModel = (model: string, type: 'CAR' | 'BIKE'): string => {
+    const m = (model || '').toUpperCase();
+    if (m.includes('THAR')) return 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80';
+    if (m.includes('CRETA')) return 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80';
+    if (m.includes('NEXON')) return 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80';
+    if (m.includes('SWIFT')) return 'https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=800&q=80';
+    if (m.includes('ACTIVA') || m.includes('SCOOTER')) return 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80';
+    if (m.includes('HUNTER') || m.includes('ROYAL') || m.includes('ENFIELD') || type === 'BIKE') {
+      return 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80';
+  };
+
   // Real-time Parivahan RC verification via Attestr API
-  const handleVerifyRc = async () => {
-    const trimmed = regNumber.trim();
-    if (!trimmed || trimmed.length < 5) {
-      setRcVerifyError('Please enter a valid registration plate number (e.g., KA01AB1234)');
+  const handleVerifyRc = async (customPlate?: string) => {
+    const targetPlate = (typeof customPlate === 'string' ? customPlate : regNumber).trim().toUpperCase();
+    if (!targetPlate || targetPlate.length < 5) {
+      setRcVerifyError('Please enter a valid registration plate number (e.g., KA03AB1234)');
       return;
     }
 
+    setRegNumber(targetPlate);
+    setRcNumber(targetPlate);
     setRcVerifying(true);
     setRcVerifyError('');
     setRcVerifySuccess(false);
 
     try {
-      const result = await api.verifyRcNumber(trimmed);
+      const result = await api.verifyRcNumber(targetPlate);
       if (result.valid) {
         setRcVerifiedResult(result);
         setRcVerifySuccess(true);
@@ -185,6 +203,10 @@ export const RegisterRentalVehiclePage: React.FC = () => {
         if (result.category === '2WN') {
           setVehicleType('BIKE');
           setCategory(result.bodyType?.toUpperCase().includes('SCOOTER') ? 'SCOOTER' : 'CRUISER');
+          setSeats(2);
+          setMileageOrRange('40 kmpl');
+          setHourlyRate('79');
+          setDailyRate('899');
         } else if (result.category === '4WN') {
           setVehicleType('CAR');
           if (result.bodyType) {
@@ -192,6 +214,24 @@ export const RegisterRentalVehiclePage: React.FC = () => {
             if (bt.includes('SUV')) setCategory('SUV');
             else if (bt.includes('SEDAN')) setCategory('SEDAN');
             else setCategory('HATCHBACK');
+          }
+          const modelUpper = (result.makerModel || '').toUpperCase();
+          if (modelUpper.includes('THAR')) {
+            setHourlyRate('249');
+            setDailyRate('3299');
+            setMileageOrRange('14.2 kmpl');
+          } else if (modelUpper.includes('CRETA')) {
+            setHourlyRate('189');
+            setDailyRate('2499');
+            setMileageOrRange('16.8 kmpl');
+          } else if (modelUpper.includes('NEXON')) {
+            setHourlyRate('169');
+            setDailyRate('2199');
+            setMileageOrRange('437 km range');
+          } else {
+            setHourlyRate('129');
+            setDailyRate('1699');
+            setMileageOrRange('18 kmpl');
           }
         }
         if (result.fuelType) {
@@ -203,6 +243,12 @@ export const RegisterRentalVehiclePage: React.FC = () => {
         if (result.seatingCapacity) {
           setSeats(result.seatingCapacity);
         }
+        if (result.registered) {
+          setYearOfMfg(result.registered.slice(0, 4));
+        } else if (result.fitnessUpto) {
+          const fitYear = parseInt(result.fitnessUpto.slice(0, 4), 10);
+          if (!isNaN(fitYear)) setYearOfMfg(String(fitYear - 15));
+        }
         if (result.insuranceUpto) {
           setInsuranceExpiry(result.insuranceUpto);
         }
@@ -212,6 +258,15 @@ export const RegisterRentalVehiclePage: React.FC = () => {
         if (result.owner && (!ownerName || ownerName === user?.full_name)) {
           setOwnerName(result.owner);
         }
+
+        // Auto photo selection
+        const autoPhoto = getPresetPhotoForModel(
+          result.makerModel || '',
+          result.category === '2WN' ? 'BIKE' : 'CAR'
+        );
+        if (!customPhotoPreview) {
+          setPhotoUrl(autoPhoto);
+        }
       } else {
         setRcVerifyError(result.message || 'Vehicle registration record not found in Parivahan registry.');
       }
@@ -220,17 +275,6 @@ export const RegisterRentalVehiclePage: React.FC = () => {
     } finally {
       setRcVerifying(false);
     }
-  };
-
-  // Preset Vehicle Models for Quick Selection
-  const selectCarPreset = (name: string, cat: string, photo: string, hRate: string, dRate: string, fuel: 'PETROL' | 'DIESEL' | 'ELECTRIC') => {
-    setVehicleName(name);
-    setCategory(cat);
-    setPhotoUrl(photo);
-    setCustomPhotoPreview(null);
-    setHourlyRate(hRate);
-    setDailyRate(dRate);
-    setFuelType(fuel);
   };
 
   // Submit Handler
@@ -294,7 +338,27 @@ export const RegisterRentalVehiclePage: React.FC = () => {
         ]
       });
 
+      // Save to local fleet list so dashboard can highlight partner vehicles
+      try {
+        const stored = JSON.parse(localStorage.getItem('parkshare_my_fleet_ids') || '[]');
+        if (!stored.includes(result.id)) {
+          stored.unshift(result.id);
+          localStorage.setItem('parkshare_my_fleet_ids', JSON.stringify(stored));
+        }
+      } catch (e) {
+        // ignore storage errors
+      }
+
       setRegisteredVehicle(result);
+
+      // Navigate directly to the Rental Fleet Dashboard
+      navigate('/rental', {
+        state: {
+          justRegistered: true,
+          newVehicle: result,
+          successMessage: `${result.name} (${result.rcNumber || result.name}) has been registered and is now live on your fleet dashboard!`
+        }
+      });
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to submit vehicle registration. Please try again.');
     } finally {
@@ -327,10 +391,11 @@ export const RegisterRentalVehiclePage: React.FC = () => {
           </div>
 
           <Link
-            to="/dashboard"
-            className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hidden sm:block"
+            to="/rental"
+            className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center space-x-1"
           >
-            My Listings
+            <Car className="w-3.5 h-3.5" />
+            <span>Fleet Dashboard</span>
           </Link>
         </div>
       </div>
@@ -444,10 +509,11 @@ export const RegisterRentalVehiclePage: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto pt-2">
               <button
-                onClick={() => navigate('/services')}
-                className="flex-1 py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-black shadow-md cursor-pointer transition active:scale-95"
+                onClick={() => navigate('/rental', { state: { registeredVehicle, newVehicle: registeredVehicle } })}
+                className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-black shadow-md cursor-pointer transition active:scale-95 flex items-center justify-center space-x-1.5"
               >
-                Go to Partner Services Hub
+                <Car className="w-4 h-4" />
+                <span>Go to Fleet Dashboard</span>
               </button>
               <button
                 onClick={() => {
@@ -473,174 +539,223 @@ export const RegisterRentalVehiclePage: React.FC = () => {
               </div>
             )}
 
-            {/* CARD 1: VEHICLE CLASSIFICATION & SPECS */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
+            {/* CARD 1: VEHICLE REGISTRATION (RC) & AUTO-FETCHED SPECIFICATIONS */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-amber-500/40 shadow-md space-y-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
                 <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black text-xs">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-xs shadow-xs">
                     1
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                      Vehicle Type & Technical Specifications
-                    </h3>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                        Vehicle Registration (RC) & Instant Auto-Fetch
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-black text-[9px] uppercase tracking-wider">
+                        Parivahan Powered
+                      </span>
+                    </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Select your vehicle category and transmission details
+                      Enter your vehicle plate number — our live Parivahan integration automatically retrieves make, model, owner, fuel & fitness!
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Type Switcher: Car vs Two-Wheeler */}
-              <div className="grid grid-cols-2 gap-3.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVehicleType('CAR');
-                    setCategory('SUV');
-                    setSeats(5);
-                    setHourlyRate('149');
-                    setDailyRate('1999');
-                    setPhotoUrl('https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80');
-                  }}
-                  className={`p-4 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center space-y-1.5 ${
-                    vehicleType === 'CAR'
-                      ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 font-bold shadow-xs scale-[1.01]'
-                      : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Car className="w-7 h-7" />
-                  <span className="text-xs font-black block">Four-Wheeler / Car / SUV</span>
-                  <span className="text-[10px] text-slate-400">Hatchbacks, Sedans & SUVs</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVehicleType('BIKE');
-                    setCategory('SCOOTER');
-                    setSeats(2);
-                    setHourlyRate('59');
-                    setDailyRate('699');
-                    setPhotoUrl('https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80');
-                  }}
-                  className={`p-4 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center space-y-1.5 ${
-                    vehicleType === 'BIKE'
-                      ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 font-bold shadow-xs scale-[1.01]'
-                      : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Bike className="w-7 h-7" />
-                  <span className="text-xs font-black block">Two-Wheeler / Scooter / Bike</span>
-                  <span className="text-[10px] text-slate-400">Cruisers, Electric Scooters & Commuters</span>
-                </button>
-              </div>
-
-              {/* Quick Preset Selector */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Quick Model Presets (Click to autofill)
+              {/* IND Number Plate Search Box */}
+              <div className="space-y-3">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Vehicle Registration Number (RC Plate) *
                 </label>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {vehicleType === 'CAR' ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => selectCarPreset('Hyundai Creta SX', 'SUV', 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80', '189', '2499', 'PETROL')}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950 text-slate-700 dark:text-slate-300 font-bold transition text-[11px]"
-                      >
-                        Hyundai Creta (SUV)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => selectCarPreset('Mahindra Thar 4x4', 'SUV', 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80', '249', '3299', 'DIESEL')}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950 text-slate-700 dark:text-slate-300 font-bold transition text-[11px]"
-                      >
-                        Mahindra Thar 4x4
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => selectCarPreset('Tata Nexon EV', 'SUV', 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80', '169', '2199', 'ELECTRIC')}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950 text-slate-700 dark:text-slate-300 font-bold transition text-[11px]"
-                      >
-                        Tata Nexon EV
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => selectCarPreset('Maruti Swift AMT', 'HATCHBACK', 'https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=800&q=80', '119', '1499', 'PETROL')}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950 text-slate-700 dark:text-slate-300 font-bold transition text-[11px]"
-                      >
-                        Maruti Swift
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => selectCarPreset('Royal Enfield Hunter 350', 'CRUISER', 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80', '79', '899', 'PETROL')}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950 text-slate-700 dark:text-slate-300 font-bold transition text-[11px]"
-                      >
-                        Hunter 350
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => selectCarPreset('Ather 450X EV', 'SCOOTER', 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80', '59', '699', 'ELECTRIC')}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950 text-slate-700 dark:text-slate-300 font-bold transition text-[11px]"
-                      >
-                        Ather 450X (EV)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => selectCarPreset('Honda Activa 6G', 'SCOOTER', 'https://images.unsplash.com/photo-1449426468159-d96dbf08f19f?auto=format&fit=crop&w=800&q=80', '49', '549', 'PETROL')}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950 text-slate-700 dark:text-slate-300 font-bold transition text-[11px]"
-                      >
-                        Honda Activa 6G
-                      </button>
-                    </>
-                  )}
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  {/* Styled Indian Number Plate */}
+                  <div className="flex-1 flex items-center rounded-2xl border-2 border-slate-800 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden shadow-inner focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20 transition">
+                    <div className="bg-blue-800 text-white px-3 py-3 flex flex-col items-center justify-center border-r border-blue-900 shrink-0 select-none">
+                      <span className="text-[10px] font-black tracking-widest text-blue-200">IND</span>
+                      <span className="text-[12px] leading-none">🇮🇳</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="KA 03 AB 1234"
+                      value={regNumber}
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase();
+                        setRegNumber(val);
+                        setRcNumber(val);
+                        setRcVerifySuccess(false);
+                        setRcVerifyError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleVerifyRc();
+                        }
+                      }}
+                      className="w-full px-4 py-3 bg-transparent font-mono font-black text-base sm:text-lg tracking-widest text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
+                      required
+                    />
+                    {rcVerifySuccess && (
+                      <div className="pr-3 text-emerald-500 flex items-center shrink-0">
+                        <CheckCircle2 className="w-5 h-5 fill-emerald-500 text-white" />
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleVerifyRc()}
+                    disabled={rcVerifying || regNumber.trim().length < 5}
+                    className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 text-white text-xs font-black flex items-center justify-center space-x-2 shadow-md hover:shadow-lg transition active:scale-95 cursor-pointer shrink-0"
+                  >
+                    {rcVerifying ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Fetching from Parivahan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>Verify & Auto-Fetch Details</span>
+                      </>
+                    )}
+                  </button>
                 </div>
+
+                {/* Plate Format & Testing Tip */}
+                <div className="flex items-center space-x-1.5 pt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="font-bold">Test Tip:</span>
+                  <span>Enter your vehicle registration number (e.g. KA01AB1234, AP09CU7296, or your personal vehicle plate) to test Parivahan verification and auto-fill.</span>
+                </div>
+
+                {/* Verification Error Notice */}
+                {rcVerifyError && (
+                  <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start space-x-2.5">
+                    <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span className="font-medium">{rcVerifyError}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Form Inputs Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Vehicle Make & Model *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Hyundai Creta SX(O) / Royal Enfield"
-                    value={vehicleName}
-                    onChange={(e) => setVehicleName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    required
-                  />
-                </div>
+              {/* AUTOMATICALLY FETCHED SPECIFICATIONS CARD */}
+              {rcVerifiedResult && rcVerifySuccess ? (
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-slate-900/10 dark:from-emerald-950/40 dark:via-slate-900 dark:to-emerald-950/30 border border-emerald-500/50 shadow-sm space-y-4 animate-in fade-in duration-300">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-emerald-500/20 pb-3 gap-2">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                        <Check className="w-4 h-4 stroke-[3]" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center space-x-1.5">
+                          <span>MoRTH Parivahan Registry Verified</span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-black">
+                            AUTO-FETCHED
+                          </span>
+                        </span>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Registration Certificate verified via Attestr Parivahan Suite
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-mono font-black text-xs self-start sm:self-auto border border-emerald-300 dark:border-emerald-700">
+                      STATUS: {rcVerifiedResult.status || 'ACTIVE'}
+                    </span>
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Mfg Year
-                  </label>
-                  <input
-                    type="text"
-                    value={yearOfMfg}
-                    onChange={(e) => setYearOfMfg(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold"
-                  />
-                </div>
-              </div>
+                  {/* Certified Specs 6-Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+                        Vehicle Make & Model
+                      </span>
+                      <strong className="text-slate-900 dark:text-white font-black truncate block text-sm">
+                        {vehicleName}
+                      </strong>
+                    </div>
 
-              {/* Transmission, Fuel & Seating */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+                        Registered Owner
+                      </span>
+                      <strong className="text-slate-900 dark:text-white font-black truncate block text-sm">
+                        {ownerName || rcVerifiedResult.owner}
+                      </strong>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+                        Class & Seating
+                      </span>
+                      <strong className="text-slate-900 dark:text-white font-black block text-sm">
+                        {vehicleType === 'CAR' ? 'Car / SUV' : 'Two-Wheeler'} • {seats} Seats
+                      </strong>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+                        Fuel Type & Mfg Year
+                      </span>
+                      <strong className="text-slate-900 dark:text-white font-black block text-sm">
+                        {fuelType} • Mfg {yearOfMfg}
+                      </strong>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+                        Registered RTO
+                      </span>
+                      <strong className="text-slate-900 dark:text-white font-black truncate block text-sm">
+                        {rcVerifiedResult.rto || 'Regional Transport Office'}
+                      </strong>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+                        Insurance Policy
+                      </span>
+                      <strong className="text-emerald-600 dark:text-emerald-400 font-black truncate block text-sm">
+                        {rcVerifiedResult.insuranceProvider ? rcVerifiedResult.insuranceProvider.slice(0, 22) : 'Active Policy'}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 gap-2 border-t border-emerald-500/20">
+                    <span className="flex items-center space-x-1 font-medium">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      <span>Fitness Certificate Valid Until: <strong>{rcVerifiedResult.fitnessUpto || '2038'}</strong></span>
+                    </span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center space-x-1">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Insurance Valid Until: <strong>{insuranceExpiry}</strong></span>
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* Empty state guidance */
+                <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 flex items-center space-x-3 text-xs text-amber-800 dark:text-amber-300">
+                  <Sparkles className="w-5 h-5 shrink-0 text-amber-600" />
+                  <div>
+                    <span className="font-black block">No need to type technical details manually!</span>
+                    <span className="text-slate-600 dark:text-slate-400 text-[11px]">
+                      Enter your registration plate above and click <strong>Verify & Auto-Fetch Details</strong> to automatically retrieve your vehicle specifications.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Transmission & Permit Classification */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Transmission
+                    Transmission Type
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setTransmission('AUTOMATIC')}
-                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition ${
+                      className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
                         transmission === 'AUTOMATIC'
                           ? 'border-amber-500 bg-amber-500/10 text-amber-600 font-black'
                           : 'border-slate-200 dark:border-slate-700 text-slate-500'
@@ -651,7 +766,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setTransmission('MANUAL')}
-                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition ${
+                      className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
                         transmission === 'MANUAL'
                           ? 'border-amber-500 bg-amber-500/10 text-amber-600 font-black'
                           : 'border-slate-200 dark:border-slate-700 text-slate-500'
@@ -664,185 +779,13 @@ export const RegisterRentalVehiclePage: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Fuel Type
-                  </label>
-                  <div className="grid grid-cols-3 gap-1.5 text-xs">
-                    {(['PETROL', 'DIESEL', 'ELECTRIC'] as const).map((fuel) => (
-                      <button
-                        key={fuel}
-                        type="button"
-                        onClick={() => setFuelType(fuel)}
-                        className={`py-2 px-1 text-center rounded-xl border text-[11px] font-bold transition truncate ${
-                          fuelType === fuel
-                            ? 'border-amber-500 bg-amber-500/10 text-amber-600 font-black'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-500'
-                        }`}
-                      >
-                        {fuel === 'ELECTRIC' ? 'EV' : fuel}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Seating & Range
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={seats}
-                      onChange={(e) => setSeats(Number(e.target.value))}
-                      className="px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold"
-                    >
-                      <option value={2}>2 Seats</option>
-                      <option value={4}>4 Seats</option>
-                      <option value={5}>5 Seats</option>
-                      <option value={7}>7 Seats</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={mileageOrRange}
-                      onChange={(e) => setMileageOrRange(e.target.value)}
-                      placeholder="18 kmpl"
-                      className="px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* CARD 2: RC BOOK & LEGAL COMPLIANCE (HIGHLIGHTED) */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-amber-500/40 shadow-md space-y-5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
-
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-xs shadow-xs">
-                    2
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                        RC Book & Document Verification
-                      </h3>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-black text-[9px] uppercase tracking-wider">
-                        Mandatory
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Upload your Registration Certificate (RC) and insurance copy for fast-track verification
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Registration Number with Real-time Parivahan Check & Permit Type */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Vehicle Registration Number (RC Plate) *
-                    </label>
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center space-x-1">
-                      <Sparkles className="w-3 h-3" />
-                      <span>Parivahan Live Check</span>
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        placeholder="e.g. KA03MG2041 or AP09CU7296"
-                        value={regNumber}
-                        onChange={(e) => {
-                          const val = e.target.value.toUpperCase();
-                          setRegNumber(val);
-                          setRcNumber(val);
-                          setRcVerifySuccess(false);
-                          setRcVerifyError('');
-                        }}
-                        className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-mono font-black text-sm tracking-wider text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        required
-                      />
-                      {rcVerifySuccess && (
-                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-500 font-bold">
-                          <CheckCircle2 className="w-4 h-4 fill-emerald-500 text-white" />
-                        </span>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleVerifyRc}
-                      disabled={rcVerifying || regNumber.trim().length < 5}
-                      className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-xs font-black flex items-center space-x-1.5 shadow-sm transition active:scale-95 cursor-pointer shrink-0"
-                    >
-                      {rcVerifying ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Verifying...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>Verify RC</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Quick Demo Plates */}
-                  <div className="flex items-center space-x-1.5 pt-0.5 text-[10px] text-slate-400 flex-wrap gap-y-1">
-                    <span className="font-bold">Test Presets:</span>
-                    {(['KA03AB1234', 'KA05NB7788', 'AP09CU7296', 'KA01AB1234'] as const).map((plate) => (
-                      <button
-                        key={plate}
-                        type="button"
-                        onClick={() => {
-                          setRegNumber(plate);
-                          setRcNumber(plate);
-                          setRcVerifyError('');
-                          // Auto-trigger verification
-                          setTimeout(() => {
-                            api.verifyRcNumber(plate).then((res) => {
-                              if (res.valid) {
-                                setRcVerifiedResult(res);
-                                setRcVerifySuccess(true);
-                                if (res.makerModel) setVehicleName(res.makerModel);
-                                if (res.category === '2WN') setVehicleType('BIKE');
-                                else setVehicleType('CAR');
-                                if (res.insuranceUpto) setInsuranceExpiry(res.insuranceUpto);
-                                if (res.owner) setOwnerName(res.owner);
-                              }
-                            });
-                          }, 50);
-                        }}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono font-bold hover:bg-amber-100 hover:text-amber-800 dark:hover:bg-amber-950/60 dark:hover:text-amber-300 transition"
-                      >
-                        {plate}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Verification Error Notice */}
-                  {rcVerifyError && (
-                    <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-[11px] text-rose-700 dark:text-rose-300 flex items-start space-x-2">
-                      <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span>{rcVerifyError}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Ownership & Permit Classification
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setRcOwnershipType('PRIVATE')}
-                      className={`p-2.5 rounded-xl border text-left transition ${
+                      className={`py-2.5 px-3 rounded-xl border text-left transition cursor-pointer ${
                         rcOwnershipType === 'PRIVATE'
                           ? 'border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold'
                           : 'border-slate-200 dark:border-slate-700 text-slate-500'
@@ -854,7 +797,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setRcOwnershipType('COMMERCIAL')}
-                      className={`p-2.5 rounded-xl border text-left transition ${
+                      className={`py-2.5 px-3 rounded-xl border text-left transition cursor-pointer ${
                         rcOwnershipType === 'COMMERCIAL'
                           ? 'border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold'
                           : 'border-slate-200 dark:border-slate-700 text-slate-500'
@@ -867,137 +810,58 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* PARIVAHAN GOVERNMENT VERIFIED REPORT ACCORDION (NEW) */}
-              {rcVerifiedResult && rcVerifySuccess && (
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-slate-900/10 dark:from-emerald-950/30 dark:via-slate-900 dark:to-emerald-950/20 border border-emerald-500/40 shadow-xs space-y-3 animate-fade-in">
-                  <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2.5">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center">
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center space-x-1.5">
-                          <span>MoRTH Parivahan Central Registry Verified</span>
-                          <span className="px-1.5 py-0.2 rounded bg-emerald-600 text-white text-[9px] font-black">LIVE</span>
-                        </span>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                          Data verified in real-time via Ministry of Road Transport and Highways (Attestr API Suite)
-                        </p>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-mono font-black text-xs">
-                      {rcVerifiedResult.status || 'ACTIVE'}
-                    </span>
-                  </div>
-
-                  {/* Certified Details Matrix */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
-                    <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Registered Owner</span>
-                      <strong className="text-slate-900 dark:text-white truncate block">
-                        {rcVerifiedResult.owner || 'Verified Registered Owner'}
-                      </strong>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Make & Model</span>
-                      <strong className="text-slate-900 dark:text-white truncate block">
-                        {rcVerifiedResult.makerModel || 'Verified Model'}
-                      </strong>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Fuel & Fitness</span>
-                      <strong className="text-slate-900 dark:text-white block">
-                        {rcVerifiedResult.fuelType} • Valid {rcVerifiedResult.fitnessUpto ? rcVerifiedResult.fitnessUpto.slice(0, 4) : '2035'}
-                      </strong>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Insurance Policy</span>
-                      <strong className="text-emerald-600 dark:text-emerald-400 truncate block">
-                        {rcVerifiedResult.insuranceProvider ? rcVerifiedResult.insuranceProvider.slice(0, 18) : 'Active Policy'}
-                      </strong>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
-                    <span className="flex items-center space-x-1">
-                      <MapPin className="w-3 h-3 text-emerald-600" />
-                      <span>{rcVerifiedResult.rto || 'Regional Transport Office, Parivahan Registry'}</span>
-                    </span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center space-x-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>Insurance Valid Until: {rcVerifiedResult.insuranceUpto || insuranceExpiry}</span>
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* RC Upload Box */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Upload Registration Certificate (RC Book) *
-                </label>
-                <input
-                  ref={rcFileInputRef}
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={handleRcUpload}
-                  className="hidden"
-                />
-
-                <div
-                  onClick={() => rcFileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-2 ${
-                    rcFilePreview
-                      ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20'
-                      : 'border-slate-300 dark:border-slate-700 hover:border-amber-500 hover:bg-amber-50/20 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  {rcFilePreview ? (
-                    <div className="space-y-2">
-                      <div className="relative inline-block">
-                        <img
-                          src={rcFilePreview}
-                          alt="RC Document"
-                          className="w-36 h-24 object-cover rounded-xl border border-emerald-500 shadow-sm mx-auto"
-                        />
-                        <div className="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white p-1 rounded-full shadow">
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+              {/* Document Attachments (RC Book & Insurance Policy) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                {/* RC Upload Box */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Attach RC Book Copy (Front/Back) *
+                  </label>
+                  <input
+                    ref={rcFileInputRef}
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleRcUpload}
+                    className="hidden"
+                  />
+                  <div
+                    onClick={() => rcFileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-1.5 ${
+                      rcFilePreview
+                        ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20'
+                        : 'border-slate-300 dark:border-slate-700 hover:border-amber-500 hover:bg-amber-50/20 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {rcFilePreview ? (
+                      <div className="space-y-1">
+                        <div className="text-center">
+                          <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center justify-center space-x-1">
+                            <FileCheck className="w-4 h-4" />
+                            <span>RC Document Attached ({rcFileName || 'rc_copy.jpg'})</span>
+                          </p>
+                          <p className="text-[10px] text-slate-400">Click to replace document</p>
                         </div>
                       </div>
-                      <div className="text-center">
-                        <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center justify-center space-x-1">
-                          <FileCheck className="w-4 h-4" />
-                          <span>RC Document Attached ({rcFileName || 'rc_book.jpg'})</span>
-                        </p>
-                        <p className="text-[10px] text-slate-400">Click to replace document</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                        <Upload className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-black text-slate-800 dark:text-slate-200">
-                          Click to upload RC Book (Front & Back)
-                        </p>
-                        <p className="text-[11px] text-slate-400">
-                          Supports JPG, PNG, WebP, PDF (Max 10MB)
-                        </p>
-                      </div>
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <Upload className="w-6 h-6 text-amber-600" />
+                        <div>
+                          <p className="text-xs font-black text-slate-800 dark:text-slate-200">
+                            Upload RC Photo / PDF
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            JPG, PNG, PDF up to 10MB
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Insurance Policy & Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                {/* Insurance Policy Copy */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Comprehensive Insurance Policy Copy
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Attach Insurance Policy Copy (Optional)
                   </label>
                   <input
                     ref={insuranceFileInputRef}
@@ -1008,40 +872,123 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                   />
                   <div
                     onClick={() => insuranceFileInputRef.current?.click()}
-                    className="border border-slate-200 dark:border-slate-700 hover:border-amber-500 rounded-xl p-3 text-center cursor-pointer transition flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800"
+                    className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-1.5 ${
+                      insuranceFilePreview
+                        ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20'
+                        : 'border-slate-300 dark:border-slate-700 hover:border-amber-500 hover:bg-amber-50/20 dark:hover:bg-slate-800'
+                    }`}
                   >
-                    <div className="flex items-center space-x-2 truncate">
-                      <FileText className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span className="truncate">
-                        {insuranceFileName || 'Attach Policy Copy'}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-amber-600 uppercase font-black shrink-0">
-                      {insuranceFileName ? 'Replace' : 'Upload'}
-                    </span>
+                    {insuranceFilePreview ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center justify-center space-x-1">
+                          <FileCheck className="w-4 h-4" />
+                          <span>Insurance Policy Attached ({insuranceFileName || 'insurance.pdf'})</span>
+                        </p>
+                        <p className="text-[10px] text-slate-400">Click to replace file</p>
+                      </div>
+                    ) : (
+                      <>
+                        <FileText className="w-6 h-6 text-amber-600" />
+                        <div>
+                          <p className="text-xs font-black text-slate-800 dark:text-slate-200">
+                            Upload Insurance Copy
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            Comprehensive or Zero-Dep cover
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Insurance Expiry Date
-                  </label>
-                  <input
-                    type="date"
-                    value={insuranceExpiry}
-                    onChange={(e) => setInsuranceExpiry(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold"
-                  />
-                </div>
+              {/* Optional Manual Specs Edit Accordion */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowManualSpecsEdit(!showManualSpecsEdit)}
+                  className="flex items-center space-x-1.5 text-xs text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 font-bold transition cursor-pointer"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>{showManualSpecsEdit ? 'Hide Manual Technical Overrides' : 'Need to tweak vehicle specs manually? Click here'}</span>
+                </button>
+
+                {showManualSpecsEdit && (
+                  <div className="mt-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3 animate-in fade-in">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                          Vehicle Make & Model
+                        </label>
+                        <input
+                          type="text"
+                          value={vehicleName}
+                          onChange={(e) => setVehicleName(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                          Mfg Year
+                        </label>
+                        <input
+                          type="text"
+                          value={yearOfMfg}
+                          onChange={(e) => setYearOfMfg(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                          Fuel Type
+                        </label>
+                        <select
+                          value={fuelType}
+                          onChange={(e) => setFuelType(e.target.value as any)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold"
+                        >
+                          <option value="PETROL">Petrol</option>
+                          <option value="DIESEL">Diesel</option>
+                          <option value="ELECTRIC">Electric / EV</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                          Seats
+                        </label>
+                        <input
+                          type="number"
+                          value={seats}
+                          onChange={(e) => setSeats(Number(e.target.value))}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                          Mileage / Range
+                        </label>
+                        <input
+                          type="text"
+                          value={mileageOrRange}
+                          onChange={(e) => setMileageOrRange(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* CARD 3: VEHICLE PHOTO GALLERY & PREVIEW */}
+            {/* CARD 2: VEHICLE PHOTO GALLERY & PREVIEW */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black text-xs">
-                    3
+                    2
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
@@ -1110,12 +1057,12 @@ export const RegisterRentalVehiclePage: React.FC = () => {
               </div>
             </div>
 
-            {/* CARD 4: RENTAL TARIFFS & EARNINGS CALCULATOR */}
+            {/* CARD 3: RENTAL TARIFFS & EARNINGS CALCULATOR */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black text-xs">
-                    4
+                    3
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
@@ -1201,12 +1148,12 @@ export const RegisterRentalVehiclePage: React.FC = () => {
               </div>
             </div>
 
-            {/* CARD 5: HUB LOCATION & HANDOVER */}
+            {/* CARD 4: HUB LOCATION & HANDOVER */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black text-xs">
-                    5
+                    4
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
@@ -1286,12 +1233,12 @@ export const RegisterRentalVehiclePage: React.FC = () => {
               </div>
             </div>
 
-            {/* CARD 6: OWNER CONTACT & UPI PAYOUT */}
+            {/* CARD 5: OWNER CONTACT & UPI PAYOUT */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black text-xs">
-                    6
+                    5
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">

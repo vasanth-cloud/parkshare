@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Calendar, ChevronDown, LayoutGrid, Sparkles, ArrowRight, Car, User } from 'lucide-react';
+import { Calendar, ChevronDown, LayoutGrid, Sparkles, ArrowRight, ArrowLeft, Car, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserAvatar } from './UserAvatar';
 
@@ -15,6 +15,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
 
   const [showManageDropdown, setShowManageDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const isRentalPage = location.pathname.startsWith('/services/rentals') || location.pathname.startsWith('/rentals');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -38,7 +40,30 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
         
         {/* Brand Logo & Mode Badge */}
         <div className="flex items-center space-x-3">
-          <Link to="/" className="flex items-center space-x-2.5 group">
+          {isRentalPage && (
+            <button
+              type="button"
+              onClick={() => {
+                const searchParams = new URLSearchParams(location.search);
+                const currentTab = searchParams.get('tab') || 'home';
+                if (currentTab !== 'home') {
+                  if (window.history.state && window.history.state.idx > 0) {
+                    navigate(-1);
+                  } else {
+                    navigate('/services/rentals?tab=home');
+                  }
+                } else {
+                  navigate('/services');
+                }
+              }}
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer mr-0.5"
+              title="Go Back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+
+          <Link to={isRentalPage ? "/services/rentals" : "/"} className="flex items-center space-x-2.5 group">
             <img
               src="/logo.png"
               alt="ParkCo Logo"
@@ -49,55 +74,60 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                 <span>ParkCo</span>
               </span>
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
-                <span>Driver Mode</span>
+                <span>{isRentalPage ? 'Rental Cars & Bikes' : 'Driver Mode'}</span>
               </span>
             </div>
           </Link>
+
         </div>
 
-        {/* Desktop Navigation Links */}
-        <div className="hidden md:flex items-center space-x-8 text-xs font-bold tracking-wide">
-          <Link to="/" className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-            <span>Find Parking</span>
-          </Link>
+        {/* Desktop Navigation Links - REMOVED on rental page as requested ("no need to show parking sit") */}
+        {!isRentalPage && (
+          <div className="hidden md:flex items-center space-x-8 text-xs font-bold tracking-wide">
+            <Link to="/" className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+              <span>Find Parking</span>
+            </Link>
 
-          <Link
-            to="/services"
-            className={`flex items-center space-x-1.5 transition-colors py-2 ${
-              location.pathname.startsWith('/services')
-                ? 'text-emerald-600 dark:text-emerald-400 font-black'
-                : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400'
-            }`}
-          >
-            <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Services</span>
-          </Link>
+            <Link
+              to="/services"
+              className={`flex items-center space-x-1.5 transition-colors py-2 ${
+                location.pathname.startsWith('/services')
+                  ? 'text-emerald-600 dark:text-emerald-400 font-black'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Services</span>
+            </Link>
 
-          <Link
-            to="/bookings"
-            className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-2"
-          >
-            <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Bookings</span>
-          </Link>
+            <Link
+              to="/bookings"
+              className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-2"
+            >
+              <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Bookings</span>
+            </Link>
 
-          <Link
-            to="/vehicles"
-            className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-2"
-          >
-            <Car className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Vehicles</span>
-          </Link>
+            <Link
+              to="/vehicles"
+              className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-2"
+            >
+              <Car className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Vehicles</span>
+            </Link>
 
-          <Link to="/profile" className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-            <span>Profile</span>
-          </Link>
-        </div>
+            <Link to="/profile" className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+              <span>Profile</span>
+            </Link>
+          </div>
+        )}
 
-        {/* Right Section: Manage Services Dropdown + User Avatar */}
+        {/* Right Section: On rental page, ONLY Manage Services is shown */}
         <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           
-          {/* Manage Services Dropdown (Visible on both Mobile & Desktop) */}
+
+
+          {/* Manage Services Dropdown (Kept on top as explicitly requested) */}
           <div
             ref={dropdownRef}
             className="relative"
@@ -168,8 +198,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                   className="flex items-center space-x-3 px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition rounded-lg mx-1"
                 >
                   <div className="flex flex-col">
-                    <span className="font-bold">Self-Drive Rentals</span>
-                    <span className="text-[10px] text-gray-400">Zero deposit cars, SUVs & bikes</span>
+                    <span className="font-bold">Rental Cars & Bikes</span>
+                    <span className="text-[10px] text-gray-400">Self-drive cars, SUVs & bikes</span>
                   </div>
                 </Link>
 
@@ -218,25 +248,27 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
             )}
           </div>
 
-          {/* User Profile Avatar */}
-          {user ? (
-            <Link
-              to="/profile"
-              className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 p-1 sm:px-2.5 sm:py-1 rounded-full border border-slate-200/90 dark:border-slate-700 transition shadow-xs cursor-pointer group"
-              title="My Profile"
-            >
-              <UserAvatar user={user} size="sm" showBorder className="ring-2 ring-emerald-500/50 group-hover:scale-105 transition-transform" />
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 hidden sm:inline">
-                {user.full_name?.split(' ')[0]}
-              </span>
-            </Link>
-          ) : (
-            <Link
-              to="/auth"
-              className="px-4 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-all flex items-center space-x-1"
-            >
-              <span>Sign In</span>
-            </Link>
+          {/* User Profile Avatar - HIDDEN ON RENTAL PAGE as requested ("except manage services remove all from top") */}
+          {!isRentalPage && (
+            user ? (
+              <Link
+                to="/profile"
+                className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 p-1 sm:px-2.5 sm:py-1 rounded-full border border-slate-200/90 dark:border-slate-700 transition shadow-xs cursor-pointer group"
+                title="My Profile"
+              >
+                <UserAvatar user={user} size="sm" showBorder className="ring-2 ring-emerald-500/50 group-hover:scale-105 transition-transform" />
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200 hidden sm:inline">
+                  {user.full_name?.split(' ')[0]}
+                </span>
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                className="px-4 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-all flex items-center space-x-1"
+              >
+                <span>Sign In</span>
+              </Link>
+            )
           )}
         </div>
 

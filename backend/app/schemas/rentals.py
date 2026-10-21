@@ -23,6 +23,7 @@ class RentalVehicleSchema(BaseModel):
     hubAddress: str
     status: str = "ACTIVE" # ACTIVE, PENDING_APPROVAL, SUSPENDED
     partnerName: str
+    partnerPhone: Optional[str] = None
     rcNumber: Optional[str] = None
     rcDocumentUrl: Optional[str] = None
     rcOwnershipType: Optional[str] = "PRIVATE" # PRIVATE, COMMERCIAL, SELF_DRIVE_PERMIT
@@ -37,6 +38,7 @@ class RentalBookingCreate(BaseModel):
     pickupDate: str
     returnDate: str
     pickupTime: str
+    returnTime: Optional[str] = "06:00 PM"
     deliveryType: str = "HUB_PICKUP" # HUB_PICKUP, DOORSTEP_DELIVERY
     doorstepAddress: Optional[str] = None
     withInsurance: bool = True
@@ -50,6 +52,7 @@ class RentalBookingOut(BaseModel):
     pickupDate: str
     returnDate: str
     pickupTime: str
+    returnTime: Optional[str] = "06:00 PM"
     deliveryType: str
     doorstepAddress: Optional[str] = None
     totalFare: float
@@ -59,6 +62,10 @@ class RentalBookingOut(BaseModel):
     otp: int
     status: str
     createdAt: str
+    ownerName: Optional[str] = None
+    ownerPhone: Optional[str] = None
+    ownerAddress: Optional[str] = None
+    paymentStatus: Optional[str] = "PAID"
 
 class RentalPartnerCreate(BaseModel):
     vehicleName: str

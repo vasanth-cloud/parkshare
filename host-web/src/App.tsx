@@ -17,6 +17,7 @@ import { RegisterDriverPage } from './pages/RegisterDriverPage';
 import { DriverDashboardPage } from './pages/DriverDashboardPage';
 import { RegisterCarSpaPage } from './pages/RegisterCarSpaPage';
 import { RegisterRentalVehiclePage } from './pages/RegisterRentalVehiclePage';
+import { RentalDashboardPage } from './pages/RentalDashboardPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -29,7 +30,8 @@ export const AppContent: React.FC = () => {
   const location = useLocation();
   const isAuthPage = location.pathname === '/auth';
   const isHomePage = location.pathname === '/' || location.pathname === '/services';
-  const showNav = !isAuthPage && !isHomePage;
+  const isRentalDashboard = location.pathname === '/rental' || location.pathname === '/rental-dashboard' || location.pathname === '/partner/rental/dashboard';
+  const showNav = !isAuthPage && !isHomePage && !isRentalDashboard;
   const { user } = useAuth();
 
   return (
@@ -56,6 +58,30 @@ export const AppContent: React.FC = () => {
           <Route path="/register/rental" element={<RegisterRentalVehiclePage />} />
           <Route path="/partner/rental" element={<RegisterRentalVehiclePage />} />
           <Route path="/register/fleet" element={<RegisterRentalVehiclePage />} />
+          <Route
+            path="/rental"
+            element={
+              <ProtectedRoute>
+                <RentalDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/rental-dashboard"
+            element={
+              <ProtectedRoute>
+                <RentalDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/partner/rental/dashboard"
+            element={
+              <ProtectedRoute>
+                <RentalDashboardPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={

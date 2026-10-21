@@ -83,8 +83,8 @@ export const HostServicesHomePage: React.FC = () => {
       subtitle: 'List your idle cars or bikes for self-drive',
       badge: 'Vehicle Fleet',
       iconText:'',
-      route: '/register/rental',
-      actionText: 'Host Vehicles',
+      route: '/rental',
+      actionText: 'Fleet Dashboard',
       theme: {
         border: 'border-amber-500/30 hover:border-amber-500',
         badgeBg: 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border-amber-500/20',
@@ -126,7 +126,7 @@ export const HostServicesHomePage: React.FC = () => {
       navigate('/register/car-spa');
     } else if (q.includes('rent') || q.includes('rental') || q.includes('fleet') || q.includes('vehicle')) {
       setSearchError('');
-      navigate('/register/rental');
+      navigate('/rental');
     } else if (q.includes('park') || q.includes('space') || q.includes('bay') || q.includes('garage') || q.includes('driveway')) {
       setSearchError('');
       navigate('/dashboard');

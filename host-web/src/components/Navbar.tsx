@@ -121,13 +121,13 @@ export const Navbar: React.FC = () => {
                           </div>
                         </Link>
                         <Link
-                          to="/register/rental"
+                          to="/rental"
                           onClick={() => setShowManageDropdown(false)}
                           className="flex items-center space-x-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
                         >
                           <div className="flex flex-col">
                             <span className="font-bold">Rental Fleet</span>
-                            <span className="text-[10px] text-gray-400">List cars & bikes</span>
+                            <span className="text-[10px] text-gray-400">Fleet dashboard & handovers</span>
                           </div>
                         </Link>
                       </div>

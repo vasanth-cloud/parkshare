@@ -491,5 +491,15 @@ export const api = {
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to verify vehicle RC number'));
     return res.json();
   },
+
+  updateRentalVehicleStatus: async (vehicleId: string, status: string, reason?: string): Promise<RentalPartnerVehicle> => {
+    const res = await fetch(`${API_BASE}/rentals/${vehicleId}/status`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ status, reason }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to update vehicle status'));
+    return res.json();
+  },
 };
 

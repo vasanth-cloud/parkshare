@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft,
   User, 
@@ -58,11 +58,18 @@ interface NotificationSettings {
 
 type SectionKey = 'vehicles' | 'rewards' | 'alerts' | 'addresses' | 'support';
 
-export const CustomerProfilePage: React.FC = () => {
+interface CustomerProfilePageProps {
+  onNavigateTab?: (tab: 'home' | 'explore' | 'bookings' | 'saved' | 'profile') => void;
+}
+
+export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onNavigateTab }) => {
   const { user, logout, updateUser } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isRentalContext = Boolean(onNavigateTab) || location.pathname.startsWith('/services/rentals') || location.pathname.startsWith('/rentals');
 
   // Vertical accordion state: which section is expanded (null = all collapsed)
   const [expandedSection, setExpandedSection] = useState<SectionKey | null>('vehicles');
@@ -1037,25 +1044,92 @@ export const CustomerProfilePage: React.FC = () => {
       </div>
 
       {/* Quick Navigation to Bookings */}
-      <Link
-        to="/bookings"
-        className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
-      >
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center">
-            <Calendar className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
-              My Bookings
-            </span>
-            <span className="text-[11px] text-slate-400">
-              View active parking passes & chauffeur trips
-            </span>
-          </div>
+      {isRentalContext ? (
+        onNavigateTab ? (
+          <button
+            type="button"
+            onClick={() => onNavigateTab('bookings')}
+            className="w-full bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition cursor-pointer text-left"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
+                  Rental Bookings
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  View active rental cars & bikes reservations
+                </span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </button>
+        ) : (
+          <Link
+            to="/services/rentals?tab=bookings"
+            className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
+                  Rental Bookings
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  View active rental cars & bikes reservations
+                </span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </Link>
+        )
+      ) : (
+        <div className="space-y-2.5">
+          <Link
+            to="/bookings"
+            className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
+                  Parking & Chauffeur Bookings
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  View active parking passes & chauffeur trips
+                </span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </Link>
+
+          <Link
+            to="/services/rentals?tab=bookings"
+            className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <Car className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
+                  Rental Cars & Bikes Bookings
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  View active rental reservations & passes
+                </span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </Link>
         </div>
-        <ChevronRight className="w-4 h-4 text-slate-400" />
-      </Link>
+      )}
 
       {/* Log Out Button */}
       <button

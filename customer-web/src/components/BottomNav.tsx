@@ -7,6 +7,14 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = () => {
+  const location = useLocation();
+  const isRentalSection = location.pathname.startsWith('/services/rentals') || location.pathname.startsWith('/rentals');
+
+  // When inside the rental car & bike section, SelfDriveRentalPage renders its dedicated 5-tab rental bottom nav bar
+  if (isRentalSection) {
+    return null;
+  }
+
   const navItems = [
     { to: '/', label: 'Parking', icon: MapPin },
     { to: '/services', label: 'Services', icon: LayoutGrid },

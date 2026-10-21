@@ -118,80 +118,75 @@ export const CreateListingPage: React.FC = () => {
     let detectedLandmark = '';
     let fullDisplayName = '';
 
-    // Provider 1: Komoot Photon reverse geocode (CORS-friendly, rich street/landmark & locality OSM data)
+    // Provider 1: OpenStreetMap Nominatim reverse geocode (Highest precision in India: road, colony, suburb, city, pincode)
     try {
-      const photonRes = await fetch(
-        `https://photon.komoot.io/reverse?lat=${latitude}&lon=${longitude}`
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
+        { signal: controller.signal }
       );
-      if (photonRes.ok) {
-        const photon = await photonRes.json();
-        const feat = photon?.features?.[0]?.properties;
-        if (feat) {
-          detectedCity = feat.city || '';
-          detectedArea = feat.locality || feat.district || '';
-          detectedState = feat.state || '';
-          detectedPostcode = feat.postcode || '';
-
-          if (feat.street) {
-            detectedStreet = feat.street;
-            if (feat.name && feat.name !== feat.street) {
-              detectedLandmark = feat.name;
-            }
-          } else if (feat.name) {
-            detectedStreet = feat.name;
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.address) {
+          detectedCity = data.address.city || data.address.town || data.address.municipality || data.address.state_district || '';
+          detectedArea = data.address.suburb || data.address.neighbourhood || data.address.residential || data.address.commercial || data.address.city_district || '';
+          detectedPostcode = data.address.postcode || '';
+          detectedStreet = data.address.road || '';
+          detectedState = data.address.state || '';
+          if (data.name && data.name !== data.address.road) {
+            detectedLandmark = data.name;
           }
+          fullDisplayName = data.display_name || '';
         }
       }
     } catch (e) {
-      console.warn('Photon reverse geocode error:', e);
+      console.warn('Nominatim reverse geocode error:', e);
     }
 
-    // Provider 2: BigDataCloud client reverse geocode (Fast & reliable city/state/postcode)
-    try {
-      const bdcRes = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-      );
-      if (bdcRes.ok) {
-        const bdc = await bdcRes.json();
-        if (bdc) {
-          if (!detectedCity) detectedCity = bdc.city || '';
-          // If BDC locality is distinct from city and area is not yet set
-          if (!detectedArea && bdc.locality && bdc.locality.toLowerCase() !== (bdc.city || '').toLowerCase()) {
-            detectedArea = bdc.locality;
-          }
-          if (!detectedState) detectedState = bdc.principalSubdivision || '';
-          if (!detectedPostcode) detectedPostcode = bdc.postcode || '';
-        }
-      }
-    } catch (e) {
-      console.warn('BigDataCloud reverse geocode error:', e);
-    }
-
-    // Provider 3: OpenStreetMap Nominatim fallback if missing street or area
+    // Provider 2: Komoot Photon reverse geocode fallback
     if (!detectedStreet || !detectedArea) {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-          { signal: controller.signal }
+        const photonRes = await fetch(
+          `https://photon.komoot.io/reverse?lat=${latitude}&lon=${longitude}`
         );
-        clearTimeout(timeoutId);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.address) {
-            if (!detectedCity) detectedCity = data.address.city || data.address.town || data.address.state_district || '';
-            if (!detectedArea) detectedArea = data.address.suburb || data.address.neighbourhood || data.address.residential || '';
-            if (!detectedPostcode) detectedPostcode = data.address.postcode || '';
-            if (!detectedStreet) detectedStreet = data.address.road || '';
-            if (!detectedLandmark && data.name && data.name !== data.address.road) {
-              detectedLandmark = data.name;
-            }
-            fullDisplayName = data.display_name || '';
+        if (photonRes.ok) {
+          const photon = await photonRes.json();
+          const feat = photon?.features?.[0]?.properties;
+          if (feat) {
+            if (!detectedCity) detectedCity = feat.city || '';
+            if (!detectedArea) detectedArea = feat.locality || feat.district || '';
+            if (!detectedState) detectedState = feat.state || '';
+            if (!detectedPostcode) detectedPostcode = feat.postcode || '';
+            if (!detectedStreet && feat.street) detectedStreet = feat.street;
+            if (!detectedLandmark && feat.name && feat.name !== feat.street) detectedLandmark = feat.name;
           }
         }
       } catch (e) {
-        console.warn('Nominatim reverse geocode fallback error:', e);
+        console.warn('Photon reverse geocode error:', e);
+      }
+    }
+
+    // Provider 3: BigDataCloud client reverse geocode fallback
+    if (!detectedCity || !detectedArea) {
+      try {
+        const bdcRes = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+        );
+        if (bdcRes.ok) {
+          const bdc = await bdcRes.json();
+          if (bdc) {
+            if (!detectedCity) detectedCity = bdc.city || '';
+            if (!detectedArea && bdc.locality && bdc.locality.toLowerCase() !== (bdc.city || '').toLowerCase()) {
+              detectedArea = bdc.locality;
+            }
+            if (!detectedState) detectedState = bdc.principalSubdivision || '';
+            if (!detectedPostcode) detectedPostcode = bdc.postcode || '';
+          }
+        }
+      } catch (e) {
+        console.warn('BigDataCloud reverse geocode error:', e);
       }
     }
 
@@ -256,60 +251,39 @@ export const CreateListingPage: React.FC = () => {
     }
   };
 
-  // Robust GPS detector with high-accuracy + network + IP fallback
+  // Robust GPS detector with high accuracy (12s timeout)
   const detectLocation = () => {
     setDetectingGps(true);
     setError('');
-    setGeoStatusMsg('');
+    setGeoStatusMsg('Requesting device GPS position...');
 
     const onGpsSuccess = async (pos: GeolocationPosition) => {
       try {
         await fetchAddressFromCoords(pos.coords.latitude, pos.coords.longitude);
       } catch (e) {
         console.warn('Error processing GPS coordinates:', e);
+        setError('Error interpreting coordinates. Please type your address below.');
       } finally {
         setDetectingGps(false);
       }
     };
 
-    const tryIpFallback = async () => {
-      try {
-        const ipRes = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client');
-        if (ipRes.ok) {
-          const ipData = await ipRes.json();
-          if (ipData && ipData.latitude && ipData.longitude) {
-            await fetchAddressFromCoords(ipData.latitude, ipData.longitude);
-            setGeoStatusMsg(`✓ Network-approximate address detected (${ipData.city || 'Local area'}). You can fine-tune below.`);
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn('IP geolocation fallback failed:', e);
-      }
-      setGeoStatusMsg('GPS not available. Please search or type your address below.');
+    const onGpsError = (err: GeolocationPositionError) => {
+      setDetectingGps(false);
+      console.warn('GPS location error:', err);
+      setGeoStatusMsg(`⚠️ Device GPS unavailable (${err.message}). Please type your area or street in the search box below.`);
     };
 
     if (!navigator.geolocation) {
-      tryIpFallback().finally(() => setDetectingGps(false));
+      setDetectingGps(false);
+      setGeoStatusMsg('⚠️ Geolocation not supported by this browser. Please type your address below.');
       return;
     }
-
-    const onGpsError = (_err: GeolocationPositionError) => {
-      // Fallback 1: Standard network accuracy
-      navigator.geolocation.getCurrentPosition(
-        onGpsSuccess,
-        () => {
-          // Fallback 2: IP-based geolocation so host is never left with blank fields
-          tryIpFallback().finally(() => setDetectingGps(false));
-        },
-        { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
-      );
-    };
 
     navigator.geolocation.getCurrentPosition(
       onGpsSuccess,
       onGpsError,
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
   };
 

@@ -60,6 +60,20 @@ function mapVehicleType(t?: string): string {
 async function cityFromCoords(latitude: number, longitude: number): Promise<string | null> {
   try {
     const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const address = data?.address || {};
+      const city = address.city || address.town || address.village || address.municipality || address.county || address.state_district || '';
+      if (city) return String(city).trim();
+    }
+  } catch {
+    // Try the second provider below.
+  }
+
+  try {
+    const res = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
     );
     if (res.ok) {
@@ -68,22 +82,9 @@ async function cityFromCoords(latitude: number, longitude: number): Promise<stri
       if (city) return city;
     }
   } catch {
-    // Try the second provider below.
-  }
-
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const address = data?.address || {};
-      const city = address.city || address.town || address.village || address.municipality || address.county || '';
-      if (city) return String(city).trim();
-    }
-  } catch {
     // Leave the city field for the customer to type.
   }
+
   return null;
 }
 

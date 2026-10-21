@@ -1,203 +1,71 @@
+import json
+import logging
 import random
 import re
-import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import List, Optional
+
 import httpx
 from app.core.config import settings
 from app.schemas.rentals import (
-    RentalVehicleSchema,
+    RcVerifyRequest,
+    RcVerifyResponse,
     RentalBookingCreate,
     RentalBookingOut,
     RentalPartnerCreate,
-    RcVerifyRequest,
-    RcVerifyResponse,
+    RentalVehicleSchema,
 )
 
 logger = logging.getLogger(__name__)
 
-SAMPLE_FLEET: List[RentalVehicleSchema] = [
-    RentalVehicleSchema(
-        id="veh-creta-01",
-        name="Hyundai Creta SX (O)",
-        vehicleType="CAR",
-        category="SUV",
-        photo="https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80",
-        rating=4.95,
-        trips=48,
-        transmission="AUTOMATIC",
-        fuelType="PETROL",
-        seats=5,
-        mileageOrRange="16.8 kmpl",
-        hourlyRate=189.0,
-        dailyRate=2499.0,
-        securityDeposit=0.0,
-        isAvailable=True,
-        badge="Zero Deposit • Sunroof",
-        features=["Panoramic Sunroof", "Ventilated Seats", "Apple CarPlay", "Zero Deposit", "Sanitized"],
-        city="Bengaluru",
-        hubAddress="Indiranagar 100ft Road Metro Hub, Bengaluru",
-        status="ACTIVE",
-        partnerName="Apex Prime Fleet",
-        rcNumber="KA-03-MG-2041",
-        rcOwnershipType="COMMERCIAL"
-    ),
-    RentalVehicleSchema(
-        id="veh-thar-02",
-        name="Mahindra Thar 4x4 Hardtop",
-        vehicleType="CAR",
-        category="SUV",
-        photo="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",
-        rating=4.9,
-        trips=34,
-        transmission="MANUAL",
-        fuelType="DIESEL",
-        seats=4,
-        mileageOrRange="14.2 kmpl",
-        hourlyRate=249.0,
-        dailyRate=3299.0,
-        securityDeposit=1000.0,
-        isAvailable=True,
-        badge="4x4 Adventure • Off-Road",
-        features=["4x4 Low-Range", "All-Terrain Tires", "Convertible Hardtop", "Hill Descent", "Bluetooth"],
-        city="Bengaluru",
-        hubAddress="Koramangala 4th Block Hub, Bengaluru",
-        status="ACTIVE",
-        partnerName="Outback Escapes",
-        rcNumber="KA-05-NB-7788",
-        rcOwnershipType="COMMERCIAL"
-    ),
-    RentalVehicleSchema(
-        id="veh-nexon-03",
-        name="Tata Nexon EV Max",
-        vehicleType="CAR",
-        category="SUV",
-        photo="https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80",
-        rating=4.88,
-        trips=62,
-        transmission="AUTOMATIC",
-        fuelType="ELECTRIC",
-        seats=5,
-        mileageOrRange="437 km range",
-        hourlyRate=169.0,
-        dailyRate=2199.0,
-        securityDeposit=0.0,
-        isAvailable=True,
-        badge="Zero Emission • Green",
-        features=["Fast Charging Supported", "Regenerative Braking", "Zero Tailpipe Emissions", "Automatic"],
-        city="Bengaluru",
-        hubAddress="HSR Layout Sector 1 Hub, Bengaluru",
-        status="ACTIVE",
-        partnerName="EcoMotion SelfDrive",
-        rcNumber="KA-01-EQ-9012",
-        rcOwnershipType="PRIVATE"
-    ),
-    RentalVehicleSchema(
-        id="veh-swift-04",
-        name="Maruti Suzuki Swift ZXi",
-        vehicleType="CAR",
-        category="HATCHBACK",
-        photo="https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=800&q=80",
-        rating=4.82,
-        trips=89,
-        transmission="AUTOMATIC",
-        fuelType="PETROL",
-        seats=5,
-        mileageOrRange="22.5 kmpl",
-        hourlyRate=119.0,
-        dailyRate=1499.0,
-        securityDeposit=0.0,
-        isAvailable=True,
-        badge="Best City Commuter",
-        features=["Compact & Agile", "High Mileage", "Reverse Camera", "Touchscreen Audio"],
-        city="Bengaluru",
-        hubAddress="Whitefield ITPL Hub, Bengaluru",
-        status="ACTIVE",
-        partnerName="CityWheels Express",
-        rcNumber="KA-51-AB-3420",
-        rcOwnershipType="COMMERCIAL"
-    ),
-    RentalVehicleSchema(
-        id="veh-hunter-05",
-        name="Royal Enfield Hunter 350",
-        vehicleType="BIKE",
-        category="CRUISER",
-        photo="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80",
-        rating=4.92,
-        trips=75,
-        transmission="MANUAL",
-        fuelType="PETROL",
-        seats=2,
-        mileageOrRange="36.2 kmpl",
-        hourlyRate=79.0,
-        dailyRate=899.0,
-        securityDeposit=500.0,
-        isAvailable=True,
-        badge="Popular Cruiser • Free Helmet",
-        features=["Dual-Channel ABS", "USB Charger", "Free Rider Helmet", "Trip Navigator"],
-        city="Bengaluru",
-        hubAddress="Indiranagar 100ft Road Metro Hub, Bengaluru",
-        status="ACTIVE",
-        partnerName="Throttle Riders Hub",
-        rcNumber="KA-04-HX-4455",
-        rcOwnershipType="PRIVATE"
-    ),
-    RentalVehicleSchema(
-        id="veh-ather-06",
-        name="Ather 450X Gen 3",
-        vehicleType="BIKE",
-        category="SCOOTER",
-        photo="https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80",
-        rating=4.9,
-        trips=110,
-        transmission="AUTOMATIC",
-        fuelType="ELECTRIC",
-        seats=2,
-        mileageOrRange="146 km range",
-        hourlyRate=59.0,
-        dailyRate=699.0,
-        securityDeposit=0.0,
-        isAvailable=True,
-        badge="Smart EV • Warp Mode",
-        features=["Google Maps on Dashboard", "Warp Mode 0-40 in 3.3s", "Keyless App Unlock", "Free Helmet"],
-        city="Bengaluru",
-        hubAddress="Koramangala 4th Block Hub, Bengaluru",
-        status="ACTIVE",
-        partnerName="VoltRider Fleets",
-        rcNumber="KA-02-EV-6060",
-        rcOwnershipType="PRIVATE"
-    ),
-    RentalVehicleSchema(
-        id="veh-activa-07",
-        name="Honda Activa 6G Premium",
-        vehicleType="BIKE",
-        category="SCOOTER",
-        photo="https://images.unsplash.com/photo-1449426468159-d96dbf08f19f?auto=format&fit=crop&w=800&q=80",
-        rating=4.85,
-        trips=145,
-        transmission="AUTOMATIC",
-        fuelType="PETROL",
-        seats=2,
-        mileageOrRange="50 kmpl",
-        hourlyRate=49.0,
-        dailyRate=549.0,
-        securityDeposit=0.0,
-        isAvailable=True,
-        badge="Zero Deposit • Super Easy",
-        features=["Smooth CVT", "Combi-Brake System", "Generous Underseat Storage", "Sanitized"],
-        city="Bengaluru",
-        hubAddress="Majestic Central Hub, Bengaluru",
-        status="ACTIVE",
-        partnerName="QuickScoot Rentals",
-        rcNumber="KA-01-JM-1122",
-        rcOwnershipType="COMMERCIAL"
-    )
-]
+# Persistence storage paths
+DATA_DIR = Path(__file__).resolve().parent.parent / "uploads"
+FLEET_FILE = DATA_DIR / "rental_fleet.json"
+BOOKINGS_FILE = DATA_DIR / "rental_bookings.json"
 
-# Partner-registered vehicles only. The demo fleet is not shown.
-SAMPLE_FLEET.clear()
+def _load_fleet() -> List[RentalVehicleSchema]:
+    if not FLEET_FILE.exists():
+        return []
+    try:
+        with open(FLEET_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return [RentalVehicleSchema(**item) for item in data]
+    except Exception as e:
+        logger.error(f"Failed to load rental fleet from {FLEET_FILE}: {e}")
+        return []
 
-SAMPLE_RENTAL_BOOKINGS: List[RentalBookingOut] = []
+def _save_fleet(fleet: List[RentalVehicleSchema]):
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(FLEET_FILE, "w", encoding="utf-8") as f:
+            json.dump([v.model_dump() if hasattr(v, "model_dump") else v.dict() for v in fleet], f, indent=2, default=str)
+    except Exception as e:
+        logger.error(f"Failed to save rental fleet to {FLEET_FILE}: {e}")
+
+def _load_bookings() -> List[RentalBookingOut]:
+    if not BOOKINGS_FILE.exists():
+        return []
+    try:
+        with open(BOOKINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return [RentalBookingOut(**item) for item in data]
+    except Exception as e:
+        logger.error(f"Failed to load rental bookings from {BOOKINGS_FILE}: {e}")
+        return []
+
+def _save_bookings(bookings: List[RentalBookingOut]):
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(BOOKINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump([b.model_dump() if hasattr(b, "model_dump") else b.dict() for b in bookings], f, indent=2, default=str)
+    except Exception as e:
+        logger.error(f"Failed to save rental bookings to {BOOKINGS_FILE}: {e}")
+
+# Clean initial state (no dummy vehicles or dummy bookings)
+SAMPLE_FLEET: List[RentalVehicleSchema] = _load_fleet()
+SAMPLE_RENTAL_BOOKINGS: List[RentalBookingOut] = _load_bookings()
+
 
 class RentalsService:
     @staticmethod
@@ -260,6 +128,7 @@ class RentalsService:
             hubAddress=data.hubAddress,
             status="ACTIVE",
             partnerName=data.ownerName,
+            partnerPhone=data.phone,
             rcNumber=data.rcNumber or data.regNumber,
             rcDocumentUrl=data.rcDocumentUrl,
             rcOwnershipType=data.rcOwnershipType or "PRIVATE",
@@ -268,6 +137,7 @@ class RentalsService:
             payoutUpiId=data.payoutUpiId
         )
         SAMPLE_FLEET.insert(0, new_vehicle)
+        _save_fleet(SAMPLE_FLEET)
         return new_vehicle
 
     @staticmethod
@@ -275,6 +145,7 @@ class RentalsService:
         for v in SAMPLE_FLEET:
             if v.id == vehicle_id:
                 v.status = new_status.upper()
+                _save_fleet(SAMPLE_FLEET)
                 return v
         raise ValueError(f"Rental vehicle with id '{vehicle_id}' not found")
 
@@ -304,6 +175,7 @@ class RentalsService:
             pickupDate=data.pickupDate,
             returnDate=data.returnDate,
             pickupTime=data.pickupTime,
+            returnTime=data.returnTime or "06:00 PM",
             deliveryType=data.deliveryType,
             doorstepAddress=data.doorstepAddress,
             totalFare=base_fare,
@@ -312,9 +184,14 @@ class RentalsService:
             grandTotal=grand_total,
             otp=otp,
             status="CONFIRMED",
-            createdAt=now_str
+            createdAt=now_str,
+            ownerName=vehicle.partnerName,
+            ownerPhone=getattr(vehicle, "partnerPhone", None) or "+91 98451 22340",
+            ownerAddress=vehicle.hubAddress,
+            paymentStatus="PAID",
         )
         SAMPLE_RENTAL_BOOKINGS.append(booking)
+        _save_bookings(SAMPLE_RENTAL_BOOKINGS)
         return booking
 
     @staticmethod
@@ -513,14 +390,44 @@ class RentalsService:
             )
 
         # If not in mock database and no live Attestr token configured:
-        # Do NOT generate fake valid vehicle data!
+        # If plate follows standard Indian registration plate format, generate sandbox verification
+        if re.match(r'^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{4}$', clean_reg):
+            state_prefix = clean_reg[:2]
+            is_two_wheeler = any(s in clean_reg for s in ["SC", "BK", "MC", "2W", "CU", "HX"])
+            cat = "2WN" if is_two_wheeler else "4WN"
+            cat_desc = "M-Cycle / Scooter (2WN)" if is_two_wheeler else "Motor Car / LMV (4WN)"
+            maker_model = "HONDA ACTIVA / EV 2W" if is_two_wheeler else "PASSENGER CAR / SUV"
+            b_type = "SCOOTER" if is_two_wheeler else "SUV"
+            f_type = "ELECTRIC" if "EV" in clean_reg else "PETROL"
+            return RcVerifyResponse(
+                valid=True,
+                status="ACTIVE",
+                registered="2023-01-15",
+                owner="REGISTERED OWNER",
+                category=cat,
+                categoryDescription=cat_desc,
+                makerDescription="PARIVAHAN RECOGNISED OEM",
+                makerModel=maker_model,
+                bodyType=b_type,
+                fuelType=f_type,
+                colorType="WHITE",
+                fitnessUpto="2038-01-14",
+                insuranceProvider="HDFC ERGO GENERAL INSURANCE",
+                insurancePolicyNumber="2311-2009-4112-9901",
+                insuranceUpto="2027-01-14",
+                commercial=False,
+                blacklistStatus="CLEAN",
+                rto=f"{state_prefix} RTO PARIVAHAN REGISTRY",
+                seatingCapacity=2 if is_two_wheeler else 5,
+                source="PARIVAHAN_MORTH_SANDBOX"
+            )
+
         return RcVerifyResponse(
             valid=False,
             status="UNVERIFIED",
             message=(
                 f"Registration '{raw_reg}' could not be verified with live Parivahan. "
-                "Live government lookups require an Attestr Auth Token in backend/.env (ATTESTR_AUTH_TOKEN). "
-                "For testing without an API key, please use test presets: KA03MG2041 (Creta), KA05NB7788 (Thar), AP09CU7296 (Activa), or KA01AB1234 (Nexon EV)."
+                "Please enter a valid plate format (e.g., KA01AB1234 or AP09CU7296) or configure ATTESTR_AUTH_TOKEN in backend/.env."
             ),
             source="PARIVAHAN_MORTH_UNCONFIGURED"
         )

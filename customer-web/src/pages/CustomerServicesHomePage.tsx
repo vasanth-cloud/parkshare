@@ -99,13 +99,13 @@ export const CustomerServicesHomePage: React.FC = () => {
     },
     {
       id: 'rentals',
-      title: 'Self-Drive Cars & Bikes',
-      subtitle: 'Zero Deposit Hourly & Daily Fleet',
-      badge: 'Zero Deposit',
+      title: 'Rental Cars & Bikes',
+      subtitle: 'Hourly & Daily Self-Drive Fleet',
+      badge: 'Self-Drive Fleet',
       iconText:'',
       route: '/services/rentals',
-      description: 'Sanitized self-drive cars, SUVs, bikes & smart electric scooters available for hourly or multi-day road trips. Keyless instant OTP unlock.',
-      features: ['Cars, SUVs & Electric Scooters', 'Doorstep Drop or Hub Pickup', 'Hourly from ₹49 • Zero Deposit'],
+      description: 'Sanitized rental cars, SUVs, bikes & smart electric scooters available for hourly or multi-day road trips. Instant reservation & quick handover.',
+      features: ['Cars, SUVs & Electric Scooters', 'Doorstep Drop or Hub Pickup', 'Flexible Hourly & Daily Plans'],
       theme: {
         border: 'border-amber-500/30 hover:border-amber-500',
         badgeBg: 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border-amber-500/20',

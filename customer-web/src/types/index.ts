@@ -222,6 +222,8 @@ export interface RentalVehicle {
   hubAddress: string;
   status: string;
   partnerName: string;
+  partnerPhone?: string;
+  distance_km?: number;
   rcNumber?: string;
   rcOwnershipType?: 'PRIVATE' | 'COMMERCIAL';
   rcDocumentUrl?: string;
@@ -237,6 +239,7 @@ export interface RentalBooking {
   pickupDate: string;
   returnDate: string;
   pickupTime: string;
+  returnTime?: string;
   deliveryType: 'HUB_PICKUP' | 'DOORSTEP_DELIVERY';
   doorstepAddress?: string;
   totalFare: number;
@@ -246,6 +249,10 @@ export interface RentalBooking {
   otp: number;
   status: string;
   createdAt: string;
+  ownerName?: string;
+  ownerPhone?: string;
+  ownerAddress?: string;
+  paymentStatus?: string;
 }
 
 // ---------------------------------------------------------------------------

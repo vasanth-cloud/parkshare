@@ -452,6 +452,7 @@ export const api = {
     pickupDate: string;
     returnDate: string;
     pickupTime: string;
+    returnTime?: string;
     deliveryType?: string;
     doorstepAddress?: string;
     withInsurance?: boolean;

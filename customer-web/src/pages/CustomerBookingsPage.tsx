@@ -264,10 +264,10 @@ export const CustomerBookingsPage: React.FC = () => {
         {/* Action Link on Top Right */}
         <div className="flex flex-col items-end gap-0.5">
           <Link
-            to="/"
-            className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-0.5"
+            to="/services/rentals?tab=bookings"
+            className="text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center space-x-1"
           >
-            <span>+ Find Spots</span>
+            <span>Rental cars & bikes →</span>
           </Link>
           <Link
             to="/drivers/trips"
