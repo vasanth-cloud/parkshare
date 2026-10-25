@@ -31,13 +31,22 @@ export const AppContent: React.FC = () => {
   const isAuthPage = location.pathname === '/auth';
   const isHomePage = location.pathname === '/' || location.pathname === '/services';
   const isRentalDashboard = location.pathname === '/rental' || location.pathname === '/rental-dashboard' || location.pathname === '/partner/rental/dashboard';
+  const isParkingHostPage = [
+    '/dashboard',
+    '/parking',
+    '/verification',
+    '/kyc',
+    '/create-listing',
+    '/pin-verify',
+    '/earnings'
+  ].includes(location.pathname);
   const showNav = !isAuthPage && !isHomePage && !isRentalDashboard;
   const { user } = useAuth();
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors duration-200">
       {showNav && <Navbar />}
-      <main className={`flex-grow ${user && showNav ? 'pb-24' : ''}`}>
+      <main className={`flex-grow ${user && showNav && isParkingHostPage ? 'pb-24' : 'pb-8'}`}>
         <Routes>
           <Route path="/" element={<HostServicesHomePage />} />
           <Route path="/services" element={<HostServicesHomePage />} />
@@ -141,7 +150,7 @@ export const AppContent: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      {showNav && user && <BottomNav />}
+      {showNav && user && isParkingHostPage && <BottomNav />}
       {showNav && !user && <Footer />}
     </div>
   );

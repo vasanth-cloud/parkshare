@@ -374,7 +374,13 @@ export const HostPinVerificationPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            if (window.history.length > 2) {
+              navigate(-1);
+            } else {
+              navigate('/dashboard');
+            }
+          }}
           className="inline-flex items-center space-x-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 py-1.5 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs hover:shadow-xs transition cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5" />

@@ -6,7 +6,7 @@ import { HostIdentityVerificationModal } from '../components/HostIdentityVerific
 import { RectifyListingModal } from '../components/RectifyListingModal';
 import { useAuth } from '../context/AuthContext';
 import { HostAvatar } from '../components/HostAvatar';
-import { PlusCircle, MapPin, Star, Power, CheckCircle, CheckCircle2, ArrowRight, DollarSign, Calendar, Car, AlertCircle, X, ShieldCheck, ShieldAlert, RotateCcw, XCircle, Clock, Trash2 } from 'lucide-react';
+import { PlusCircle, MapPin, Star, Power, CheckCircle, CheckCircle2, ArrowRight, ArrowLeft, DollarSign, Calendar, Car, AlertCircle, X, ShieldCheck, ShieldAlert, RotateCcw, XCircle, Clock, Trash2 } from 'lucide-react';
 
 export const HostDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -238,7 +238,7 @@ export const HostDashboard: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-slate-50 to-gray-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-gray-900 dark:text-slate-100 py-4 sm:py-6 px-3.5 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-5 pb-28 transition-colors duration-200">
       {/* Sleek Greeting Header */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-gray-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3 transition-colors duration-200">
-        <div className="flex items-center space-x-3.5 min-w-0">
+        <div className="flex items-center space-x-3 min-w-0">
           <HostAvatar
             url={user?.profile_photo_url}
             name={user?.full_name}

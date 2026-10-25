@@ -10,7 +10,8 @@ function resolveBackendBase(): string {
   // If running inside Capacitor Native Android/iOS App
   const isCapacitor = typeof window !== 'undefined' && Boolean((window as any).Capacitor?.isNativePlatform?.() || (window as any).Capacitor?.platform === 'android' || (window as any).Capacitor?.platform === 'ios');
   if (isCapacitor) {
-    return 'https://parkshare-backend-9anh.onrender.com';
+    // When connected via USB with ADB reverse, localhost:8000 connects to your local machine
+    return 'http://localhost:8000';
   }
 
   if (rawApiUrl) {

@@ -28,7 +28,6 @@ import {
   Calendar,
   Check,
   BadgeCheck,
-  TrendingUp,
   Fuel,
   Gauge,
   Users,
@@ -366,77 +365,30 @@ export const RegisterRentalVehiclePage: React.FC = () => {
     }
   };
 
-  // Estimated Monthly Earnings Calculator (based on 22 days utilization)
-  const estimatedMonthlyGross = (Number(dailyRate) || 0) * 22;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 select-none">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-12 select-none">
       
       {/* 1. Header Bar */}
-      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 py-3.5 shadow-xs sticky top-0 z-30">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 py-2.5 shadow-xs relative z-10">
+        <div className="max-w-4xl mx-auto flex items-center">
           <button
-            onClick={() => navigate('/services')}
-            className="flex items-center space-x-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition cursor-pointer"
+            type="button"
+            onClick={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate('/rental');
+              }
+            }}
+            className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition cursor-pointer border border-slate-200/80 dark:border-slate-700 group shadow-xs active:scale-95"
+            aria-label="Back"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Partner Hub</span>
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
           </button>
-
-          <div className="flex items-center space-x-2">
-            <span className="text-xs font-black bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
-              <span></span>
-              <span>Self-Drive Fleet Portal</span>
-            </span>
-          </div>
-
-          <Link
-            to="/rental"
-            className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center space-x-1"
-          >
-            <Car className="w-3.5 h-3.5" />
-            <span>Fleet Dashboard</span>
-          </Link>
         </div>
       </div>
 
-      {/* 2. Hero Banner with Earnings Highlight */}
-      <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white py-8 px-4 border-b border-amber-900/40 shadow-md">
-        <div className="max-w-4xl mx-auto space-y-3.5 text-center sm:text-left">
-          <div className="inline-flex items-center space-x-2 bg-amber-500/20 border border-amber-400/30 text-amber-300 px-3 py-1 rounded-full text-xs font-black">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>HOST VEHICLE & RC ONBOARDING</span>
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
-            List Your Car or Bike for Self-Drive Rentals
-          </h1>
-
-          <p className="text-xs sm:text-sm text-amber-100/90 max-w-2xl font-medium">
-            Turn your idle car or two-wheeler into an income stream. Upload your RC book, set your rates, and get verified bookings with guaranteed digital OTP handovers.
-          </p>
-
-          {/* Value Props Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 max-w-3xl">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5 text-center">
-              <span className="block text-sm sm:text-base font-black text-amber-300">₹30k - ₹75k</span>
-              <span className="text-[10px] text-slate-300 font-medium">Earn per month</span>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5 text-center">
-              <span className="block text-sm sm:text-base font-black text-emerald-400">RC Verified</span>
-              <span className="text-[10px] text-slate-300 font-medium">100% Legal & Safe</span>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5 text-center">
-              <span className="block text-sm sm:text-base font-black text-cyan-300">0% Deductible</span>
-              <span className="text-[10px] text-slate-300 font-medium">Damage protection</span>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5 text-center">
-              <span className="block text-sm sm:text-base font-black text-white">Direct UPI</span>
-              <span className="text-[10px] text-slate-300 font-medium">Weekly payouts</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* 3. Main Container */}
       <div className="max-w-4xl mx-auto px-4 mt-6">
@@ -453,7 +405,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                 Listing Created & RC Under Verified Review
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
-                {registeredVehicle.name} Added to Fleet!
+                {registeredVehicle.name} Added to Rentals!
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
                 Your vehicle RC details and photos have been submitted. Your listing is active and available for customer discovery.
@@ -501,7 +453,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block font-bold">Fleet Listing ID:</span>
+                  <span className="text-slate-400 block font-bold">Rental Listing ID:</span>
                   <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{registeredVehicle.id}</span>
                 </div>
               </div>
@@ -513,7 +465,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                 className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-black shadow-md cursor-pointer transition active:scale-95 flex items-center justify-center space-x-1.5"
               >
                 <Car className="w-4 h-4" />
-                <span>Go to Fleet Dashboard</span>
+                <span>Go to Rental Dashboard</span>
               </button>
               <button
                 onClick={() => {
@@ -549,16 +501,11 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                     1
                   </div>
                   <div>
-                    <div className="flex items-center space-x-2">
-                      <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                        Vehicle Registration (RC) & Instant Auto-Fetch
-                      </h3>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-black text-[9px] uppercase tracking-wider">
-                        Parivahan Powered
-                      </span>
-                    </div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                      Vehicle Registration (RC) & Auto-Fetch
+                    </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Enter your vehicle plate number — our live Parivahan integration automatically retrieves make, model, owner, fuel & fitness!
+                      Enter your vehicle plate number to auto-retrieve make, model, owner, fuel & fitness details.
                     </p>
                   </div>
                 </div>
@@ -624,11 +571,6 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Plate Format & Testing Tip */}
-                <div className="flex items-center space-x-1.5 pt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                  <span className="font-bold">Test Tip:</span>
-                  <span>Enter your vehicle registration number (e.g. KA01AB1234, AP09CU7296, or your personal vehicle plate) to test Parivahan verification and auto-fill.</span>
-                </div>
 
                 {/* Verification Error Notice */}
                 {rcVerifyError && (
@@ -732,18 +674,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              ) : (
-                /* Empty state guidance */
-                <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 flex items-center space-x-3 text-xs text-amber-800 dark:text-amber-300">
-                  <Sparkles className="w-5 h-5 shrink-0 text-amber-600" />
-                  <div>
-                    <span className="font-black block">No need to type technical details manually!</span>
-                    <span className="text-slate-600 dark:text-slate-400 text-[11px]">
-                      Enter your registration plate above and click <strong>Verify & Auto-Fetch Details</strong> to automatically retrieve your vehicle specifications.
-                    </span>
-                  </div>
-                </div>
-              )}
+              ) : null}
 
               {/* Transmission & Permit Classification */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
@@ -1046,7 +977,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                         {vehicleName || 'Vehicle Name'}
                       </span>
                       <span className="text-xs font-black text-amber-600 dark:text-amber-400">
-                        ₹{dailyRate}/day
+                        ₹{hourlyRate}/hr
                       </span>
                     </div>
                     <span className="text-[10px] text-slate-400 block mt-0.5 font-bold">
@@ -1057,7 +988,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
               </div>
             </div>
 
-            {/* CARD 3: RENTAL TARIFFS & EARNINGS CALCULATOR */}
+            {/* CARD 3: RENTAL TARIFF */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
                 <div className="flex items-center space-x-2.5">
@@ -1066,84 +997,31 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                      Rental Tariffs & Security Deposit
+                      Rental Tariff
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Set competitive rates based on vehicle category and market demand
+                      Set competitive hourly rate based on vehicle category and market demand
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Daily Rate (₹ / 24 hrs) *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                    <input
-                      type="number"
-                      value={dailyRate}
-                      onChange={(e) => setDailyRate(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-black text-slate-900 dark:text-white"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Hourly Rate (₹ / hour) *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                    <input
-                      type="number"
-                      value={hourlyRate}
-                      onChange={(e) => setHourlyRate(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-black text-slate-900 dark:text-white"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Security Deposit (₹)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                    <input
-                      type="number"
-                      value={securityDeposit}
-                      onChange={(e) => setSecurityDeposit(e.target.value)}
-                      placeholder="0 for Zero Deposit"
-                      className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-black text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">
-                    {Number(securityDeposit) === 0 ? '✓ Zero Deposit badge enabled' : 'Refundable deposit'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Earnings Projection Pill */}
-              <div className="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-emerald-950/40 border border-emerald-500/30 rounded-2xl p-4 flex items-center justify-between text-white">
-                <div className="space-y-0.5">
-                  <span className="text-[10px] uppercase font-black tracking-wider text-emerald-400 flex items-center space-x-1">
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    <span>Estimated Monthly Payout</span>
-                  </span>
-                  <p className="text-xs text-slate-300 font-medium">
-                    At 22 booked days/month (0% platform deduction for 30 days)
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xl font-black text-emerald-400 block font-mono">
-                    ₹{estimatedMonthlyGross.toLocaleString('en-IN')}
-                  </span>
-                  <span className="text-[10px] text-slate-400">Direct to your bank</span>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Hourly Rate (₹ / hour) *
+                </label>
+                <div className="relative max-w-xs">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                  <input
+                    type="number"
+                    value={hourlyRate}
+                    onChange={(e) => {
+                      setHourlyRate(e.target.value);
+                      setDailyRate(String(Number(e.target.value) * 10));
+                    }}
+                    className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-black text-slate-900 dark:text-white"
+                    required
+                  />
                 </div>
               </div>
             </div>
@@ -1157,7 +1035,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                      Hub Location & Handover Guidelines
+                      Hub Location
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Where will the renter collect the vehicle and keys?
@@ -1195,42 +1073,6 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Handover Toggles */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <label className="flex items-center space-x-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={doorstepDeliveryAvailable}
-                    onChange={(e) => setDoorstepDeliveryAvailable(e.target.checked)}
-                    className="w-4 h-4 text-amber-600 rounded-md"
-                  />
-                  <div>
-                    <span className="text-xs font-black block text-slate-800 dark:text-slate-200">
-                      Doorstep Delivery Available
-                    </span>
-                    <span className="text-[10px] text-slate-400 block">
-                      Earn +₹149 extra per delivery trip
-                    </span>
-                  </div>
-                </label>
-
-                <label className="flex items-center space-x-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={keylessLockbox}
-                    onChange={(e) => setKeylessLockbox(e.target.checked)}
-                    className="w-4 h-4 text-amber-600 rounded-md"
-                  />
-                  <div>
-                    <span className="text-xs font-black block text-slate-800 dark:text-slate-200">
-                      Keyless OTP Lock Handover
-                    </span>
-                    <span className="text-[10px] text-slate-400 block">
-                      Renter verifies handover via 4-digit OTP
-                    </span>
-                  </div>
-                </label>
-              </div>
             </div>
 
             {/* CARD 5: OWNER CONTACT & UPI PAYOUT */}
@@ -1254,7 +1096,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Owner / Fleet Name *
+                    Owner / Business Name *
                   </label>
                   <input
                     type="text"
@@ -1303,7 +1145,7 @@ export const RegisterRentalVehiclePage: React.FC = () => {
                   className="w-4 h-4 mt-0.5 text-amber-600 rounded-md shrink-0"
                 />
                 <span className="text-xs text-slate-300 leading-relaxed font-medium">
-                  I certify that the vehicle RC book, insurance, and roadworthiness are valid and authentic under the Motor Vehicles Act. I agree to ParkCo's Fleet Partner Terms of Service.
+                  I certify that the vehicle RC book, insurance, and roadworthiness are valid and authentic under the Motor Vehicles Act. I agree to ParkCo's Rental Partner Terms of Service.
                 </span>
               </label>
 

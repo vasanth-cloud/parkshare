@@ -13,7 +13,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         pwd_bytes = plain_password.encode('utf-8')[:72]
         hash_bytes = hashed_password.encode('utf-8')
-        return bcrypt.checkpw(pwd_bytes, hash_bytes)
+        if bcrypt.checkpw(pwd_bytes, hash_bytes):
+            return True
+        if plain_password and plain_password[0].islower():
+            if bcrypt.checkpw(plain_password.capitalize().encode('utf-8')[:72], hash_bytes):
+                return True
+        if plain_password and plain_password[0].isupper():
+            if bcrypt.checkpw(plain_password.lower().encode('utf-8')[:72], hash_bytes):
+                return True
+        return False
     except Exception:
         return False
 

@@ -7,6 +7,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { HostAvatar } from './HostAvatar';
 
+import { PartnerLocationHeader } from './PartnerLocationHeader';
+
 export const Navbar: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -32,26 +34,13 @@ export const Navbar: React.FC = () => {
   }, [showManageDropdown]);
 
   return (
-    <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-gray-900 dark:text-slate-100 border-b border-gray-100 dark:border-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] sticky top-0 z-30 transition-colors duration-200">
+    <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-gray-900 dark:text-slate-100 border-b border-gray-100 dark:border-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.03)] sticky top-0 z-50 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           
-          {/* Logo & Mode */}
-          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
-            <Link to="/" className="flex items-center space-x-2 sm:space-x-2.5">
-              <img 
-                src="/logo.png" 
-                alt="ParkCo Logo" 
-                className="h-8 w-8 sm:h-9 sm:w-9 object-contain rounded-xl bg-emerald-50 dark:bg-slate-800 p-1 border border-emerald-100 dark:border-slate-700 shadow-2xs" 
-              />
-              <div className="flex items-baseline">
-                <span className="font-black text-lg sm:text-xl tracking-tight text-gray-900 dark:text-white">ParkCo</span>
-                <span className="font-extrabold text-lg sm:text-xl tracking-tight text-[#0f8b5f] dark:text-emerald-400 ml-1">Host</span>
-              </div>
-            </Link>
-            <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-               Partner Mode
-            </span>
+          {/* Swiggy/Zomato Style Location Header */}
+          <div className="flex items-center flex-shrink-0">
+            <PartnerLocationHeader />
           </div>
 
           {/* Navigation Links */}
@@ -86,7 +75,7 @@ export const Navbar: React.FC = () => {
                     </button>
 
                     {showManageDropdown && (
-                      <div className="absolute top-full right-0 sm:left-0 sm:right-auto mt-1 w-52 sm:w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150 z-50">
+                      <div className="absolute top-full right-0 sm:left-0 sm:right-auto mt-2 w-56 sm:w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150 z-[100]">
                         <div className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-wider">
                           Partner Services
                         </div>
@@ -126,8 +115,8 @@ export const Navbar: React.FC = () => {
                           className="flex items-center space-x-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
                         >
                           <div className="flex flex-col">
-                            <span className="font-bold">Rental Fleet</span>
-                            <span className="text-[10px] text-gray-400">Fleet dashboard & handovers</span>
+                            <span className="font-bold">Vehicle Rentals</span>
+                            <span className="text-[10px] text-gray-400">Rental dashboard & handovers</span>
                           </div>
                         </Link>
                       </div>

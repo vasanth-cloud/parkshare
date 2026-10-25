@@ -1269,11 +1269,42 @@ export const HostAuthPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#0f8b5f] hover:bg-[#0c754f] text-white font-bold py-3.5 px-4 rounded-full shadow-md shadow-[#0f8b5f]/25 transition text-xs sm:text-sm flex items-center justify-center space-x-2 disabled:opacity-50 mt-3"
+                className="w-full bg-[#0f8b5f] hover:bg-[#0c754f] text-white font-bold py-3.5 px-4 rounded-full shadow-md shadow-[#0f8b5f]/25 transition text-xs sm:text-sm flex items-center justify-center space-x-2 disabled:opacity-50 mt-3 cursor-pointer"
               >
                 <span>{loading ? 'Processing...' : 'Sign In to Host Portal'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+
+              {/* Quick Fill Host Credentials */}
+              <div className="pt-2">
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-center">
+                  Quick Sign In
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('avasanth081@gmail.com');
+                      setPassword('Vasanth@123');
+                      setError('');
+                    }}
+                    className="py-2 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-xl border border-emerald-200 transition text-center cursor-pointer shadow-2xs"
+                  >
+                    ⚡ Vasanth (Host)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('host@parkshare.com');
+                      setPassword('Host@123');
+                      setError('');
+                    }}
+                    className="py-2 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-xl border border-slate-200 transition text-center cursor-pointer shadow-2xs"
+                  >
+                    ⚡ Demo Partner
+                  </button>
+                </div>
+              </div>
             </>
           )}
         </form>

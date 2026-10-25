@@ -10,11 +10,16 @@ import {
   ShieldCheck,
   TrendingUp,
   DollarSign,
-  ArrowRight
+  ArrowRight,
+  Car,
+  Sparkles,
+  KeyRound,
+  Warehouse
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { HostAvatar } from '../components/HostAvatar';
+import { PartnerLocationHeader } from '../components/PartnerLocationHeader';
 
 export const HostServicesHomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,7 +39,7 @@ export const HostServicesHomePage: React.FC = () => {
       shortTitle: 'Parking Host',
       subtitle: 'Monetize driveways, garages & bays',
       badge: 'Driveways & Garages',
-      iconText:'',
+      icon: <Warehouse className="w-7 h-7 text-emerald-600 dark:text-emerald-400 stroke-[2.2]" />,
       route: '/dashboard',
       actionText: 'Manage Spaces',
       theme: {
@@ -46,13 +51,13 @@ export const HostServicesHomePage: React.FC = () => {
     },
     {
       id: 'drivers',
-      title: 'Acting Driver Partner',
-      shortTitle: 'Acting Driver',
-      subtitle: 'Drive customer cars for city & outstation trips',
-      badge: 'Chauffeur Gigs',
-      iconText:'',
+      title: 'Rental Driver Partner',
+      shortTitle: 'Rental Driver',
+      subtitle: 'Drive customer and rental cars for city & outstation trips',
+      badge: 'Rental Driver',
+      icon: <Car className="w-7 h-7 text-indigo-600 dark:text-indigo-400 stroke-[2.2]" />,
       route: '/driver',
-      actionText: 'Driver Gigs',
+      actionText: 'Driver Dashboard',
       theme: {
         border: 'border-indigo-500/30 hover:border-indigo-500',
         badgeBg: 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border-indigo-400/20',
@@ -66,7 +71,7 @@ export const HostServicesHomePage: React.FC = () => {
       shortTitle: 'Car Spa',
       subtitle: 'Doorstep waterless wash & foam detailing',
       badge: 'Wash & Detailing',
-      iconText: '',
+      icon: <Sparkles className="w-7 h-7 text-cyan-600 dark:text-cyan-400 stroke-[2.2]" />,
       route: '/register/car-spa',
       actionText: 'Wash Partner',
       theme: {
@@ -78,13 +83,13 @@ export const HostServicesHomePage: React.FC = () => {
     },
     {
       id: 'rentals',
-      title: 'Rental Fleet Partner',
-      shortTitle: 'Self-Drive Fleet',
-      subtitle: 'List your idle cars or bikes for self-drive',
-      badge: 'Vehicle Fleet',
-      iconText:'',
+      title: 'Vehicle Rental Partner',
+      shortTitle: 'Vehicle Rentals',
+      subtitle: 'List your idle cars or bikes for rentals',
+      badge: 'Vehicle Rentals',
+      icon: <KeyRound className="w-7 h-7 text-amber-600 dark:text-amber-400 stroke-[2.2]" />,
       route: '/rental',
-      actionText: 'Fleet Dashboard',
+      actionText: 'Rental Dashboard',
       theme: {
         border: 'border-amber-500/30 hover:border-amber-500',
         badgeBg: 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border-amber-500/20',
@@ -131,7 +136,7 @@ export const HostServicesHomePage: React.FC = () => {
       setSearchError('');
       navigate('/dashboard');
     } else {
-      setSearchError(`No services match "${searchQuery}". Search is available for Parking Host, Acting Driver, Car Spa, and Rental Fleet.`);
+      setSearchError(`No services match "${searchQuery}". Search is available for Parking Host, Rental Driver, Car Spa, and Vehicle Rentals.`);
     }
   };
 
@@ -141,21 +146,9 @@ export const HostServicesHomePage: React.FC = () => {
       {/* Top Header Bar */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 py-3 shadow-xs">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <Link to="/services" className="flex items-center space-x-2.5">
-            <img
-              src="/logo.png"
-              alt="ParkCo Partner"
-              className="w-9 h-9 rounded-xl object-contain bg-emerald-500/10 p-0.5 border border-emerald-500/20"
-            />
-            <div className="flex flex-col">
-              <span className="text-base font-black tracking-tight text-slate-900 dark:text-white leading-none">
-                ParkCo Partner
-              </span>
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mt-0.5">
-                Host & Partner Network
-              </span>
-            </div>
-          </Link>
+          <div className="flex items-center flex-shrink-0">
+            <PartnerLocationHeader />
+          </div>
 
           <div className="flex items-center space-x-2">
             <button
@@ -240,7 +233,7 @@ export const HostServicesHomePage: React.FC = () => {
               <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
               <input
                 type="text"
-                placeholder="Search services: Parking, Drivers, Car Spa, Fleet Rentals..."
+                placeholder="Search services: Parking, Rental Drivers, Car Spa, Vehicle Rentals..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -329,8 +322,8 @@ export const HostServicesHomePage: React.FC = () => {
                 onClick={() => navigate(srv.route)}
                 className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-95 shadow-xs cursor-pointer group"
               >
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-2 border shadow-xs group-hover:scale-110 transition-transform duration-200 ${srv.theme.iconBg}`}>
-                  {srv.iconText}
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-2 border shadow-xs group-hover:scale-110 transition-transform duration-200 ${srv.theme.iconBg}`}>
+                  {srv.icon}
                 </div>
                 <span className="text-xs font-black text-slate-900 dark:text-white leading-tight">
                   {srv.shortTitle}
@@ -359,9 +352,9 @@ export const HostServicesHomePage: React.FC = () => {
             >
               <div className="flex items-center space-x-3.5 min-w-0">
                 <div
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border shadow-2xs shrink-0 group-hover:scale-105 transition-transform ${srv.theme.iconBg}`}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-2xs shrink-0 group-hover:scale-105 transition-transform ${srv.theme.iconBg}`}
                 >
-                  {srv.iconText}
+                  {srv.icon}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center space-x-2">

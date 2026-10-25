@@ -278,11 +278,17 @@ export const DriverDashboardPage: React.FC = () => {
       <div className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <button
-            onClick={() => navigate('/')}
-            className="flex items-center space-x-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 transition"
+            onClick={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate('/services');
+              }
+            }}
+            className="flex items-center space-x-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 group"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Services</span>
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back</span>
           </button>
           <span className="text-xs font-black bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2.5 py-0.5 rounded-full flex items-center gap-1">
              Driver Partner
