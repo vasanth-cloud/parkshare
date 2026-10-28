@@ -196,6 +196,16 @@ export const SelfDriveRentalPage: React.FC = () => {
   const [confirmedBooking, setConfirmedBooking] = useState<RentalBooking | null>(null);
   const [bookingError, setBookingError] = useState('');
   const [copiedOtp, setCopiedOtp] = useState<number | null>(null);
+  const [expandedOtps, setExpandedOtps] = useState<Record<string, boolean>>({});
+  const [expandedMaps, setExpandedMaps] = useState<Record<string, boolean>>({});
+
+  const toggleOtp = (bookingId: string) => {
+    setExpandedOtps(prev => ({ ...prev, [bookingId]: !prev[bookingId] }));
+  };
+
+  const toggleMap = (bookingId: string) => {
+    setExpandedMaps(prev => ({ ...prev, [bookingId]: !prev[bookingId] }));
+  };
 
   // Filter Bookings Sub-tab
   const [bookingsFilter, setBookingsFilter] = useState<'ALL' | 'ACTIVE' | 'UPCOMING' | 'COMPLETED'>('ALL');
@@ -1135,15 +1145,57 @@ export const SelfDriveRentalPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Handover OTP / Live Rental Timer */}
-                {b.status === 'IN_PROGRESS' ? (
-                  <LiveRentalTimer
-                    status={b.status}
-                    tripStartedAt={b.tripStartedAt}
-                    pickupTime={b.pickupTime}
-                  />
-                ) : (
-                  <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-500/30 space-y-2">
+                {/* Live Rental Timer if active */}
+                {b.status === 'IN_PROGRESS' && (
+                  <div className="pt-1">
+                    <LiveRentalTimer
+                      status={b.status}
+                      tripStartedAt={b.tripStartedAt}
+                      pickupTime={b.pickupTime}
+                    />
+                  </div>
+                )}
+
+                {/* Quick Action Toggle Buttons for OTP & Map */}
+                <div className="flex items-center gap-2 pt-1">
+                  {b.status !== 'IN_PROGRESS' && (
+                    <button
+                      type="button"
+                      onClick={() => toggleOtp(b.bookingId)}
+                      className={`flex-1 py-2.5 px-3 rounded-2xl font-black text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95 border ${
+                        expandedOtps[b.bookingId]
+                          ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-sm'
+                          : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-500/30 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                      }`}
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>{expandedOtps[b.bookingId] ? 'Hide OTP' : 'View OTP'}</span>
+                      <span className="text-[10px] opacity-75 font-mono">
+                        {expandedOtps[b.bookingId] ? '▲' : '▼'}
+                      </span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => toggleMap(b.bookingId)}
+                    className={`flex-1 py-2.5 px-3 rounded-2xl font-black text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95 border ${
+                      expandedMaps[b.bookingId]
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                    }`}
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    <span>{expandedMaps[b.bookingId] ? 'Hide Map' : 'View Route Map'}</span>
+                    <span className="text-[10px] opacity-75 font-mono">
+                      {expandedMaps[b.bookingId] ? '▲' : '▼'}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Collapsible Handover OTP Card */}
+                {expandedOtps[b.bookingId] && b.status !== 'IN_PROGRESS' && (
+                  <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border-2 border-amber-500/50 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2.5">
                         <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black">
@@ -1153,7 +1205,7 @@ export const SelfDriveRentalPage: React.FC = () => {
                           <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 block">
                             Show this OTP to Host Upon Arrival
                           </span>
-                          <span className="text-xl font-black text-slate-900 dark:text-white font-mono tracking-widest">
+                          <span className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-widest">
                             {b.otp}
                           </span>
                         </div>
@@ -1162,7 +1214,7 @@ export const SelfDriveRentalPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => copyToClipboard(b.otp)}
-                        className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-white/80 dark:bg-slate-900/80 px-2.5 py-1 rounded-xl border border-amber-500/20 hover:bg-white flex items-center gap-1 cursor-pointer"
+                        className="text-xs font-bold text-amber-800 dark:text-amber-300 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-amber-500/30 hover:bg-amber-100/50 flex items-center gap-1 cursor-pointer shadow-xs"
                       >
                         {copiedOtp === b.otp ? (
                           <>
@@ -1177,21 +1229,25 @@ export const SelfDriveRentalPage: React.FC = () => {
                         )}
                       </button>
                     </div>
-                    <div className="text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1 font-medium bg-amber-100/60 dark:bg-amber-900/40 py-1 px-2.5 rounded-lg">
+                    <div className="text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1.5 font-medium bg-amber-100/70 dark:bg-amber-900/50 py-1.5 px-3 rounded-xl">
                       <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin shrink-0" />
-                      <span>Timer starts once host enters this OTP at handover.</span>
+                      <span>Timer starts automatically once the host enters this OTP at handover.</span>
                     </div>
                   </div>
                 )}
 
-                {/* Route Navigation Map */}
-                <RentalRouteNavigationMap
-                  customerCoords={userCoords}
-                  hostCoords={{ lat: b.hostLat || 12.9716, lng: b.hostLng || 77.6412 }}
-                  hostAddress={b.doorstepAddress || b.ownerAddress || b.vehicle.hubAddress}
-                  hostName={b.ownerName}
-                  doorstepAddress={b.doorstepAddress}
-                />
+                {/* Collapsible Route Navigation Map */}
+                {expandedMaps[b.bookingId] && (
+                  <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <RentalRouteNavigationMap
+                      customerCoords={userCoords}
+                      hostCoords={{ lat: b.hostLat || 12.9716, lng: b.hostLng || 77.6412 }}
+                      hostAddress={b.doorstepAddress || b.ownerAddress || b.vehicle.hubAddress}
+                      hostName={b.ownerName}
+                      doorstepAddress={b.doorstepAddress}
+                    />
+                  </div>
+                )}
 
                 {/* Schedule & Handover Details */}
                 <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-2xl">

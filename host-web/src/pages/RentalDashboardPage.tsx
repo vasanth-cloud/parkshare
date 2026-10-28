@@ -427,6 +427,14 @@ export const RentalDashboardPage: React.FC = () => {
     });
   }, [vehicles]);
 
+  // Helper to find active/confirmed booking for a vehicle
+  const getVehicleActiveBooking = (vehicleId: string) => {
+    return bookings.find(
+      b => (b.vehicle?.id === vehicleId || b.vehicleId === vehicleId || b.vehicle?.id?.endsWith(vehicleId) || vehicleId.endsWith(b.vehicle?.id || '---')) &&
+           (b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS' || b.status === 'ACTIVE')
+    );
+  };
+
   const filteredVehicles = displayVehicles.filter(v => {
     if (vehicleTypeFilter !== 'ALL' && v.vehicleType !== vehicleTypeFilter) return false;
     if (searchQuery.trim() && !v.name.toLowerCase().includes(searchQuery.toLowerCase().trim())) return false;
@@ -779,6 +787,93 @@ export const RentalDashboardPage: React.FC = () => {
               </Link>
             </div>
 
+            {/* Urgent Host Notification for Active Customer Bookings */}
+            {(() => {
+              const pendingBookings = bookings.filter(b => b.status === 'CONFIRMED' || b.status === 'ACTIVE' || b.status === 'IN_PROGRESS');
+              if (pendingBookings.length === 0) return null;
+
+              return (
+                <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20 border-2 border-amber-500/70 shadow-md animate-in slide-in-from-top-2 duration-300 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-3 h-3 rounded-full bg-amber-500 animate-ping" />
+                      <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                        Vehicle Booked — Please Be Available at Hub / Ready for Handover!
+                      </h3>
+                    </div>
+                    <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-mono">
+                      {pendingBookings.length} Active Booking{pendingBookings.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    A customer has reserved your vehicle. Do not leave your hub or schedule other tasks without completing handover. Customer will arrive and share their 4-digit verification OTP.
+                  </p>
+
+                  <div className="space-y-2">
+                    {pendingBookings.map((b) => (
+                      <div
+                        key={b.bookingId || b.id}
+                        className="p-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-slate-900 dark:text-white">
+                              🚗 {b.vehicle?.name || 'PASSENGER CAR / SUV'}
+                            </span>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                              b.status === 'IN_PROGRESS'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            }`}>
+                              {b.status === 'IN_PROGRESS' ? '🚗 Trip In Progress' : '🔒 Reserved / Pending Pickup'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                            <span>👤 <strong>{b.customerName || 'Customer'}</strong></span>
+                            <span>📞 <strong>{b.customerPhone}</strong></span>
+                            <span>📍 {b.deliveryType === 'DOORSTEP_DELIVERY' ? `Door Delivery: ${b.doorstepAddress || 'Live GPS Address'}` : `Hub Pickup (${b.vehicle?.hubAddress || 'Hub'})`}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {b.customerPhone && (
+                            <a
+                              href={`tel:${b.customerPhone}`}
+                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-xs"
+                            >
+                              <Phone className="w-3.5 h-3.5" />
+                              <span>Call Customer</span>
+                            </a>
+                          )}
+                          {b.status !== 'IN_PROGRESS' ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedBookingForHandover(b);
+                                setInputOtp('');
+                                setOtpError('');
+                                setHandoverSuccess(false);
+                              }}
+                              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1 shadow-xs cursor-pointer active:scale-95 transition"
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
+                              <span>Enter Handover OTP</span>
+                            </button>
+                          ) : (
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-xl">
+                              Trip Active
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Filter & Search Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="relative flex-1">
@@ -863,14 +958,31 @@ export const RentalDashboardPage: React.FC = () => {
                             alt={vehicle.name}
                             className="w-full h-full object-cover"
                           />
-                          <div className="absolute top-3 left-3 flex gap-1.5">
-                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md backdrop-blur-md ${
-                              isActive
-                                ? 'bg-emerald-600/90 text-white'
-                                : 'bg-slate-800/90 text-slate-200'
-                            }`}>
-                              {isActive ? '● Available' : 'Paused'}
-                            </span>
+                          <div className="absolute top-3 left-3 flex gap-1.5 z-10">
+                            {(() => {
+                              const activeBooking = getVehicleActiveBooking(vehicle.id);
+                              if (activeBooking) {
+                                return (
+                                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full shadow-md backdrop-blur-md flex items-center gap-1.5 ${
+                                    activeBooking.status === 'IN_PROGRESS'
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-rose-600 text-white animate-pulse'
+                                  }`}>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                    {activeBooking.status === 'IN_PROGRESS' ? '🚗 Trip In Progress' : '🔒 BOOKED BY CUSTOMER'}
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md backdrop-blur-md ${
+                                  isActive
+                                    ? 'bg-emerald-600/90 text-white'
+                                    : 'bg-slate-800/90 text-slate-200'
+                                }`}>
+                                  {isActive ? '● Available' : 'Paused'}
+                                </span>
+                              );
+                            })()}
                           </div>
                           <div className="absolute top-3 right-3">
                             <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-white/90 dark:bg-slate-900/90 text-slate-900 dark:text-white shadow-md">
@@ -950,6 +1062,66 @@ export const RentalDashboardPage: React.FC = () => {
                               {vehicle.mileageOrRange}
                             </span>
                           </div>
+
+                          {/* Active Reservation Details inside Vehicle Card */}
+                          {(() => {
+                            const activeBooking = getVehicleActiveBooking(vehicle.id);
+                            if (!activeBooking) return null;
+
+                            return (
+                              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border-2 border-amber-500/50 space-y-2 mt-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-black uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                    {activeBooking.status === 'IN_PROGRESS' ? 'Rental Trip In Progress' : 'Booked & Arriving Soon'}
+                                  </span>
+                                  <span className="text-[10px] font-mono font-bold text-slate-500">
+                                    #{activeBooking.bookingId || activeBooking.id}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center justify-between text-xs">
+                                  <div>
+                                    <span className="font-black text-slate-900 dark:text-white block">
+                                      👤 {activeBooking.customerName || 'Customer'}
+                                    </span>
+                                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                                      {activeBooking.deliveryType === 'DOORSTEP_DELIVERY'
+                                        ? `🚚 Door Delivery: ${activeBooking.doorstepAddress || 'Live GPS Handover'}`
+                                        : `🏢 Hub Pickup (${vehicle.hubAddress || vehicle.city})`}
+                                    </span>
+                                  </div>
+                                  {activeBooking.customerPhone && (
+                                    <a
+                                      href={`tel:${activeBooking.customerPhone}`}
+                                      className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow-xs shrink-0"
+                                    >
+                                      <Phone className="w-3 h-3" />
+                                      <span>Call</span>
+                                    </a>
+                                  )}
+                                </div>
+
+                                {activeBooking.status === 'IN_PROGRESS' ? (
+                                  <LiveRentalTimer status={activeBooking.status} tripStartedAt={activeBooking.tripStartedAt} />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedBookingForHandover(activeBooking);
+                                      setInputOtp('');
+                                      setOtpError('');
+                                      setHandoverSuccess(false);
+                                    }}
+                                    className="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition"
+                                  >
+                                    <KeyRound className="w-3.5 h-3.5" />
+                                    <span>Verify Customer Handover OTP</span>
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
 
