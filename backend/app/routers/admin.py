@@ -49,10 +49,11 @@ def get_admin_stats(
         driver_payouts = round(driver_revenue * 0.90, 2)
 
     # 3. Car Spa & Detailing Service Financials
-    from app.services.car_spa_service import CarSpaService
-    total_car_spas = len(CarSpaService.get_all_spas())
-    spa_revenue = float(CarSpaService.get_total_revenue())
-    spa_orders = CarSpaService.get_total_bookings()
+    from app.services.car_spa_service import CarSpaServiceApp
+    from app.models.car_spa import CarSpaStatusEnum
+    total_car_spas = CarSpaServiceApp.count_centers(db, status=CarSpaStatusEnum.ACTIVE.value)
+    spa_revenue = float(CarSpaServiceApp.get_total_revenue(db))
+    spa_orders = CarSpaServiceApp.get_total_bookings(db)
     spa_commission = round(spa_revenue * 0.10, 2)
     spa_payouts = round(spa_revenue * 0.90, 2)
 
@@ -149,21 +150,24 @@ def get_admin_stats(
             )
         )
 
-    # Add spa transactions
-    for s_book in CarSpaService.get_all_bookings():
+    # Add spa transactions (paid bookings)
+    for s_book in CarSpaServiceApp.list_admin_bookings(db):
+        if not s_book.paid_at and (s_book.amount_paid or 0) <= 0:
+            continue
+        gross = float(s_book.amount_paid or s_book.service_price or 0)
         classified_transactions.append(
             ClassifiedTransactionOut(
-                id=s_book.bookingId,
+                id=s_book.booking_reference,
                 service="CAR_SPA",
                 service_label="Car Spa Detailing",
                 service_icon="",
-                booking_reference=s_book.bookingId,
-                customer_name=s_book.package.name if s_book.package else "Spa Service",
-                gross_amount=s_book.finalPrice,
-                commission=round(s_book.finalPrice * 0.10, 2),
-                net_payout=round(s_book.finalPrice * 0.90, 2),
-                status="COMPLETED",
-                date=s_book.createdAt or "Recently",
+                booking_reference=s_book.booking_reference,
+                customer_name=(s_book.customer.full_name if s_book.customer else None) or s_book.service_name,
+                gross_amount=round(gross, 2),
+                commission=round(gross * 0.10, 2),
+                net_payout=round(gross * 0.90, 2),
+                status=s_book.status,
+                date=s_book.created_at.isoformat() if s_book.created_at else "Recently",
                 payment_method="UPI / Razorpay"
             )
         )

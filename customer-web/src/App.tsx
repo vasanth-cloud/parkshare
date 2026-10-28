@@ -18,6 +18,7 @@ import { ActingDriversPage } from './pages/ActingDriversPage';
 import { DriverTripPage } from './pages/DriverTripPage';
 import { MyDriverTripsPage } from './pages/MyDriverTripsPage';
 import { CarSpaPage } from './pages/CarSpaPage';
+import { MyCarSpaBookingsPage, CarSpaBookingDetailPage } from './pages/MyCarSpaBookingsPage';
 import { SelfDriveRentalPage } from './pages/SelfDriveRentalPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -111,6 +112,22 @@ export const AppContent: React.FC = () => {
           />
           <Route path="/services/car-spa" element={<CarSpaPage />} />
           <Route path="/car-spa" element={<CarSpaPage />} />
+          <Route
+            path="/car-spa/bookings"
+            element={
+              <ProtectedRoute>
+                <MyCarSpaBookingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/car-spa/bookings/:id"
+            element={
+              <ProtectedRoute>
+                <CarSpaBookingDetailPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/services/rentals" element={<SelfDriveRentalPage />} />
           <Route path="/rentals" element={<SelfDriveRentalPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -359,24 +359,69 @@ export interface DriverBooking {
   updated_at?: string | null;
 }
 
+export interface CarSpaServiceItem {
+  id: number;
+  center_id: number;
+  name: string;
+  description?: string | null;
+  price: number;
+  duration_minutes: number;
+  is_active: boolean;
+}
+
 export interface CarSpaCenter {
-  id: string;
-  centerName: string;
-  ownerName: string;
-  phone: string;
+  id: number;
+  host_id: number;
+  name: string;
   city: string;
   address: string;
-  serviceType: 'DOORSTEP_MOBILE' | 'WORKSHOP_BAY' | 'BOTH';
-  bayCapacity: number;
-  operatingHours: string;
-  servicesOffered: string[];
-  rating: number;
-  totalOrders: number;
-  isVerified: boolean;
-  status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'REJECTED';
+  latitude?: number | null;
+  longitude?: number | null;
+  phone?: string | null;
+  description?: string | null;
+  photo_url?: string | null;
+  operating_hours?: string | null;
+  status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'REJECTED' | string;
+  rejection_reason?: string | null;
+  services: CarSpaServiceItem[];
+  contact_unlocked?: boolean;
+  created_at?: string | null;
+  // Legacy aliases used by older UI fragments
+  centerName?: string;
+  ownerName?: string;
+  operatingHours?: string;
+  servicesOffered?: string[];
   photo?: string;
   rejectionReason?: string;
-  createdAt?: string;
+}
+
+export interface CarSpaBooking {
+  id: number;
+  booking_reference: string;
+  center_id: number;
+  service_id?: number | null;
+  customer_id: number;
+  service_name: string;
+  service_price: number;
+  spa_name: string;
+  spa_city: string;
+  spa_address?: string | null;
+  spa_phone?: string | null;
+  wanted_date: string;
+  customer_note?: string | null;
+  slot_start?: string | null;
+  slot_end?: string | null;
+  status: string;
+  amount_paid: number;
+  paid_at?: string | null;
+  contact_unlocked: boolean;
+  customer?: {
+    id: number;
+    full_name: string;
+    phone_number?: string | null;
+    email?: string | null;
+  } | null;
+  created_at?: string | null;
 }
 
 export interface RentalPartnerVehicle {

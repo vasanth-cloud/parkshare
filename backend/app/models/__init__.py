@@ -15,6 +15,14 @@ from app.models.driver import (
     DriverBookingStatusEnum,
     DriverPaymentPurposeEnum,
 )
+from app.models.car_spa import (
+    CarSpaCenter,
+    CarSpaService,
+    CarSpaBooking,
+    CarSpaPayment,
+    CarSpaStatusEnum,
+    CarSpaBookingStatusEnum,
+)
 
 __all__ = [
     "ActingDriverProfile",
@@ -24,6 +32,12 @@ __all__ = [
     "DriverStatusEnum",
     "DriverBookingStatusEnum",
     "DriverPaymentPurposeEnum",
+    "CarSpaCenter",
+    "CarSpaService",
+    "CarSpaBooking",
+    "CarSpaPayment",
+    "CarSpaStatusEnum",
+    "CarSpaBookingStatusEnum",
     "Base",
     "User",
     "Host",

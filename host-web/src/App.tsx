@@ -16,6 +16,7 @@ import { HostVerificationPage } from './pages/HostVerificationPage';
 import { RegisterDriverPage } from './pages/RegisterDriverPage';
 import { DriverDashboardPage } from './pages/DriverDashboardPage';
 import { RegisterCarSpaPage } from './pages/RegisterCarSpaPage';
+import { CarSpaDashboardPage } from './pages/CarSpaDashboardPage';
 import { RegisterRentalVehiclePage } from './pages/RegisterRentalVehiclePage';
 import { RentalDashboardPage } from './pages/RentalDashboardPage';
 
@@ -64,6 +65,22 @@ export const AppContent: React.FC = () => {
           />
           <Route path="/register/car-spa" element={<RegisterCarSpaPage />} />
           <Route path="/partner/car-spa" element={<RegisterCarSpaPage />} />
+          <Route
+            path="/partner/car-spa/dashboard"
+            element={
+              <ProtectedRoute>
+                <CarSpaDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/car-spa"
+            element={
+              <ProtectedRoute>
+                <CarSpaDashboardPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/register/rental" element={<RegisterRentalVehiclePage />} />
           <Route path="/partner/rental" element={<RegisterRentalVehiclePage />} />
           <Route path="/register/fleet" element={<RegisterRentalVehiclePage />} />

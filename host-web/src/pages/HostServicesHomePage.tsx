@@ -72,7 +72,7 @@ export const HostServicesHomePage: React.FC = () => {
       subtitle: 'Doorstep waterless wash & foam detailing',
       badge: 'Wash & Detailing',
       icon: <Sparkles className="w-7 h-7 text-cyan-600 dark:text-cyan-400 stroke-[2.2]" />,
-      route: '/register/car-spa',
+      route: '/partner/car-spa/dashboard',
       actionText: 'Wash Partner',
       theme: {
         border: 'border-cyan-500/30 hover:border-cyan-500',
@@ -128,7 +128,7 @@ export const HostServicesHomePage: React.FC = () => {
       navigate('/driver');
     } else if (q.includes('spa') || q.includes('wash') || q.includes('clean') || q.includes('detail')) {
       setSearchError('');
-      navigate('/register/car-spa');
+      navigate('/partner/car-spa/dashboard');
     } else if (q.includes('rent') || q.includes('rental') || q.includes('fleet') || q.includes('vehicle')) {
       setSearchError('');
       navigate('/rental');
