@@ -6,10 +6,20 @@ import {
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
 
 function resolveBackendBase(): string {
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('parkshare_custom_backend');
+    if (custom) return custom.replace(/\/+$/, '');
+  }
+
   // If running inside Capacitor Native Android/iOS App
   const isCapacitor = typeof window !== 'undefined' && Boolean((window as any).Capacitor?.isNativePlatform?.() || (window as any).Capacitor?.platform === 'android' || (window as any).Capacitor?.platform === 'ios');
   if (isCapacitor) {
-    return 'https://parkshare-backend-9anh.onrender.com';
+    if (typeof window !== 'undefined') {
+      const active = localStorage.getItem('parkshare_active_backend');
+      if (active) return active;
+    }
+    // Default to localhost:8000 (ADB reverse over USB)
+    return 'http://localhost:8000';
   }
 
   if (rawApiUrl) {
@@ -22,7 +32,7 @@ function resolveBackendBase(): string {
     }
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
-      return 'https://parkshare-backend-9anh.onrender.com';
+      return 'http://localhost:8000';
     }
     if (host === '10.0.2.2') {
       return 'http://10.0.2.2:8000';
@@ -31,11 +41,26 @@ function resolveBackendBase(): string {
       return `http://${host}:8000`;
     }
   }
-  return 'https://parkshare-backend-9anh.onrender.com';
+  return 'http://localhost:8000';
 }
 
-export const BACKEND_BASE = resolveBackendBase();
+export let BACKEND_BASE = resolveBackendBase();
 const API_BASE = `${BACKEND_BASE}/api/v1`;
+
+if (typeof window !== 'undefined') {
+  const isCapacitor = Boolean((window as any).Capacitor?.isNativePlatform?.() || (window as any).Capacitor?.platform === 'android' || (window as any).Capacitor?.platform === 'ios');
+  if (isCapacitor) {
+    fetch(`${BACKEND_BASE}/health`, { method: 'GET' }).catch(() => {
+      const fallback = BACKEND_BASE.includes('localhost') ? 'http://192.168.1.17:8000' : 'http://localhost:8000';
+      fetch(`${fallback}/health`, { method: 'GET' })
+        .then(() => {
+          BACKEND_BASE = fallback;
+          localStorage.setItem('parkshare_active_backend', fallback);
+        })
+        .catch(() => {});
+    });
+  }
+}
 
 export function getFullImageUrl(url?: string): string {
   if (!url) return '';
@@ -84,11 +109,32 @@ async function extractErrorMessage(res: Response, fallback: string): Promise<str
 }
 
 async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
+  const isCapacitor = typeof window !== 'undefined' && Boolean((window as any).Capacitor?.isNativePlatform?.() || (window as any).Capacitor?.platform === 'android' || (window as any).Capacitor?.platform === 'ios');
+
   try {
     return await fetch(url, options);
   } catch (err: any) {
+    if (isCapacitor && (err.name === 'TypeError' || err.message?.toLowerCase().includes('fetch'))) {
+      const candidates = [
+        'http://localhost:8000',
+        'http://192.168.1.17:8000',
+      ];
+      for (const cand of candidates) {
+        if (!url.startsWith(cand)) {
+          const altUrl = url.replace(BACKEND_BASE, cand);
+          try {
+            const res = await fetch(altUrl, options);
+            BACKEND_BASE = cand;
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('parkshare_active_backend', cand);
+            }
+            return res;
+          } catch {}
+        }
+      }
+    }
     if (err.name === 'TypeError' || err.message?.toLowerCase().includes('fetch')) {
-      throw new Error(`Unable to reach ParkCo server at ${BACKEND_BASE}. Please verify that the backend is started.`);
+      throw new Error(`Unable to reach ParkCo server at ${BACKEND_BASE}. Please ensure your PC backend is running and USB or Wi-Fi is connected.`);
     }
     throw err;
   }
@@ -123,7 +169,7 @@ export const api = {
   },
 
   updateProfilePhoto: async (profile_photo_url: string): Promise<User> => {
-    const res = await fetch(`${API_BASE}/auth/profile-photo`, {
+    const res = await safeFetch(`${API_BASE}/auth/profile-photo`, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify({ profile_photo_url }),
@@ -134,13 +180,13 @@ export const api = {
 
   // Vehicles
   getVehicles: async (): Promise<Vehicle[]> => {
-    const res = await fetch(`${API_BASE}/vehicles`, { headers: getHeaders() });
+    const res = await safeFetch(`${API_BASE}/vehicles`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch vehicles');
     return res.json();
   },
 
   addVehicle: async (data: any): Promise<Vehicle> => {
-    const res = await fetch(`${API_BASE}/vehicles`, {
+    const res = await safeFetch(`${API_BASE}/vehicles`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -150,7 +196,7 @@ export const api = {
   },
 
   deleteVehicle: async (id: number): Promise<void> => {
-    const res = await fetch(`${API_BASE}/vehicles/${id}`, {
+    const res = await safeFetch(`${API_BASE}/vehicles/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -167,20 +213,20 @@ export const api = {
     if (params.lng !== undefined) query.append('lng', params.lng.toString());
     if (params.radius_km !== undefined) query.append('radius_km', params.radius_km.toString());
 
-    const res = await fetch(`${API_BASE}/listings/search?${query.toString()}`);
+    const res = await safeFetch(`${API_BASE}/listings/search?${query.toString()}`);
     if (!res.ok) throw new Error('Search failed');
     return res.json();
   },
 
   getListingDetail: async (id: number): Promise<ParkingListing> => {
-    const res = await fetch(`${API_BASE}/listings/${id}`, { headers: getHeaders() });
+    const res = await safeFetch(`${API_BASE}/listings/${id}`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to load listing detail');
     return res.json();
   },
 
   // Bookings
   calculatePrice: async (listing_id: number, start_time: string, end_time: string, booking_product_type?: string) => {
-    const res = await fetch(`${API_BASE}/bookings/calculate-price`, {
+    const res = await safeFetch(`${API_BASE}/bookings/calculate-price`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ listing_id, start_time, end_time, booking_product_type }),
@@ -190,7 +236,7 @@ export const api = {
   },
 
   createBooking: async (data: { listing_id: number; vehicle_id: number; start_time: string; end_time: string; booking_product_type?: string }): Promise<Booking> => {
-    const res = await fetch(`${API_BASE}/bookings`, {
+    const res = await safeFetch(`${API_BASE}/bookings`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -200,14 +246,14 @@ export const api = {
   },
 
   getMyBookings: async (): Promise<Booking[]> => {
-    const res = await fetch(`${API_BASE}/bookings/my-bookings`, { headers: getHeaders() });
+    const res = await safeFetch(`${API_BASE}/bookings/my-bookings`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch bookings');
     return res.json();
   },
 
   // Payments
   createPaymentOrder: async (booking_id: number) => {
-    const res = await fetch(`${API_BASE}/payments/create-order`, {
+    const res = await safeFetch(`${API_BASE}/payments/create-order`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ booking_id }),
@@ -217,7 +263,7 @@ export const api = {
   },
 
   verifyPayment: async (data: { booking_id: number; order_id: string; payment_id: string; signature: string }) => {
-    const res = await fetch(`${API_BASE}/payments/verify`, {
+    const res = await safeFetch(`${API_BASE}/payments/verify`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -230,13 +276,13 @@ export const api = {
   },
 
   getActiveBooking: async (): Promise<Booking | null> => {
-    const res = await fetch(`${API_BASE}/bookings/active`, { headers: getHeaders() });
+    const res = await safeFetch(`${API_BASE}/bookings/active`, { headers: getHeaders() });
     if (!res.ok) return null;
     return res.json();
   },
 
   endParking: async (booking_id: number, otp?: string): Promise<Booking> => {
-    const res = await fetch(`${API_BASE}/bookings/${booking_id}/end-parking`, {
+    const res = await safeFetch(`${API_BASE}/bookings/${booking_id}/end-parking`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(otp ? { otp } : {}),
@@ -246,13 +292,13 @@ export const api = {
   },
 
   previewCancellation: async (booking_id: number) => {
-    const res = await fetch(`${API_BASE}/bookings/${booking_id}/cancellation-preview`, { headers: getHeaders() });
+    const res = await safeFetch(`${API_BASE}/bookings/${booking_id}/cancellation-preview`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to load cancellation preview');
     return res.json();
   },
 
   cancelBooking: async (booking_id: number, reason?: string): Promise<Booking> => {
-    const res = await fetch(`${API_BASE}/bookings/${booking_id}/cancel${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`, {
+    const res = await safeFetch(`${API_BASE}/bookings/${booking_id}/cancel${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`, {
       method: 'POST',
       headers: getHeaders(),
     });
@@ -261,7 +307,7 @@ export const api = {
   },
 
   createDispute: async (data: { booking_id: number; category: string; description: string }) => {
-    const res = await fetch(`${API_BASE}/disputes`, {
+    const res = await safeFetch(`${API_BASE}/disputes`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -271,14 +317,14 @@ export const api = {
   },
 
   getMyDisputes: async () => {
-    const res = await fetch(`${API_BASE}/disputes/my`, { headers: getHeaders() });
+    const res = await safeFetch(`${API_BASE}/disputes/my`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch reported disputes');
     return res.json();
   },
 
   // Reviews
   createReview: async (data: { booking_id: number; rating: number; comment?: string }) => {
-    const res = await fetch(`${API_BASE}/reviews`, {
+    const res = await safeFetch(`${API_BASE}/reviews`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -288,7 +334,7 @@ export const api = {
   },
 
   getReviewsByListing: async (listing_id: number): Promise<Review[]> => {
-    const res = await fetch(`${API_BASE}/reviews/listing/${listing_id}`);
+    const res = await safeFetch(`${API_BASE}/reviews/listing/${listing_id}`);
     if (!res.ok) return [];
     return res.json();
   },
@@ -343,7 +389,7 @@ export const api = {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const res = await fetch(`${API_BASE}/verification/upload-file`, {
+    const res = await safeFetch(`${API_BASE}/verification/upload-file`, {
       method: 'POST',
       headers,
       body: formData,
@@ -353,7 +399,7 @@ export const api = {
   },
 
   markDriverArrived: async (booking_id: number): Promise<Booking> => {
-    const res = await fetch(`${API_BASE}/bookings/${booking_id}/driver-arrived`, {
+    const res = await safeFetch(`${API_BASE}/bookings/${booking_id}/driver-arrived`, {
       method: 'POST',
       headers: getHeaders(),
     });
@@ -371,7 +417,7 @@ export const api = {
       damage_notes?: string;
     }
   ): Promise<Booking> => {
-    const res = await fetch(`${API_BASE}/bookings/${booking_id}/submit-odometer`, {
+    const res = await safeFetch(`${API_BASE}/bookings/${booking_id}/submit-odometer`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -381,7 +427,7 @@ export const api = {
   },
 
   requestVehicleCollection: async (booking_id: number): Promise<Booking> => {
-    const res = await fetch(`${API_BASE}/bookings/${booking_id}/request-collection`, {
+    const res = await safeFetch(`${API_BASE}/bookings/${booking_id}/request-collection`, {
       method: 'POST',
       headers: getHeaders(),
     });
@@ -390,7 +436,7 @@ export const api = {
   },
 
   verifyReleaseOtp: async (booking_id: number, otp: string): Promise<Booking> => {
-    const res = await fetch(`${API_BASE}/bookings/${booking_id}/verify-release-otp`, {
+    const res = await safeFetch(`${API_BASE}/bookings/${booking_id}/verify-release-otp`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ otp }),
@@ -405,7 +451,7 @@ export const api = {
     recommended_listings: ParkingListing[];
     suggestions: string[];
   }> => {
-    const res = await fetch(`${API_BASE}/chatbot/message`, {
+    const res = await safeFetch(`${API_BASE}/chatbot/message`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ message, history }),
@@ -416,7 +462,7 @@ export const api = {
 
   getChatSuggestions: async (): Promise<string[]> => {
     try {
-      const res = await fetch(`${API_BASE}/chatbot/suggestions`, {
+      const res = await safeFetch(`${API_BASE}/chatbot/suggestions`, {
         headers: getHeaders(),
       });
       if (!res.ok) return [];
@@ -432,16 +478,31 @@ export const api = {
     }
   },
 
-  getRentalVehicles: async (params?: { type?: string; transmission?: string; city?: string }): Promise<RentalVehicle[]> => {
+  getRentalVehicles: async (params?: { type?: string; transmission?: string; city?: string; lat?: number; lng?: number; query?: string }): Promise<RentalVehicle[]> => {
     const query = new URLSearchParams();
     if (params?.type && params.type !== 'ALL') query.set('type', params.type);
     if (params?.transmission && params.transmission !== 'ANY') query.set('transmission', params.transmission);
     if (params?.city) query.set('city', params.city);
+    if (params?.lat !== undefined && params?.lat !== null) query.set('lat', params.lat.toString());
+    if (params?.lng !== undefined && params?.lng !== null) query.set('lng', params.lng.toString());
+    if (params?.query) query.set('query', params.query);
 
-    const res = await fetch(`${API_BASE}/rentals/available?${query.toString()}`, {
+    const res = await safeFetch(`${API_BASE}/rentals/available?${query.toString()}`, {
       headers: getHeaders(),
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to fetch rental vehicles'));
+    return res.json();
+  },
+
+  getRentalBookings: async (params?: { phone?: string; bookingId?: string }): Promise<RentalBooking[]> => {
+    const q = new URLSearchParams();
+    if (params?.phone) q.set('phone', params.phone);
+    if (params?.bookingId) q.set('booking_id', params.bookingId);
+
+    const res = await safeFetch(`${API_BASE}/rentals/bookings?${q.toString()}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return [];
     return res.json();
   },
 
@@ -458,7 +519,7 @@ export const api = {
     withInsurance?: boolean;
     city?: string;
   }): Promise<RentalBooking> => {
-    const res = await fetch(`${API_BASE}/rentals/book`, {
+    const res = await safeFetch(`${API_BASE}/rentals/book`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload),
@@ -468,14 +529,14 @@ export const api = {
   },
 
   getMyNotifications: async (): Promise<AppNotification[]> => {
-    const res = await fetch(`${API_BASE}/bookings/notifications/my`, { headers: getHeaders() });
+    const res = await safeFetch(`${API_BASE}/bookings/notifications/my`, { headers: getHeaders() });
     if (!res.ok) return [];
     return res.json();
   },
 
   // Acting Drivers (customer)
   getDriverPricing: async (): Promise<DriverPricing> => {
-    const res = await fetch(`${API_BASE}/drivers/pricing`);
+    const res = await safeFetch(`${API_BASE}/drivers/pricing`);
     if (!res.ok) throw new Error('Failed to load driver pricing');
     return res.json();
   },
@@ -486,7 +547,7 @@ export const api = {
     car_type: string;
     pickup_city?: string;
   }): Promise<DriverFareBreakdown> => {
-    const res = await fetch(`${API_BASE}/drivers/estimate`, {
+    const res = await safeFetch(`${API_BASE}/drivers/estimate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -504,13 +565,13 @@ export const api = {
     if (params?.city) q.set('city', params.city);
     if (params?.transmission) q.set('transmission', params.transmission);
     if (params?.car_type) q.set('car_type', params.car_type);
-    const res = await fetch(`${API_BASE}/drivers/available?${q.toString()}`);
+    const res = await safeFetch(`${API_BASE}/drivers/available?${q.toString()}`);
     if (!res.ok) return [];
     return res.json();
   },
 
   createDriverBooking: async (data: DriverBookingCreate): Promise<DriverBooking> => {
-    const res = await fetch(`${API_BASE}/drivers/bookings`, {
+    const res = await safeFetch(`${API_BASE}/drivers/bookings`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -520,19 +581,19 @@ export const api = {
   },
 
   getMyDriverBookings: async (): Promise<DriverBooking[]> => {
-    const res = await fetch(`${API_BASE}/drivers/bookings/my`, { headers: getHeaders() });
+    const res = await safeFetch(`${API_BASE}/drivers/bookings/my`, { headers: getHeaders() });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to load driver trips'));
     return res.json();
   },
 
   getDriverBooking: async (bookingId: number): Promise<DriverBooking> => {
-    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}`, { headers: getHeaders() });
+    const res = await safeFetch(`${API_BASE}/drivers/bookings/${bookingId}`, { headers: getHeaders() });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Driver trip not found'));
     return res.json();
   },
 
   cancelDriverBooking: async (bookingId: number, reason?: string): Promise<DriverBooking> => {
-    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/cancel`, {
+    const res = await safeFetch(`${API_BASE}/drivers/bookings/${bookingId}/cancel`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ reason: reason || null }),
@@ -542,7 +603,7 @@ export const api = {
   },
 
   createDriverPaymentOrder: async (bookingId: number): Promise<DriverPaymentOrder> => {
-    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/pay/create-order`, {
+    const res = await safeFetch(`${API_BASE}/drivers/bookings/${bookingId}/pay/create-order`, {
       method: 'POST',
       headers: getHeaders(),
     });
@@ -554,7 +615,7 @@ export const api = {
     bookingId: number,
     data: { order_id: string; payment_id: string; signature: string }
   ): Promise<DriverBooking> => {
-    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/pay/verify`, {
+    const res = await safeFetch(`${API_BASE}/drivers/bookings/${bookingId}/pay/verify`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -564,7 +625,7 @@ export const api = {
   },
 
   rateDriverTrip: async (bookingId: number, rating: number, comment?: string): Promise<DriverBooking> => {
-    const res = await fetch(`${API_BASE}/drivers/bookings/${bookingId}/rate`, {
+    const res = await safeFetch(`${API_BASE}/drivers/bookings/${bookingId}/rate`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ rating, comment: comment || null }),

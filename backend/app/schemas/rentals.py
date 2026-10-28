@@ -21,6 +21,10 @@ class RentalVehicleSchema(BaseModel):
     features: List[str]
     city: str
     hubAddress: str
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    distanceKm: Optional[float] = None
+    doorDeliveryAvailable: bool = True
     status: str = "ACTIVE" # ACTIVE, PENDING_APPROVAL, SUSPENDED
     partnerName: str
     partnerPhone: Optional[str] = None
@@ -62,10 +66,23 @@ class RentalBookingOut(BaseModel):
     otp: int
     status: str
     createdAt: str
+    tripStartedAt: Optional[str] = None
+    tripCompletedAt: Optional[str] = None
+    hostLat: Optional[float] = None
+    hostLng: Optional[float] = None
+    customerLat: Optional[float] = None
+    customerLng: Optional[float] = None
     ownerName: Optional[str] = None
     ownerPhone: Optional[str] = None
     ownerAddress: Optional[str] = None
     paymentStatus: Optional[str] = "PAID"
+
+class RentalOtpVerifyRequest(BaseModel):
+    otp: int
+
+class RentalTripCompleteRequest(BaseModel):
+    returnNotes: Optional[str] = None
+    finalOdometer: Optional[int] = None
 
 class RentalPartnerCreate(BaseModel):
     vehicleName: str
@@ -83,6 +100,10 @@ class RentalPartnerCreate(BaseModel):
     phone: str
     city: str
     hubAddress: str
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    distanceKm: Optional[float] = None
+    doorDeliveryAvailable: bool = True
     photoUrl: Optional[str] = None
     features: Optional[List[str]] = None
     rcNumber: Optional[str] = None

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
+import { getFullImageUrl } from '../services/api';
 
 interface UserAvatarProps {
   user?: User | null;
@@ -42,16 +43,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   // Resolve profile image URL
   const getFullPhotoUrl = (url?: string) => {
     if (!url) return null;
-    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
-      return url;
-    }
-    const isLocal = typeof window !== 'undefined' && (
-      window.location.hostname === 'localhost' || 
-      window.location.hostname === '127.0.0.1' ||
-      window.location.hostname === '10.0.2.2'
-    );
-    const backendOrigin = isLocal ? 'http://localhost:8000' : 'https://parkshare-backend-9anh.onrender.com';
-    return `${backendOrigin}${url.startsWith('/') ? '' : '/'}${url}`;
+    return getFullImageUrl(url);
   };
 
   const userPhoto = user?.profile_photo_url ? getFullPhotoUrl(user.profile_photo_url) : null;

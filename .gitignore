@@ -71,3 +71,6 @@ local.properties
 **/android/build/
 **/android/app/build/
 **/android/local.properties
+
+# Local ADB test screenshots
+/*.png

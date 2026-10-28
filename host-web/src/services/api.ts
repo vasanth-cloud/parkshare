@@ -76,6 +76,34 @@ function getHeaders(): HeadersInit {
   return headers;
 }
 
+async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
+  const isCapacitor = typeof window !== 'undefined' && Boolean((window as any).Capacitor?.isNativePlatform?.() || (window as any).Capacitor?.platform === 'android' || (window as any).Capacitor?.platform === 'ios');
+
+  try {
+    return await fetch(url, options);
+  } catch (err: any) {
+    if (isCapacitor && (err.name === 'TypeError' || err.message?.toLowerCase().includes('fetch'))) {
+      const candidates = [
+        'http://localhost:8000',
+        'http://192.168.1.17:8000',
+      ];
+      for (const cand of candidates) {
+        if (!url.startsWith(cand)) {
+          const altUrl = url.replace(BACKEND_BASE, cand);
+          try {
+            const res = await fetch(altUrl, options);
+            return res;
+          } catch {}
+        }
+      }
+    }
+    if (err.name === 'TypeError' || err.message?.toLowerCase().includes('fetch')) {
+      throw new Error(`Unable to reach ParkCo server at ${BACKEND_BASE}. Please ensure your PC backend is running and USB or Wi-Fi is connected.`);
+    }
+    throw err;
+  }
+}
+
 async function extractErrorMessage(res: Response, fallback: string): Promise<string> {
   try {
     const data = await res.json();
@@ -493,6 +521,16 @@ export const api = {
     return res.json();
   },
 
+  updateVehicleDoorDelivery: async (vehicleId: string, doorDeliveryAvailable: boolean): Promise<RentalPartnerVehicle> => {
+    const res = await (typeof safeFetch !== 'undefined' ? safeFetch : fetch)(`${API_BASE}/rentals/${vehicleId}/door-delivery`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ doorDeliveryAvailable }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to update doorstep delivery status'));
+    return res.json();
+  },
+
   updateRentalVehicleStatus: async (vehicleId: string, status: string, reason?: string): Promise<RentalPartnerVehicle> => {
     const res = await fetch(`${API_BASE}/rentals/${vehicleId}/status`, {
       method: 'POST',
@@ -500,6 +538,36 @@ export const api = {
       body: JSON.stringify({ status, reason }),
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to update vehicle status'));
+    return res.json();
+  },
+
+  getRentalBookings: async (params?: { partnerPhone?: string }): Promise<any[]> => {
+    const q = new URLSearchParams();
+    if (params?.partnerPhone) q.set('partner_phone', params.partnerPhone);
+    const res = await (typeof safeFetch !== 'undefined' ? safeFetch : fetch)(`${API_BASE}/rentals/bookings?${q.toString()}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  verifyRentalHandoverOtp: async (bookingId: string, otp: number): Promise<any> => {
+    const res = await (typeof safeFetch !== 'undefined' ? safeFetch : fetch)(`${API_BASE}/rentals/bookings/${bookingId}/verify-otp`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ otp }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Invalid Handover OTP'));
+    return res.json();
+  },
+
+  completeRentalTrip: async (bookingId: string, returnNotes?: string, finalOdometer?: number): Promise<any> => {
+    const res = await (typeof safeFetch !== 'undefined' ? safeFetch : fetch)(`${API_BASE}/rentals/bookings/${bookingId}/complete`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ returnNotes, finalOdometer }),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to complete rental trip'));
     return res.json();
   },
 };

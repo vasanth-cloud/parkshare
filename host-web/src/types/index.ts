@@ -399,6 +399,7 @@ export interface RentalPartnerVehicle {
   features: string[];
   city: string;
   hubAddress: string;
+  doorDeliveryAvailable?: boolean;
   status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'REJECTED';
   partnerName: string;
   rcNumber?: string;
@@ -435,3 +436,33 @@ export interface RcVerificationResult {
   source?: string;
 }
 
+
+export interface RentalPartnerBooking {
+  bookingId: string;
+  vehicle: RentalPartnerVehicle;
+  customerName: string;
+  customerPhone: string;
+  pickupDate: string;
+  returnDate: string;
+  pickupTime: string;
+  returnTime?: string;
+  deliveryType: 'HUB_PICKUP' | 'DOORSTEP_DELIVERY';
+  doorstepAddress?: string;
+  totalFare: number;
+  securityDeposit: number;
+  insuranceFee: number;
+  grandTotal: number;
+  otp: number;
+  status: 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  createdAt: string;
+  tripStartedAt?: string | null;
+  tripCompletedAt?: string | null;
+  hostLat?: number | null;
+  hostLng?: number | null;
+  customerLat?: number | null;
+  customerLng?: number | null;
+  ownerName?: string;
+  ownerPhone?: string;
+  ownerAddress?: string;
+  paymentStatus?: string;
+}

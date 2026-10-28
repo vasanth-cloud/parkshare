@@ -220,6 +220,10 @@ export interface RentalVehicle {
   features: string[];
   city: string;
   hubAddress: string;
+  lat?: number;
+  lng?: number;
+  distanceKm?: number;
+  doorDeliveryAvailable?: boolean;
   status: string;
   partnerName: string;
   partnerPhone?: string;
@@ -249,6 +253,12 @@ export interface RentalBooking {
   otp: number;
   status: string;
   createdAt: string;
+  tripStartedAt?: string | null;
+  tripCompletedAt?: string | null;
+  hostLat?: number | null;
+  hostLng?: number | null;
+  customerLat?: number | null;
+  customerLng?: number | null;
   ownerName?: string;
   ownerPhone?: string;
   ownerAddress?: string;

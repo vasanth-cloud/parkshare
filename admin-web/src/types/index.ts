@@ -293,6 +293,7 @@ export interface RentalVehicle {
   features: string[];
   city: string;
   hubAddress: string;
+  doorDeliveryAvailable?: boolean;
   status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'REJECTED';
   partnerName: string;
   rcNumber?: string;

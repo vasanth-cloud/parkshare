@@ -1,3 +1,4 @@
+import { LiveRentalTimer } from '../components/LiveRentalTimer';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
 import L from 'leaflet';
@@ -274,13 +275,24 @@ export const RentalDashboardPage: React.FC = () => {
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
 
   // Handover OTP Modal State
-  const [selectedBookingForHandover, setSelectedBookingForHandover] = useState<MockRentalBooking | null>(null);
+  const [selectedBookingForHandover, setSelectedBookingForHandover] = useState<any | null>(null);
   const [inputOtp, setInputOtp] = useState('');
   const [otpError, setOtpError] = useState('');
   const [handoverSuccess, setHandoverSuccess] = useState(false);
 
   // Active & Upcoming Bookings
-  const [bookings, setBookings] = useState<MockRentalBooking[]>(INITIAL_BOOKINGS);
+  const [bookings, setBookings] = useState<any[]>(INITIAL_BOOKINGS);
+
+  const fetchHostBookings = async () => {
+    try {
+      const data = await api.getRentalBookings();
+      if (Array.isArray(data) && data.length > 0) {
+        setBookings(data);
+      }
+    } catch (err) {
+      console.warn('Failed to load host bookings:', err);
+    }
+  };
 
   const fetchFleet = async () => {
     try {
@@ -301,7 +313,37 @@ export const RentalDashboardPage: React.FC = () => {
 
   useEffect(() => {
     fetchFleet();
+    fetchHostBookings();
+    const bInterval = setInterval(fetchHostBookings, 3000);
+    return () => clearInterval(bInterval);
   }, []);
+
+  const [updatingDeliveryId, setUpdatingDeliveryId] = useState<string | null>(null);
+
+  const handleToggleDoorDelivery = async (vehicle: RentalPartnerVehicle) => {
+    const currentStatus = vehicle.doorDeliveryAvailable !== false && !vehicle.features?.includes('Hub Pickup Only');
+    const newStatus = !currentStatus;
+    setUpdatingDeliveryId(vehicle.id);
+    try {
+      await api.updateVehicleDoorDelivery(vehicle.id, newStatus);
+      setVehicles(prev => prev.map(v => {
+        if (v.id === vehicle.id) {
+          const updatedFeatures = (v.features || []).filter(f => f !== 'Doorstep Delivery Available' && f !== 'Hub Pickup Only');
+          updatedFeatures.push(newStatus ? 'Doorstep Delivery Available' : 'Hub Pickup Only');
+          return {
+            ...v,
+            doorDeliveryAvailable: newStatus,
+            features: updatedFeatures
+          };
+        }
+        return v;
+      }));
+    } catch (err: any) {
+      alert(err.message || 'Failed to update doorstep delivery setting');
+    } finally {
+      setUpdatingDeliveryId(null);
+    }
+  };
 
   const handleToggleStatus = async (vehicle: RentalPartnerVehicle) => {
     const nextStatus = vehicle.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
@@ -325,27 +367,48 @@ export const RentalDashboardPage: React.FC = () => {
     }
   };
 
-  const handleVerifyHandoverOtp = (e: React.FormEvent) => {
+  const handleVerifyHandoverOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBookingForHandover) return;
 
-    if (inputOtp.trim() === selectedBookingForHandover.handoverOtp) {
+    const bId = selectedBookingForHandover.bookingId || selectedBookingForHandover.id;
+    const enteredOtp = parseInt(inputOtp.trim(), 10);
+
+    try {
+      await api.verifyRentalHandoverOtp(bId, enteredOtp);
       setHandoverSuccess(true);
       setOtpError('');
-      setBookings(prev =>
-        prev.map(b =>
-          b.id === selectedBookingForHandover.id
-            ? { ...b, status: 'ACTIVE_TRIP' }
-            : b
-        )
-      );
+      await fetchHostBookings();
+      await fetchFleet();
       setTimeout(() => {
         setHandoverSuccess(false);
         setSelectedBookingForHandover(null);
         setInputOtp('');
-      }, 1600);
-    } else {
-      setOtpError('Invalid OTP. Please ask renter to show the 4-digit code in their ParkCo app.');
+      }, 1400);
+    } catch (err: any) {
+      // Check if fallback local match
+      if (selectedBookingForHandover.handoverOtp && inputOtp.trim() === selectedBookingForHandover.handoverOtp) {
+        setHandoverSuccess(true);
+        setOtpError('');
+        setTimeout(() => {
+          setHandoverSuccess(false);
+          setSelectedBookingForHandover(null);
+          setInputOtp('');
+        }, 1400);
+      } else {
+        setOtpError(err.message || 'Invalid Handover OTP. Please ask renter to check their ParkCo app.');
+      }
+    }
+  };
+
+  const handleCompleteTrip = async (bookingId: string) => {
+    if (!window.confirm('Confirm vehicle return and complete this rental trip?')) return;
+    try {
+      await api.completeRentalTrip(bookingId);
+      await fetchHostBookings();
+      await fetchFleet();
+    } catch (err: any) {
+      alert(err.message || 'Failed to complete trip');
     }
   };
 
@@ -827,6 +890,42 @@ export const RentalDashboardPage: React.FC = () => {
                                 <MapPin className="w-3 h-3 text-slate-400" />
                                 <span>{vehicle.hubAddress || vehicle.city}</span>
                               </p>
+                              <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                                  vehicle.doorDeliveryAvailable !== false && !vehicle.features?.includes('Hub Pickup Only')
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                    : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                                }`}>
+                                  {vehicle.doorDeliveryAvailable !== false && !vehicle.features?.includes('Hub Pickup Only')
+                                    ? '🚚 Door Delivery: ON'
+                                    : '🏢 Hub Pickup Only'}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={updatingDeliveryId === vehicle.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleDoorDelivery(vehicle);
+                                  }}
+                                  className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold border transition cursor-pointer flex items-center gap-1 ${
+                                    vehicle.doorDeliveryAvailable !== false && !vehicle.features?.includes('Hub Pickup Only')
+                                      ? 'border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                                      : 'border-emerald-500/30 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300'
+                                  }`}
+                                  title="Change whether you can deliver to customer or need hub pickup"
+                                >
+                                  {updatingDeliveryId === vehicle.id ? (
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Sliders className="w-3 h-3" />
+                                  )}
+                                  <span>
+                                    {vehicle.doorDeliveryAvailable !== false && !vehicle.features?.includes('Hub Pickup Only')
+                                      ? 'Switch to Hub Only'
+                                      : 'Enable Door Delivery'}
+                                  </span>
+                                </button>
+                              </div>
                             </div>
                             <div className="text-right">
                               <span className="font-extrabold text-base text-emerald-700 dark:text-emerald-400 block">
@@ -918,26 +1017,31 @@ export const RentalDashboardPage: React.FC = () => {
                         </span>
                         <span className="text-xs text-slate-400 font-medium">Verified Renter</span>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        booking.status === 'UPCOMING'
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+                        booking.status === 'CONFIRMED' || booking.status === 'UPCOMING'
                           ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                          : (booking.status === 'IN_PROGRESS' || booking.status === 'ACTIVE_TRIP')
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                       }`}>
-                        {booking.status === 'UPCOMING' ? 'Pending Key Handover' : 'Active In-Trip'}
+                        {(booking.status === 'IN_PROGRESS' || booking.status === 'ACTIVE_TRIP') && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                        )}
+                        <span>{booking.status === 'CONFIRMED' || booking.status === 'UPCOMING' ? 'Pending Key Handover' : (booking.status === 'IN_PROGRESS' || booking.status === 'ACTIVE_TRIP' ? 'Active In-Trip' : booking.status)}</span>
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <h4 className="font-extrabold text-base text-slate-900 dark:text-white">
-                          {booking.vehicleName}
+                          {booking.vehicle?.name || booking.vehicleName}
                         </h4>
                         <p className="text-xs text-slate-500 mt-1">
                           Renter: <strong className="text-slate-800 dark:text-slate-200">{booking.customerName}</strong>
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{booking.doorstepAddress}</span>
+                          <span>{booking.doorstepAddress || booking.ownerAddress || booking.vehicle?.hubAddress || 'Hub Pickup'}</span>
                         </p>
                       </div>
 
@@ -946,7 +1050,7 @@ export const RentalDashboardPage: React.FC = () => {
                           Duration: <strong>{booking.pickupDate}</strong> → <strong>{booking.returnDate}</strong>
                         </div>
                         <div className="text-base font-extrabold text-emerald-700 dark:text-emerald-400">
-                          Total Fare: ₹{booking.totalFare.toLocaleString('en-IN')}
+                          Total Fare: ₹{(booking.grandTotal || booking.totalFare || 0).toLocaleString('en-IN')}
                         </div>
                         <div className="text-[11px] text-slate-400">
                           Security Deposit: ₹0 (ParkCo Guaranteed)
@@ -954,8 +1058,14 @@ export const RentalDashboardPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
-                      {booking.status === 'UPCOMING' ? (
+                    {(booking.status === 'IN_PROGRESS' || booking.status === 'ACTIVE_TRIP') && (
+                      <div className="pt-2">
+                        <LiveRentalTimer status={booking.status} tripStartedAt={booking.tripStartedAt} />
+                      </div>
+                    )}
+
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+                      {(booking.status === 'CONFIRMED' || booking.status === 'UPCOMING') ? (
                         <button
                           onClick={() => {
                             setSelectedBookingForHandover(booking);
@@ -965,13 +1075,23 @@ export const RentalDashboardPage: React.FC = () => {
                           className="px-4 py-2.5 rounded-xl bg-[#0F5132] hover:bg-[#0b3e27] text-white text-xs font-bold shadow-sm transition cursor-pointer flex items-center gap-2"
                         >
                           <KeyRound className="w-4 h-4" />
-                          <span>Verify Handover Key OTP</span>
+                          <span>Enter Customer OTP to Start Trip</span>
                         </button>
+                      ) : (booking.status === 'IN_PROGRESS' || booking.status === 'ACTIVE_TRIP') ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Trip Active</span>
+                          </span>
+                          <button
+                            onClick={() => handleCompleteTrip(booking.bookingId || booking.id)}
+                            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+                          >
+                            Complete Return
+                          </button>
+                        </div>
                       ) : (
-                        <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Keys Verified & Handed Over</span>
-                        </span>
+                        <span className="text-xs font-bold text-slate-500">Trip Completed</span>
                       )}
 
                       <a
@@ -1225,9 +1345,7 @@ export const RentalDashboardPage: React.FC = () => {
               <div className="text-slate-500 text-[11px]">
                 Renter: <strong>{selectedBookingForHandover.customerName}</strong>
               </div>
-              <div className="text-emerald-700 dark:text-emerald-400 text-[11px] font-mono font-bold pt-1">
-                (Demo Test OTP: {selectedBookingForHandover.handoverOtp})
-              </div>
+
             </div>
 
             <form onSubmit={handleVerifyHandoverOtp} className="space-y-4">

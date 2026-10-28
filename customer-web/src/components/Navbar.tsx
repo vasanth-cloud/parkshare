@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Calendar, ChevronDown, LayoutGrid, Sparkles, ArrowRight, ArrowLeft, Car, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserAvatar } from './UserAvatar';
+import { CustomerLocationHeader } from './CustomerLocationHeader';
 
 interface NavbarProps {
   onOpenChat?: () => void;
@@ -38,8 +39,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
     <nav className="sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-slate-900 dark:text-white shadow-xs dark:shadow-md border-b border-slate-200/90 dark:border-slate-800 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
-        {/* Brand Logo & Mode Badge */}
-        <div className="flex items-center space-x-3">
+        {/* Swiggy/Zomato Style Location Header (Matching Host Side) */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
           {isRentalPage && (
             <button
               type="button"
@@ -56,29 +57,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenChat }) => {
                   navigate('/services');
                 }
               }}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer mr-0.5"
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer mr-0.5 shrink-0"
               title="Go Back"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
 
-          <Link to={isRentalPage ? "/services/rentals" : "/"} className="flex items-center space-x-2.5 group">
-            <img
-              src="/logo.png"
-              alt="ParkCo Logo"
-              className="w-10 h-10 rounded-xl shadow-xs group-hover:scale-105 transition-transform bg-white p-0.5 object-contain border border-slate-200 dark:border-slate-700"
-            />
-            <div className="flex flex-col">
-              <span className="text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center space-x-1">
-                <span>ParkCo</span>
-              </span>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
-                <span>{isRentalPage ? 'Rental Cars & Bikes' : 'Driver Mode'}</span>
-              </span>
-            </div>
-          </Link>
-
+          <CustomerLocationHeader />
         </div>
 
         {/* Desktop Navigation Links - REMOVED on rental page as requested ("no need to show parking sit") */}

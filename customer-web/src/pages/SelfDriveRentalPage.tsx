@@ -24,6 +24,7 @@ import {
   Navigation,
   Lock,
   CheckCircle2,
+  Building,
   Sparkles,
   ChevronRight,
   Copy,
@@ -44,6 +45,8 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { RentalVehicle, RentalBooking } from '../types';
 import { CustomerProfilePage } from './CustomerProfilePage';
+import { RentalRouteNavigationMap } from '../components/RentalRouteNavigationMap';
+import { LiveRentalTimer } from '../components/LiveRentalTimer';
 
 export type RentalTab = 'home' | 'explore' | 'bookings' | 'saved' | 'profile';
 
@@ -94,6 +97,7 @@ export const SelfDriveRentalPage: React.FC = () => {
   };
 
   const [vehicles, setVehicles] = useState<RentalVehicle[]>([]);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Saved / Wishlisted Vehicles in LocalStorage (filtering out any obsolete dummy IDs)
@@ -198,12 +202,61 @@ export const SelfDriveRentalPage: React.FC = () => {
 
   useEffect(() => {
     fetchVehicles();
+    const handleFocus = () => {
+      fetchVehicles();
+    };
+    window.addEventListener('focus', handleFocus);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchVehicles();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('parkshare_customer_location');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.areaId) {
+          setSelectedArea(parsed.areaId);
+        } else if (parsed.title) {
+          setGpsAddressName(`${parsed.title}, ${parsed.subtitle}`);
+          setIsUsingGps(true);
+        }
+      }
+    } catch {}
+
+    const handleLocationChange = (e: any) => {
+      const detail = e.detail;
+      if (detail?.areaId) {
+        setSelectedArea(detail.areaId);
+        setIsUsingGps(false);
+      } else if (detail?.title) {
+        setGpsAddressName(`${detail.title}, ${detail.subtitle}`);
+        setIsUsingGps(true);
+      }
+    };
+    window.addEventListener('parkshare_location_updated', handleLocationChange);
+    return () => window.removeEventListener('parkshare_location_updated', handleLocationChange);
   }, []);
 
-  const fetchVehicles = async () => {
+  const fetchVehicles = async (lat?: number, lng?: number, queryStr?: string) => {
     setLoading(true);
     try {
-      const data = await api.getRentalVehicles();
+      const effLat = lat !== undefined ? lat : userCoords?.lat;
+      const effLng = lng !== undefined ? lng : userCoords?.lng;
+      const effQuery = queryStr !== undefined ? queryStr : searchQuery;
+      const data = await api.getRentalVehicles({
+        lat: effLat,
+        lng: effLng,
+        query: effQuery,
+        type: categoryFilter !== 'ALL' ? categoryFilter : undefined,
+        transmission: transmissionFilter !== 'ANY' ? transmissionFilter : undefined,
+      });
       if (Array.isArray(data)) {
         setVehicles(data);
       } else {
@@ -215,6 +268,63 @@ export const SelfDriveRentalPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Live Location & GPS permission on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserCoords(coords);
+          fetchVehicles(coords.lat, coords.lng, searchQuery);
+        },
+        (err) => {
+          console.warn('Geolocation access:', err.message);
+          fetchVehicles();
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      fetchVehicles();
+    }
+  }, []);
+
+  // Search input debounce re-fetch
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchVehicles(userCoords?.lat, userCoords?.lng, searchQuery);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery, categoryFilter, transmissionFilter]);
+
+  // Active booking status polling (checks every 2.5 seconds if host verified OTP)
+  useEffect(() => {
+    const activeBookingId = confirmedBooking?.bookingId;
+    const interval = setInterval(async () => {
+      if (activeBookingId) {
+        try {
+          const res = await api.getRentalBookings({ bookingId: activeBookingId });
+          if (Array.isArray(res) && res.length > 0) {
+            const latest = res[0];
+            if (latest.status !== confirmedBooking?.status || latest.tripStartedAt !== confirmedBooking?.tripStartedAt) {
+              setConfirmedBooking(latest);
+              setRentalBookings(prev => prev.map(b => b.bookingId === latest.bookingId ? latest : b));
+            }
+          }
+        } catch {}
+      }
+      if (activeTab === 'bookings' && customerPhone) {
+        try {
+          const list = await api.getRentalBookings({ phone: customerPhone });
+          if (Array.isArray(list) && list.length > 0) {
+            setRentalBookings(list);
+          }
+        } catch {}
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [confirmedBooking?.bookingId, confirmedBooking?.status, activeTab, customerPhone]);
 
   // Helper: compute distance for a vehicle based on selected area
   const getProximityKm = (vehicle: RentalVehicle, areaId: string): number => {
@@ -308,8 +418,8 @@ export const SelfDriveRentalPage: React.FC = () => {
   // Vehicles with proximity
   const vehiclesWithProximity = useMemo(() => {
     return vehicles.map(v => {
-      const dist = getProximityKm(v, selectedArea);
-      return { ...v, distance_km: dist };
+      const dist = v.distanceKm !== undefined && v.distanceKm !== null ? v.distanceKm : getProximityKm(v, selectedArea);
+      return { ...v, distance_km: dist, distanceKm: dist };
     });
   }, [vehicles, selectedArea]);
 
@@ -341,6 +451,13 @@ export const SelfDriveRentalPage: React.FC = () => {
       result = [...result].sort((a, b) => b.dailyRate - a.dailyRate);
     } else if (sortBy === 'RATING') {
       result = [...result].sort((a, b) => (b.rating || 5) - (a.rating || 5));
+    } else {
+      // Default: sort nearest first!
+      result = [...result].sort((a, b) => {
+        const distA = a.distanceKm ?? a.distance_km ?? 999;
+        const distB = b.distanceKm ?? b.distance_km ?? 999;
+        return distA - distB;
+      });
     }
 
     return result;
@@ -363,11 +480,33 @@ export const SelfDriveRentalPage: React.FC = () => {
   const currentHub = BENGALURU_HUBS.find(h => h.id === selectedArea) || BENGALURU_HUBS[0];
   const activeLocationDisplay = gpsAddressName || currentHub.name;
 
+  // Live address resolved from GPS or selected customer location
+  const currentLiveAddress = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('parkshare_customer_location');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.title && parsed.subtitle) {
+          return `${parsed.title}, ${parsed.subtitle}`;
+        }
+        if (parsed.title) return parsed.title;
+      }
+    } catch {}
+    return gpsAddressName || activeLocationDisplay || 'Indiranagar, Bengaluru, Karnataka';
+  }, [gpsAddressName, activeLocationDisplay]);
+
   // Open Booking Dialog
   const handleOpenBooking = (vehicle: RentalVehicle) => {
+    if (!vehicle.isAvailable) {
+      alert('This vehicle has been booked by another customer and is currently unavailable.');
+      return;
+    }
     setSelectedVehicle(vehicle);
     setConfirmedBooking(null);
     setBookingError('');
+    const canDoorDeliver = vehicle.doorDeliveryAvailable !== false && !vehicle.features?.includes('Hub Pickup Only');
+    setDeliveryType(canDoorDeliver ? 'DOORSTEP_DELIVERY' : 'HUB_PICKUP');
+    setDoorstepAddress(canDoorDeliver ? currentLiveAddress : (vehicle.hubAddress || vehicle.city));
     if (user) {
       if (!customerName) setCustomerName(user.full_name || '');
       if (!customerPhone) setCustomerPhone(user.phone_number || '');
@@ -445,6 +584,8 @@ export const SelfDriveRentalPage: React.FC = () => {
       };
 
       setConfirmedBooking(enrichedBooking);
+      // Immediately refresh fleet so this booked vehicle is hidden for other customers!
+      fetchVehicles();
 
       // Prepend to saved bookings list
       const updatedList = [enrichedBooking, ...rentalBookings];
@@ -461,7 +602,7 @@ export const SelfDriveRentalPage: React.FC = () => {
     const diffDays = tripDuration.diffDays;
     const baseFare = baseDaily * diffDays;
     const insurance = withInsurance ? (99 * diffDays) : 0;
-    const delivery = deliveryType === 'DOORSTEP_DELIVERY' ? 149 : 0;
+    const delivery = 0; // Free delivery to customer live address
     const deposit = 0;
     const grandTotal = baseFare + insurance + delivery;
     return { baseFare, insurance, delivery, deposit, grandTotal, diffDays };
@@ -546,61 +687,15 @@ export const SelfDriveRentalPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Search Box matching Screenshot 2 */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm space-y-3">
-            
-            {/* Pickup Location Selector */}
-            <div
-              onClick={() => setIsLocationModalOpen(true)}
-              className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 cursor-pointer transition flex items-center justify-between"
-            >
-              <div className="flex items-center space-x-3 overflow-hidden">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div className="overflow-hidden">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Pickup Location
-                  </span>
-                  <span className="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
-                    {activeLocationDisplay}
-                  </span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-            </div>
-
-            {/* Pickup & Return Dates Selector */}
-            <div
-              onClick={() => setIsDatesModalOpen(true)}
-              className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 cursor-pointer transition flex items-center justify-between"
-            >
-              <div className="flex items-center space-x-3 overflow-hidden">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <div className="overflow-hidden">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Pickup & Return
-                  </span>
-                  <span className="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
-                    {pickupDate} ({pickupTime}) — {returnDate} ({returnTime})
-                  </span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-            </div>
-
-            {/* Big Green Primary Button "Search Cars" matching Screenshot 2 */}
-            <button
-              type="button"
-              onClick={() => handleTabChange('explore')}
-              className="w-full py-3.5 rounded-2xl bg-[#137a50] hover:bg-[#0f6843] active:scale-[0.98] text-white font-black text-sm shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer"
-            >
-              <Search className="w-4 h-4" />
-              <span>Search Cars</span>
-            </button>
-          </div>
+          {/* Primary Action Button "Search Cars" */}
+          <button
+            type="button"
+            onClick={() => handleTabChange('explore')}
+            className="w-full py-3.5 rounded-2xl bg-[#137a50] hover:bg-[#0f6843] active:scale-[0.98] text-white font-black text-sm shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer"
+          >
+            <Search className="w-4 h-4" />
+            <span>Search Cars</span>
+          </button>
 
           {/* Quick Category Chips */}
           <div className="space-y-2">
@@ -744,47 +839,34 @@ export const SelfDriveRentalPage: React.FC = () => {
           {/* Trip & Search Cockpit */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-3.5 sm:p-4 shadow-xs space-y-3">
             
-            {/* Top Line: Location Chip + Duration Badge */}
-            <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center space-x-1.5 overflow-hidden">
-                <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span className="font-bold text-slate-700 dark:text-slate-300 truncate text-[11px] sm:text-xs">
-                  {activeLocationDisplay}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleUseGps}
-                  disabled={isLocatingGps}
-                  className="text-[10px] font-black text-amber-600 dark:text-amber-400 hover:underline cursor-pointer ml-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-500/20 flex items-center gap-1 shrink-0"
-                >
-                  <Navigation className={`w-3 h-3 ${isLocatingGps ? 'animate-spin text-amber-500' : isUsingGps ? 'text-emerald-500' : ''}`} />
-                  <span>{isLocatingGps ? 'Detecting...' : 'Detect GPS'}</span>
-                </button>
-              </div>
-
-              <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1">
+            {/* Top Line: Schedule Header + Duration Badge */}
+            <div className="flex items-center justify-between text-xs pb-1.5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                Trip Schedule
+              </span>
+              <div className="text-[11px] font-bold text-amber-600 dark:text-amber-400 shrink-0 flex items-center gap-1 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-500/20">
                 <Clock className="w-3 h-3 text-amber-600" />
-                <span>{tripDuration.diffDays} Day{tripDuration.diffDays > 1 ? 's' : ''}</span>
+                <span>{tripDuration.diffDays} Day{tripDuration.diffDays > 1 ? 's' : ''} Duration</span>
               </div>
             </div>
 
             {/* Compact 2-Column Schedule Pill */}
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-2 sm:p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
+              <div className="p-2 sm:p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 min-w-0">
                 <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block mb-1">
                   • Pickup
                 </span>
-                <div className="flex items-center space-x-1">
+                <div className="space-y-1">
                   <input
                     type="date"
                     value={pickupDate}
                     onChange={(e) => setPickupDate(e.target.value)}
-                    className="w-full bg-transparent font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-none"
+                    className="w-full bg-transparent font-bold text-[11px] sm:text-xs text-slate-800 dark:text-slate-200 focus:outline-none min-w-0"
                   />
                   <select
                     value={pickupTime}
                     onChange={(e) => setPickupTime(e.target.value)}
-                    className="bg-transparent font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-none shrink-0"
+                    className="w-full bg-white dark:bg-slate-700/60 border border-slate-200/60 dark:border-slate-600/60 rounded-lg px-1.5 py-0.5 font-bold text-[10px] sm:text-xs text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
                   >
                     {TIME_OPTIONS.map(t => (
                       <option key={t} value={t} className="dark:bg-slate-800 text-slate-900 dark:text-slate-100">{t}</option>
@@ -793,21 +875,21 @@ export const SelfDriveRentalPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="p-2 sm:p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
+              <div className="p-2 sm:p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 min-w-0">
                 <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block mb-1">
                   • Return
                 </span>
-                <div className="flex items-center space-x-1">
+                <div className="space-y-1">
                   <input
                     type="date"
                     value={returnDate}
                     onChange={(e) => setReturnDate(e.target.value)}
-                    className="w-full bg-transparent font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-none"
+                    className="w-full bg-transparent font-bold text-[11px] sm:text-xs text-slate-800 dark:text-slate-200 focus:outline-none min-w-0"
                   />
                   <select
                     value={returnTime}
                     onChange={(e) => setReturnTime(e.target.value)}
-                    className="bg-transparent font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-none shrink-0"
+                    className="w-full bg-white dark:bg-slate-700/60 border border-slate-200/60 dark:border-slate-600/60 rounded-lg px-1.5 py-0.5 font-bold text-[10px] sm:text-xs text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
                   >
                     {TIME_OPTIONS.map(t => (
                       <option key={t} value={t} className="dark:bg-slate-800 text-slate-900 dark:text-slate-100">{t}</option>
@@ -1053,40 +1135,63 @@ export const SelfDriveRentalPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Pickup Handover OTP Box */}
-                <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-500/30 flex items-center justify-between">
-                  <div className="flex items-center space-x-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black">
-                      <KeyRound className="w-4 h-4" />
+                {/* Handover OTP / Live Rental Timer */}
+                {b.status === 'IN_PROGRESS' ? (
+                  <LiveRentalTimer
+                    status={b.status}
+                    tripStartedAt={b.tripStartedAt}
+                    pickupTime={b.pickupTime}
+                  />
+                ) : (
+                  <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-500/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black">
+                          <KeyRound className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 block">
+                            Show this OTP to Host Upon Arrival
+                          </span>
+                          <span className="text-xl font-black text-slate-900 dark:text-white font-mono tracking-widest">
+                            {b.otp}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(b.otp)}
+                        className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-white/80 dark:bg-slate-900/80 px-2.5 py-1 rounded-xl border border-amber-500/20 hover:bg-white flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiedOtp === b.otp ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy Code</span>
+                          </>
+                        )}
+                      </button>
                     </div>
-                    <div>
-                      <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 block">
-                        Pickup Verification OTP
-                      </span>
-                      <span className="text-sm font-black text-slate-900 dark:text-white font-mono tracking-wider">
-                        {b.otp}
-                      </span>
+                    <div className="text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1 font-medium bg-amber-100/60 dark:bg-amber-900/40 py-1 px-2.5 rounded-lg">
+                      <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin shrink-0" />
+                      <span>Timer starts once host enters this OTP at handover.</span>
                     </div>
                   </div>
+                )}
 
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(b.otp)}
-                    className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-white/80 dark:bg-slate-900/80 px-2.5 py-1 rounded-xl border border-amber-500/20 hover:bg-white flex items-center gap-1 cursor-pointer"
-                  >
-                    {copiedOtp === b.otp ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy Code</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                {/* Route Navigation Map */}
+                <RentalRouteNavigationMap
+                  customerCoords={userCoords}
+                  hostCoords={{ lat: b.hostLat || 12.9716, lng: b.hostLng || 77.6412 }}
+                  hostAddress={b.doorstepAddress || b.ownerAddress || b.vehicle.hubAddress}
+                  hostName={b.ownerName}
+                  doorstepAddress={b.doorstepAddress}
+                />
 
                 {/* Schedule & Handover Details */}
                 <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-2xl">
@@ -1790,25 +1895,37 @@ export const SelfDriveRentalPage: React.FC = () => {
                     <CheckCircle2 className="w-7 h-7" />
                   </div>
                   <h4 className="text-base font-black text-emerald-800 dark:text-emerald-300">
-                    Rental Reservation Confirmed!
+                    {confirmedBooking.status === 'IN_PROGRESS' ? 'Rental Trip Active & In Progress!' : 'Rental Reservation Confirmed!'}
                   </h4>
                   <p className="text-xs text-emerald-600 dark:text-emerald-400">
                     Booking ID: <strong className="font-mono">{confirmedBooking.bookingId}</strong>
                   </p>
                 </div>
 
-                {/* Big OTP Handover Pass */}
-                <div className="p-4 rounded-3xl bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-500 text-center space-y-1 shadow-sm">
-                  <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">
-                    Show this OTP at Handover
-                  </span>
-                  <div className="text-3xl font-black font-mono text-slate-900 dark:text-white tracking-widest">
-                    {confirmedBooking.otp}
+                {/* OTP or Live Trip Timer */}
+                {confirmedBooking.status === 'IN_PROGRESS' ? (
+                  <LiveRentalTimer
+                    status={confirmedBooking.status}
+                    tripStartedAt={confirmedBooking.tripStartedAt}
+                    pickupTime={confirmedBooking.pickupTime}
+                  />
+                ) : (
+                  <div className="p-4 rounded-3xl bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-500 text-center space-y-2 shadow-sm">
+                    <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider block">
+                      Show this OTP to Host to Start Rental
+                    </span>
+                    <div className="text-4xl font-black font-mono text-slate-900 dark:text-white tracking-widest py-1">
+                      {confirmedBooking.otp}
+                    </div>
+                    <span className="text-xs text-slate-600 dark:text-slate-400 block font-medium">
+                      Show this 4-digit OTP to the host upon reaching the hub. Once the host enters this OTP, your rental timer will start.
+                    </span>
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-amber-800 dark:text-amber-300 font-bold bg-amber-100/70 dark:bg-amber-900/50 py-1.5 px-3 rounded-xl">
+                      <Clock className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                      <span>Timer starts automatically when Host enters OTP</span>
+                    </div>
                   </div>
-                  <span className="text-[10px] text-slate-500 block">
-                    Present this OTP to host upon vehicle pickup
-                  </span>
-                </div>
+                )}
 
                 {/* Host Details Unlocked */}
                 <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 space-y-2 text-xs">
@@ -1832,7 +1949,16 @@ export const SelfDriveRentalPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                {/* Route Map Section & Google Maps Navigation */}
+                <RentalRouteNavigationMap
+                  customerCoords={userCoords}
+                  hostCoords={{ lat: confirmedBooking.hostLat || 12.9716, lng: confirmedBooking.hostLng || 77.6412 }}
+                  hostAddress={confirmedBooking.doorstepAddress || confirmedBooking.ownerAddress || confirmedBooking.vehicle.hubAddress}
+                  hostName={confirmedBooking.ownerName}
+                  doorstepAddress={confirmedBooking.doorstepAddress}
+                />
+
+                <div className="flex items-center space-x-2 pt-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -1840,7 +1966,7 @@ export const SelfDriveRentalPage: React.FC = () => {
                       setConfirmedBooking(null);
                       handleTabChange('bookings');
                     }}
-                    className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md transition text-center"
+                    className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md transition text-center cursor-pointer"
                   >
                     View in Bookings Tab →
                   </button>
@@ -1850,7 +1976,7 @@ export const SelfDriveRentalPage: React.FC = () => {
                       setSelectedVehicle(null);
                       setConfirmedBooking(null);
                     }}
-                    className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs"
+                    className="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
                   >
                     Close
                   </button>
@@ -1889,54 +2015,134 @@ export const SelfDriveRentalPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Handover Method */}
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                    Handover Method
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setDeliveryType('HUB_PICKUP')}
-                      className={`p-2.5 rounded-2xl border text-left transition ${
-                        deliveryType === 'HUB_PICKUP'
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-bold'
-                          : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                      }`}
-                    >
-                      <span className="block font-black text-xs">Hub Pickup</span>
-                      <span className="text-[10px] text-slate-400 block">Self pickup (Free)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeliveryType('DOORSTEP_DELIVERY')}
-                      className={`p-2.5 rounded-2xl border text-left transition ${
-                        deliveryType === 'DOORSTEP_DELIVERY'
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-bold'
-                          : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                      }`}
-                    >
-                      <span className="block font-black text-xs">Doorstep Delivery</span>
-                      <span className="text-[10px] text-slate-400 block">Drop to address (+₹149)</span>
-                    </button>
-                  </div>
-                </div>
+                {/* Handover & Delivery Selection */}
+                {(() => {
+                  const canDoorDeliver = selectedVehicle.doorDeliveryAvailable !== false && !selectedVehicle.features?.includes('Hub Pickup Only');
+                  if (canDoorDeliver) {
+                    return (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
+                            Handover Method
+                          </label>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                            Free Handover
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeliveryType('DOORSTEP_DELIVERY');
+                              setDoorstepAddress(currentLiveAddress);
+                            }}
+                            className={`p-3 rounded-2xl border-2 text-left transition flex items-center space-x-2.5 cursor-pointer ${
+                              deliveryType === 'DOORSTEP_DELIVERY'
+                                ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 shadow-xs'
+                                : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 opacity-70'
+                            }`}
+                          >
+                            <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
+                              deliveryType === 'DOORSTEP_DELIVERY' ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                            }`}>
+                              <MapPin className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="block text-xs font-black text-slate-800 dark:text-slate-100">Door Delivery</span>
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">To Live Address</span>
+                            </div>
+                          </button>
 
-                {deliveryType === 'DOORSTEP_DELIVERY' && (
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                      Complete Delivery Address
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="House No, Street, Landmark..."
-                      value={doorstepAddress}
-                      onChange={(e) => setDoorstepAddress(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
-                      required
-                    />
-                  </div>
-                )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeliveryType('HUB_PICKUP');
+                              setDoorstepAddress(selectedVehicle.hubAddress || selectedVehicle.city);
+                            }}
+                            className={`p-3 rounded-2xl border-2 text-left transition flex items-center space-x-2.5 cursor-pointer ${
+                              deliveryType === 'HUB_PICKUP'
+                                ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 shadow-xs'
+                                : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 opacity-70'
+                            }`}
+                          >
+                            <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
+                              deliveryType === 'HUB_PICKUP' ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                            }`}>
+                              <Building className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="block text-xs font-black text-slate-800 dark:text-slate-100">Hub Pickup</span>
+                              <span className="text-[10px] text-slate-500 font-bold">Self Collect</span>
+                            </div>
+                          </button>
+                        </div>
+
+                        {deliveryType === 'DOORSTEP_DELIVERY' ? (
+                          <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-500/30 flex items-center justify-between">
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                <MapPin className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                                  {currentLiveAddress}
+                                </span>
+                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  Live GPS Handover Location (Free Doorstep Drop)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between">
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                <Building className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                                  {selectedVehicle.hubAddress || selectedVehicle.city}
+                                </span>
+                                <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1 mt-0.5">
+                                  Partner Hub / Garage Handover
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
+                          Handover Method
+                        </label>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-500/20">
+                          Hub Pickup Only
+                        </span>
+                      </div>
+                      <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-500/30 flex items-center justify-between">
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <Building className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                              {selectedVehicle.hubAddress || selectedVehicle.city}
+                            </span>
+                            <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1 mt-0.5">
+                              Host Hub / Garage Pickup (No Door Delivery for this vehicle)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Customer Details */}
                 <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1977,12 +2183,10 @@ export const SelfDriveRentalPage: React.FC = () => {
                         <span>Base Fare ({fare.diffDays} day{fare.diffDays > 1 ? 's' : ''})</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">₹{fare.baseFare}</span>
                       </div>
-                      {fare.delivery > 0 && (
-                        <div className="flex justify-between">
-                          <span>Doorstep Delivery</span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">₹{fare.delivery}</span>
-                        </div>
-                      )}
+                      <div className="flex justify-between">
+                        <span>{deliveryType === 'DOORSTEP_DELIVERY' ? 'Doorstep Delivery' : 'Hub Pickup'}</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">FREE</span>
+                      </div>
                       <div className="flex justify-between pt-1.5 border-t border-slate-200 dark:border-slate-700 text-sm font-black text-slate-900 dark:text-white">
                         <span>Total Payable</span>
                         <span className="text-emerald-600 dark:text-emerald-400">₹{fare.grandTotal}</span>
@@ -2042,10 +2246,17 @@ export const SelfDriveRentalPage: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
             {/* Top Badges */}
-            <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
-              <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-black text-amber-300 border border-white/20">
-                {vehicle.badge}
-              </span>
+            <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1 z-10">
+              {!vehicle.isAvailable ? (
+                <span className="px-2.5 py-1 rounded-full bg-rose-600/95 backdrop-blur-md text-[10px] font-black text-white border border-rose-300/40 shadow-sm flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-white" />
+                  <span>BOOKED</span>
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-black text-amber-300 border border-white/20">
+                  {vehicle.badge}
+                </span>
+              )}
             </div>
 
             {/* Save Heart Button Top-Right */}
@@ -2078,10 +2289,35 @@ export const SelfDriveRentalPage: React.FC = () => {
               <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug">
                 {vehicle.name}
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center space-x-1 mt-0.5">
-                <MapPin className="w-3 h-3 text-amber-600 shrink-0" />
-                <span className="truncate">{vehicle.hubAddress}</span>
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center space-x-1 truncate">
+                  <MapPin className="w-3 h-3 text-amber-600 shrink-0" />
+                  <span className="truncate">{vehicle.hubAddress}</span>
+                </p>
+                {(vehicle.distanceKm !== undefined && vehicle.distanceKm !== null || vehicle.distance_km !== undefined) && (
+                  <span className="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 font-extrabold text-[10px] border border-emerald-500/20 shrink-0">
+                    📍 {((vehicle.distanceKm ?? vehicle.distance_km) as number).toFixed(1)} km away
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                {!vehicle.isAvailable ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                    <Lock className="w-3 h-3 text-rose-500" />
+                    <span>Booked by Customer</span>
+                  </span>
+                ) : (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                    vehicle.doorDeliveryAvailable !== false && !vehicle.features?.includes('Hub Pickup Only')
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                  }`}>
+                    {vehicle.doorDeliveryAvailable !== false && !vehicle.features?.includes('Hub Pickup Only')
+                      ? '🚚 Door Delivery Available'
+                      : '🏢 Hub Pickup Only'}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Specs Matrix */}
@@ -2134,13 +2370,48 @@ export const SelfDriveRentalPage: React.FC = () => {
             </span>
           </div>
 
-          <button
-            onClick={() => handleOpenBooking(vehicle)}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-xs hover:shadow-md transition-all active:scale-95 flex items-center space-x-1 cursor-pointer"
-          >
-            <KeyRound className="w-3 h-3" />
-            <span>Book Now</span>
-          </button>
+          {(() => {
+            const isMyActiveBooking = rentalBookings.some(
+              b => b.vehicle.id === vehicle.id && (b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS')
+            );
+
+            if (!vehicle.isAvailable) {
+              if (isMyActiveBooking) {
+                return (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('bookings')}
+                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-xs hover:shadow-md transition-all active:scale-95 flex items-center space-x-1 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Booked (View)</span>
+                  </button>
+                );
+              }
+              return (
+                <button
+                  type="button"
+                  disabled
+                  className="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-black border border-slate-300 dark:border-slate-700 flex items-center space-x-1 cursor-not-allowed opacity-90 shadow-none"
+                  title="This vehicle is currently booked by a customer"
+                >
+                  <Lock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Booked</span>
+                </button>
+              );
+            }
+
+            return (
+              <button
+                type="button"
+                onClick={() => handleOpenBooking(vehicle)}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-xs hover:shadow-md transition-all active:scale-95 flex items-center space-x-1 cursor-pointer"
+              >
+                <KeyRound className="w-3 h-3" />
+                <span>Book Now</span>
+              </button>
+            );
+          })()}
         </div>
       </div>
     );
