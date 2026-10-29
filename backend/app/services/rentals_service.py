@@ -116,6 +116,14 @@ SAMPLE_RENTAL_BOOKINGS: List[RentalBookingOut] = _load_bookings()
 
 class RentalsService:
     @staticmethod
+    def reset_all():
+        SAMPLE_FLEET.clear()
+        SAMPLE_RENTAL_BOOKINGS.clear()
+        _save_fleet(SAMPLE_FLEET)
+        _save_bookings(SAMPLE_RENTAL_BOOKINGS)
+        return {"status": "ok", "message": "All rental vehicles and bookings removed"}
+
+    @staticmethod
     def get_available_vehicles(
         vehicle_type: Optional[str] = None,
         transmission: Optional[str] = None,

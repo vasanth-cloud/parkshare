@@ -207,6 +207,20 @@ export const SelfDriveRentalPage: React.FC = () => {
     setExpandedMaps(prev => ({ ...prev, [bookingId]: !prev[bookingId] }));
   };
 
+  // Immediate fetch of bookings when tab switches to bookings
+  useEffect(() => {
+    if (activeTab === 'bookings' && customerPhone) {
+      api.getRentalBookings({ phone: customerPhone })
+        .then(list => {
+          if (Array.isArray(list)) {
+            setRentalBookings(list);
+            saveRentalBookings(list);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [activeTab, customerPhone]);
+
   // Filter Bookings Sub-tab
   const [bookingsFilter, setBookingsFilter] = useState<'ALL' | 'ACTIVE' | 'UPCOMING' | 'COMPLETED'>('ALL');
 
@@ -326,8 +340,9 @@ export const SelfDriveRentalPage: React.FC = () => {
       if (activeTab === 'bookings' && customerPhone) {
         try {
           const list = await api.getRentalBookings({ phone: customerPhone });
-          if (Array.isArray(list) && list.length > 0) {
+          if (Array.isArray(list)) {
             setRentalBookings(list);
+            saveRentalBookings(list);
           }
         } catch {}
       }

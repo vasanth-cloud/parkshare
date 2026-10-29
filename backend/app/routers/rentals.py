@@ -16,6 +16,14 @@ from app.services.rentals_service import RentalsService
 
 router = APIRouter(prefix="/rentals", tags=["Self-Drive & Bike Rentals"])
 
+@router.post("/reset-all")
+@router.delete("/all")
+def reset_all_rentals():
+    """
+    Remove all rental vehicles and bookings across the system.
+    """
+    return RentalsService.reset_all()
+
 @router.get("/available", response_model=List[RentalVehicleSchema])
 def get_available_vehicles(
     type: Optional[str] = Query(None, description="Vehicle type: ALL, CAR, BIKE"),

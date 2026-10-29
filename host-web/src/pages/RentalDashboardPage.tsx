@@ -286,7 +286,7 @@ export const RentalDashboardPage: React.FC = () => {
   const fetchHostBookings = async () => {
     try {
       const data = await api.getRentalBookings();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setBookings(data);
       }
     } catch (err) {
