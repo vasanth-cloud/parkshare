@@ -1,47 +1,33 @@
-import { SpaPackage, SpaBookingRequest, SpaBookingResponse } from '../types';
-
-const API_BASE = '/api/v1/car-spa';
+import { api } from '../../../services/api';
+import type { CarSpaBooking, CarSpaCenter, CarSpaPaymentOrder } from '../../../types';
 
 /**
- * Car Spa API client
- * Use this service to interact with the backend Car Spa Detailing endpoints.
+ * Thin module wrapper around the authenticated customer car-spa API.
  */
 export const spaApi = {
-  /**
-   * Fetch available spa & detailing packages
-   */
-  async getPackages(): Promise<SpaPackage[]> {
-    try {
-      const res = await fetch(`${API_BASE}/packages`);
-      if (!res.ok) throw new Error('Failed to fetch spa packages');
-      return await res.json();
-    } catch (err) {
-      console.warn('Spa packages unavailable:', err);
-      return [];
-    }
-  },
+  listCenters: (params?: { city?: string; lat?: number; lng?: number }): Promise<CarSpaCenter[]> =>
+    api.listCarSpas(params),
 
-  /**
-   * Create a new car spa appointment
-   */
-  async createBooking(data: SpaBookingRequest): Promise<SpaBookingResponse> {
-    const res = await fetch(`${API_BASE}/book`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to book spa appointment');
-    }
-    return await res.json();
-  },
+  getCenter: (centerId: number): Promise<CarSpaCenter> => api.getCarSpa(centerId),
 
-  /**
-   * Get appointment status by ID
-   */
-  async getBookingStatus(bookingId: string): Promise<SpaBookingResponse> {
-    const res = await fetch(`${API_BASE}/bookings/${bookingId}`);
-    if (!res.ok) throw new Error('Appointment not found');
-    return await res.json();
-  },
+  createBooking: (data: {
+    center_id: number;
+    service_id: number;
+    wanted_date: string;
+    customer_note?: string;
+  }): Promise<CarSpaBooking> => api.createCarSpaBooking(data),
+
+  myBookings: (): Promise<CarSpaBooking[]> => api.getMyCarSpaBookings(),
+
+  getBooking: (bookingId: number): Promise<CarSpaBooking> => api.getCarSpaBooking(bookingId),
+
+  createPaymentOrder: (bookingId: number): Promise<CarSpaPaymentOrder> =>
+    api.createCarSpaPaymentOrder(bookingId),
+
+  verifyPayment: (
+    bookingId: number,
+    data: { order_id: string; payment_id: string; signature: string }
+  ): Promise<CarSpaBooking> => api.verifyCarSpaPayment(bookingId, data),
+
+  cancelBooking: (bookingId: number): Promise<CarSpaBooking> => api.cancelCarSpaBooking(bookingId),
 };

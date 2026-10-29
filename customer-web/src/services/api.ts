@@ -1,6 +1,7 @@
 import {
   User, Vehicle, ParkingListing, Booking, Review, RentalVehicle, RentalBooking,
   DriverPublic, DriverPricing, DriverFareBreakdown, DriverBooking, DriverBookingCreate, DriverPaymentOrder, AppNotification,
+  CarSpaCenter, CarSpaBooking, CarSpaPaymentOrder,
 } from '../types';
 
 const rawApiUrl = (import.meta as any).env?.VITE_API_URL;
@@ -631,6 +632,81 @@ export const api = {
       body: JSON.stringify({ rating, comment: comment || null }),
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to submit rating'));
+    return res.json();
+  },
+
+  // Car Spa (customer)
+  listCarSpas: async (params?: { city?: string; lat?: number; lng?: number }): Promise<CarSpaCenter[]> => {
+    const q = new URLSearchParams();
+    if (params?.city) q.set('city', params.city);
+    if (params?.lat != null) q.set('lat', String(params.lat));
+    if (params?.lng != null) q.set('lng', String(params.lng));
+    const res = await safeFetch(`${API_BASE}/car-spa/centers?${q.toString()}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to load car spas'));
+    return res.json();
+  },
+
+  getCarSpa: async (centerId: number): Promise<CarSpaCenter> => {
+    const res = await safeFetch(`${API_BASE}/car-spa/centers/${centerId}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Car spa not found'));
+    return res.json();
+  },
+
+  createCarSpaBooking: async (data: {
+    center_id: number;
+    service_id: number;
+    wanted_date: string;
+    customer_note?: string | null;
+  }): Promise<CarSpaBooking> => {
+    const res = await safeFetch(`${API_BASE}/car-spa/bookings`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to create car spa booking'));
+    return res.json();
+  },
+
+  getMyCarSpaBookings: async (): Promise<CarSpaBooking[]> => {
+    const res = await safeFetch(`${API_BASE}/car-spa/bookings/my`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to load car spa bookings'));
+    return res.json();
+  },
+
+  getCarSpaBooking: async (bookingId: number): Promise<CarSpaBooking> => {
+    const res = await safeFetch(`${API_BASE}/car-spa/bookings/${bookingId}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Car spa booking not found'));
+    return res.json();
+  },
+
+  createCarSpaPaymentOrder: async (bookingId: number): Promise<CarSpaPaymentOrder> => {
+    const res = await safeFetch(`${API_BASE}/car-spa/bookings/${bookingId}/pay/create-order`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to start payment'));
+    return res.json();
+  },
+
+  verifyCarSpaPayment: async (
+    bookingId: number,
+    data: { order_id: string; payment_id: string; signature: string }
+  ): Promise<CarSpaBooking> => {
+    const res = await safeFetch(`${API_BASE}/car-spa/bookings/${bookingId}/pay/verify`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Payment verification failed'));
+    return res.json();
+  },
+
+  cancelCarSpaBooking: async (bookingId: number): Promise<CarSpaBooking> => {
+    const res = await safeFetch(`${API_BASE}/car-spa/bookings/${bookingId}/cancel`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to cancel booking'));
     return res.json();
   },
 };

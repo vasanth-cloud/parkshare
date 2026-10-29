@@ -1,5 +1,5 @@
 import {
-  User, ParkingListing, Booking, HostSummary, VerificationStatus, CarSpaCenter, Review, RentalPartnerVehicle, RcVerificationResult,
+  User, ParkingListing, Booking, HostSummary, VerificationStatus, CarSpaCenter, CarSpaBooking, CarSpaServiceItem, Review, RentalPartnerVehicle, RcVerificationResult,
   DriverProfile, DriverRegistrationPayload, DriverEarnings, DriverPricing, DriverBooking,
 } from '../types';
 
@@ -478,13 +478,95 @@ export const api = {
   },
 
   // Car Spa & Detailing Partner APIs
-  registerCarSpa: async (data: any): Promise<CarSpaCenter> => {
-    const res = await fetch(`${API_BASE}/car-spa/register`, {
+  registerCarSpa: async (data: {
+    name: string;
+    city: string;
+    address: string;
+    phone: string;
+    description?: string | null;
+    photo_url?: string | null;
+    operating_hours?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    services: { name: string; description?: string | null; price: number; duration_minutes: number }[];
+  }): Promise<CarSpaCenter> => {
+    const res = await fetch(`${API_BASE}/car-spa/centers`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to submit car spa registration'));
+    return res.json();
+  },
+
+  getMyCarSpa: async (): Promise<CarSpaCenter> => {
+    const res = await fetch(`${API_BASE}/car-spa/centers/me`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'No car spa registered'));
+    return res.json();
+  },
+
+  updateMyCarSpa: async (data: Partial<CarSpaCenter>): Promise<CarSpaCenter> => {
+    const res = await fetch(`${API_BASE}/car-spa/centers/me`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to update car spa'));
+    return res.json();
+  },
+
+  addCarSpaService: async (data: {
+    name: string;
+    description?: string | null;
+    price: number;
+    duration_minutes: number;
+  }): Promise<CarSpaServiceItem> => {
+    const res = await fetch(`${API_BASE}/car-spa/centers/me/services`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to add service'));
+    return res.json();
+  },
+
+  updateCarSpaService: async (
+    serviceId: number,
+    data: Partial<{ name: string; description: string; price: number; duration_minutes: number; is_active: boolean }>
+  ): Promise<CarSpaServiceItem> => {
+    const res = await fetch(`${API_BASE}/car-spa/centers/me/services/${serviceId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to update service'));
+    return res.json();
+  },
+
+  deleteCarSpaService: async (serviceId: number): Promise<void> => {
+    const res = await fetch(`${API_BASE}/car-spa/centers/me/services/${serviceId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to remove service'));
+  },
+
+  getIncomingCarSpaBookings: async (): Promise<CarSpaBooking[]> => {
+    const res = await fetch(`${API_BASE}/car-spa/bookings/incoming`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to load spa bookings'));
+    return res.json();
+  },
+
+  assignCarSpaSlot: async (
+    bookingId: number,
+    data: { slot_start: string; slot_end?: string | null }
+  ): Promise<CarSpaBooking> => {
+    const res = await fetch(`${API_BASE}/car-spa/bookings/${bookingId}/assign-slot`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await extractErrorMessage(res, 'Failed to assign slot'));
     return res.json();
   },
 

@@ -510,7 +510,7 @@ export const BottomNav: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setShowProfileDrawer(false);
-                        navigate('/register/car-spa');
+                        navigate('/partner/car-spa/dashboard');
                       }}
                       className="p-3 rounded-2xl bg-cyan-50/70 dark:bg-cyan-950/40 border border-cyan-200/80 dark:border-cyan-800/60 hover:border-cyan-400 text-left transition group"
                     >
@@ -521,7 +521,7 @@ export const BottomNav: React.FC = () => {
                       </div>
                       <div className="text-xs font-black text-gray-900 dark:text-white">Car Spa Partner</div>
                       <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5 leading-tight">
-                        Register wash center or mobile van
+                        Workshop bookings & slot assignment
                       </p>
                     </button>
                   </div>

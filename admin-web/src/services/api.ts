@@ -1,5 +1,5 @@
 import {
-  User, ParkingListing, AdminStats, Dispute, DriverProfile, CarSpaCenter, RentalVehicle,
+  User, ParkingListing, AdminStats, Dispute, DriverProfile, CarSpaCenter, CarSpaBooking, RentalVehicle,
   DriverAdminSummary, DriverPricing, DriverBooking,
 } from '../types';
 
@@ -211,28 +211,37 @@ export const api = {
     if (city) params.append('city', city);
     const query = params.toString() ? `?${params.toString()}` : '';
 
-    const res = await fetch(`${API_BASE}/car-spa/all${query}`, { headers: getHeaders() });
-    if (!res.ok) throw new Error('Failed to load car spas directory');
+    const res = await fetch(`${API_BASE}/car-spa/admin/centers${query}`, { headers: getHeaders() });
+    if (!res.ok) {
+      // Fallback for older path
+      const fallback = await fetch(`${API_BASE}/car-spa/all${query}`, { headers: getHeaders() });
+      if (!fallback.ok) throw new Error('Failed to load car spas directory');
+      return fallback.json();
+    }
     return res.json();
   },
 
-  registerCarSpa: async (data: any): Promise<CarSpaCenter> => {
-    const res = await fetch(`${API_BASE}/car-spa/register`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to register car spa');
+  getCarSpaBookings: async (): Promise<CarSpaBooking[]> => {
+    const res = await fetch(`${API_BASE}/car-spa/admin/bookings`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load car spa bookings');
     return res.json();
   },
 
-  updateCarSpaStatus: async (spaId: string, status: string, reason?: string): Promise<CarSpaCenter> => {
-    const res = await fetch(`${API_BASE}/car-spa/${spaId}/status`, {
+  updateCarSpaStatus: async (spaId: number | string, status: string, reason?: string): Promise<CarSpaCenter> => {
+    const res = await fetch(`${API_BASE}/car-spa/admin/centers/${spaId}/status`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ status, reason }),
     });
-    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to update car spa status');
+    if (!res.ok) {
+      const legacy = await fetch(`${API_BASE}/car-spa/${spaId}/status`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ status, reason }),
+      });
+      if (!legacy.ok) throw new Error((await legacy.json()).detail || 'Failed to update car spa status');
+      return legacy.json();
+    }
     return res.json();
   },
 

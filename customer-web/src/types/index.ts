@@ -430,3 +430,77 @@ export interface AppNotification {
   created_at: string;
 }
 
+export interface CarSpaServiceItem {
+  id: number;
+  center_id: number;
+  name: string;
+  description?: string | null;
+  price: number;
+  duration_minutes: number;
+  is_active: boolean;
+}
+
+export interface CarSpaCenter {
+  id: number;
+  host_id: number;
+  name: string;
+  city: string;
+  address: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  phone?: string | null;
+  description?: string | null;
+  photo_url?: string | null;
+  operating_hours?: string | null;
+  status: string;
+  rejection_reason?: string | null;
+  distance_km?: number | null;
+  services: CarSpaServiceItem[];
+  contact_unlocked: boolean;
+  created_at?: string | null;
+}
+
+export type CarSpaBookingStatus =
+  | 'AWAITING_PAYMENT'
+  | 'PAID_AWAITING_SLOT'
+  | 'SLOT_ASSIGNED'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'REFUNDED';
+
+export interface CarSpaBooking {
+  id: number;
+  booking_reference: string;
+  center_id: number;
+  service_id?: number | null;
+  customer_id: number;
+  service_name: string;
+  service_price: number;
+  spa_name: string;
+  spa_city: string;
+  spa_address?: string | null;
+  spa_phone?: string | null;
+  wanted_date: string;
+  customer_note?: string | null;
+  slot_start?: string | null;
+  slot_end?: string | null;
+  status: CarSpaBookingStatus | string;
+  amount_paid: number;
+  paid_at?: string | null;
+  contact_unlocked: boolean;
+  created_at?: string | null;
+}
+
+export interface CarSpaPaymentOrder {
+  payment_id: number;
+  booking_id: number;
+  booking_reference: string;
+  order_id: string;
+  amount: number;
+  amount_in_paise: number;
+  currency: string;
+  key_id: string;
+  mock_mode: boolean;
+  description: string;
+}
+
